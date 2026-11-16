@@ -1,0 +1,35 @@
+# Local environment values
+.env
+.env.*
+!.env.example
+
+# Java / Gradle
+.gradle/
+**/build/
+out/
+*.class
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend
+node_modules/
+dist/
+
+# Generated local datasets and models
+/data/
+/artifacts/
+/llm/data/
+/llm/artifacts/
+
+# Local IDE and OS files
+.idea/
+*.iml
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
