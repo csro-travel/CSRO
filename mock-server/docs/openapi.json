@@ -1,0 +1,862 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "여행봄 Mock — API-026 / API-027",
+    "description": "고정 가상 시각의 개발용 JSON fixture. 공급사 계약과 호텔의 숙박일별 주장을 분리합니다.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "개발 확인"
+        ],
+        "summary": "Health",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock-supplier/v1/bookings/{supplierBookingId}": {
+      "get": {
+        "tags": [
+          "API-026"
+        ],
+        "summary": "Get Booking",
+        "operationId": "getSupplierBooking",
+        "security": [
+          {
+            "InternalServiceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "supplierBookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Supplierbookingid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierBooking"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "about:blank",
+                      "default": "about:blank",
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    },
+                    "code": {
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "title": "Traceid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "about:blank",
+                      "default": "about:blank",
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    },
+                    "code": {
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "title": "Traceid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "about:blank",
+                      "default": "about:blank",
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    },
+                    "code": {
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "title": "Traceid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "about:blank",
+                      "default": "about:blank",
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    },
+                    "code": {
+                      "title": "Code",
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "title": "Traceid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock-hotel/v1/reconfirmations": {
+      "post": {
+        "tags": [
+          "API-027"
+        ],
+        "summary": "Reconfirm",
+        "operationId": "reconfirmHotelNights",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconfirmationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotelReply"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "about:blank",
+                      "title": "Type",
+                      "default": "about:blank"
+                    },
+                    "title": {
+                      "type": "string",
+                      "title": "Title"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "title": "Status"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "title": "Detail"
+                    },
+                    "code": {
+                      "type": "string",
+                      "title": "Code"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "title": "Traceid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ],
+                  "title": "Problem"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotelPending"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "InternalServiceBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HotelPending": {
+        "properties": {
+          "reconfirmationRequestId": {
+            "type": "string",
+            "title": "Reconfirmationrequestid"
+          },
+          "reconfirmationId": {
+            "type": "string",
+            "title": "Reconfirmationid"
+          },
+          "status": {
+            "type": "string",
+            "const": "PENDING",
+            "title": "Status"
+          },
+          "receivedAt": {
+            "type": "string",
+            "title": "Receivedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reconfirmationRequestId",
+          "reconfirmationId",
+          "status",
+          "receivedAt"
+        ],
+        "title": "HotelPending"
+      },
+      "HotelReply": {
+        "properties": {
+          "reconfirmationRequestId": {
+            "type": "string",
+            "title": "Reconfirmationrequestid"
+          },
+          "reconfirmationId": {
+            "type": "string",
+            "title": "Reconfirmationid"
+          },
+          "status": {
+            "type": "string",
+            "const": "RESPONDED",
+            "title": "Status"
+          },
+          "supplierBookingId": {
+            "type": "string",
+            "title": "Supplierbookingid"
+          },
+          "propertyId": {
+            "type": "string",
+            "title": "Propertyid"
+          },
+          "nights": {
+            "items": {
+              "$ref": "#/components/schemas/Night"
+            },
+            "type": "array",
+            "title": "Nights"
+          },
+          "occurredAt": {
+            "type": "string",
+            "title": "Occurredat"
+          },
+          "sentAt": {
+            "type": "string",
+            "title": "Sentat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reconfirmationRequestId",
+          "reconfirmationId",
+          "status",
+          "supplierBookingId",
+          "propertyId",
+          "nights",
+          "occurredAt",
+          "sentAt"
+        ],
+        "title": "HotelReply"
+      },
+      "Night": {
+        "properties": {
+          "stayDate": {
+            "type": "string",
+            "title": "Staydate"
+          },
+          "reportedProvisionStatus": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE",
+              "UNKNOWN"
+            ],
+            "title": "Reportedprovisionstatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stayDate",
+          "reportedProvisionStatus",
+          "message"
+        ],
+        "title": "Night"
+      },
+      "ReconfirmationRequest": {
+        "properties": {
+          "reconfirmationRequestId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reconfirmationrequestid"
+          },
+          "supplierBookingId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Supplierbookingid"
+          },
+          "propertyId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Propertyid"
+          },
+          "stayDates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Staydates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reconfirmationRequestId",
+          "supplierBookingId",
+          "propertyId",
+          "stayDates"
+        ],
+        "title": "ReconfirmationRequest"
+      },
+      "Stay": {
+        "properties": {
+          "checkInDate": {
+            "type": "string",
+            "title": "Checkindate"
+          },
+          "checkOutDate": {
+            "type": "string",
+            "title": "Checkoutdate"
+          },
+          "adults": {
+            "type": "integer",
+            "title": "Adults"
+          },
+          "rooms": {
+            "type": "integer",
+            "title": "Rooms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkInDate",
+          "checkOutDate",
+          "adults",
+          "rooms"
+        ],
+        "title": "Stay"
+      },
+      "SupplierBooking": {
+        "properties": {
+          "supplierBookingId": {
+            "type": "string",
+            "title": "Supplierbookingid"
+          },
+          "referenceBookingId": {
+            "type": "string",
+            "title": "Referencebookingid"
+          },
+          "propertyId": {
+            "type": "string",
+            "title": "Propertyid"
+          },
+          "contractStatus": {
+            "type": "string",
+            "const": "CONFIRMED",
+            "title": "Contractstatus"
+          },
+          "stay": {
+            "$ref": "#/components/schemas/Stay"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "supplierBookingId",
+          "referenceBookingId",
+          "propertyId",
+          "contractStatus",
+          "stay",
+          "updatedAt"
+        ],
+        "title": "SupplierBooking"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "InternalServiceBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
