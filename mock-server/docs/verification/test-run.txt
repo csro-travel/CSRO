@@ -1,0 +1,35 @@
+/workspace/csro-mock-venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_api026_matches_authoritative_yb001_example_exactly (test_contract.MockContractTests.test_api026_matches_authoritative_yb001_example_exactly) ... ok
+test_api027_matches_authoritative_yb001_example_exactly (test_contract.MockContractTests.test_api027_matches_authoritative_yb001_example_exactly) ... ok
+test_both_routes_require_valid_internal_bearer (test_contract.MockContractTests.test_both_routes_require_valid_internal_bearer) ... ok
+test_empty_and_duplicate_stay_dates_are_400 (test_contract.MockContractTests.test_empty_and_duplicate_stay_dates_are_400) ... ok
+test_header_name_is_case_insensitive (test_contract.MockContractTests.test_header_name_is_case_insensitive) ... ok
+test_hotel_claim_does_not_change_supplier_contract (test_contract.MockContractTests.test_hotel_claim_does_not_change_supplier_contract) ... ok
+test_identifiers_are_nonblank_strict_strings (test_contract.MockContractTests.test_identifiers_are_nonblank_strict_strings) ... ok
+test_invalid_date_strings_are_400 (test_contract.MockContractTests.test_invalid_date_strings_are_400) ... ok
+test_malformed_json_and_non_object_bodies_are_flat_400_problems (test_contract.MockContractTests.test_malformed_json_and_non_object_bodies_are_flat_400_problems) ... ok
+test_repeat_requests_return_fixed_scenario_and_do_not_cancel_booking (test_contract.MockContractTests.test_repeat_requests_return_fixed_scenario_and_do_not_cancel_booking) ... ok
+test_request_id_round_trips_without_inventing_a_new_schema (test_contract.MockContractTests.test_request_id_round_trips_without_inventing_a_new_schema) ... ok
+test_required_fields_and_extra_fields_are_rejected_as_400 (test_contract.MockContractTests.test_required_fields_and_extra_fields_are_rejected_as_400) ... ok
+test_same_unique_date_set_is_accepted_and_returned_in_canonical_order (test_contract.MockContractTests.test_same_unique_date_set_is_accepted_and_returned_in_canonical_order) ... ok
+test_stateless_fixture_does_not_claim_request_id_collision_management (test_contract.MockContractTests.test_stateless_fixture_does_not_claim_request_id_collision_management) ... ok
+test_stay_dates_have_strict_array_and_item_types (test_contract.MockContractTests.test_stay_dates_have_strict_array_and_item_types) ... ok
+test_supplier_and_hotel_booking_ids_have_distinct_namespaces (test_contract.MockContractTests.test_supplier_and_hotel_booking_ids_have_distinct_namespaces) ... ok
+test_unknown_supplier_id_returns_source_specific_not_found (test_contract.MockContractTests.test_unknown_supplier_id_returns_source_specific_not_found) ... ok
+test_valid_but_mismatched_property_is_422 (test_contract.MockContractTests.test_valid_but_mismatched_property_is_422) ... ok
+test_valid_but_wrong_stay_date_set_is_422 (test_contract.MockContractTests.test_valid_but_wrong_stay_date_set_is_422) ... ok
+test_yb002_implementation_fixture_is_normal_for_all_nights (test_contract.MockContractTests.test_yb002_implementation_fixture_is_normal_for_all_nights) ... ok
+test_yb003_fixture_keeps_contract_confirmed_when_hotel_cannot_find_booking (test_contract.MockContractTests.test_yb003_fixture_keeps_contract_confirmed_when_hotel_cannot_find_booking) ... ok
+test_yb004_pending_fixture_has_only_v01_202_fields (test_contract.MockContractTests.test_yb004_pending_fixture_has_only_v01_202_fields) ... ok
+test_yb005_unavailable_fixture_is_a_service_error_not_a_booking_status (test_contract.MockContractTests.test_yb005_unavailable_fixture_is_a_service_error_not_a_booking_status) ... ok
+test_environment_token_is_used_and_empty_token_is_rejected (test_http.MetadataTests.test_environment_token_is_used_and_empty_token_is_rejected) ... ok
+test_error_trace_is_returned_in_response_header (test_http.MetadataTests.test_error_trace_is_returned_in_response_header) ... ok
+test_openapi_errors_use_problem_media_type_and_require_bearer (test_http.MetadataTests.test_openapi_errors_use_problem_media_type_and_require_bearer) ... ok
+test_live_extension_statuses_and_pending_shape (test_http.RealHTTPTests.test_live_extension_statuses_and_pending_shape) ... ok
+test_live_supplier_and_hotel_contract (test_http.RealHTTPTests.test_live_supplier_and_hotel_contract) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 1.070s
+
+OK

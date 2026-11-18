@@ -1,0 +1,20 @@
+INFO:     Started server process [4738]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53820 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "GET /mock-supplier/v1/bookings/SUP-BOOK-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "POST /mock-hotel/v1/reconfirmations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "GET /mock-supplier/v1/bookings/SUP-BOOK-002 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "POST /mock-hotel/v1/reconfirmations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "GET /mock-supplier/v1/bookings/SUP-BOOK-003 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "POST /mock-hotel/v1/reconfirmations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53832 - "GET /mock-supplier/v1/bookings/SUP-BOOK-004 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "POST /mock-hotel/v1/reconfirmations HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:53832 - "GET /mock-supplier/v1/bookings/SUP-BOOK-005 HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:53832 - "POST /mock-hotel/v1/reconfirmations HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:53848 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4738]

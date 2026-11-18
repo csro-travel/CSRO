@@ -1,0 +1,124 @@
+Here is the result of "fetch" for the Page with URL https://app.notion.com/p/3542f2597c57826e9b9881d07057b57e as of 2026-11-14T03:34:23.132Z:
+<page url="https://app.notion.com/p/3542f2597c57826e9b9881d07057b57e">
+<ancestor-path>
+<parent-data-source url="collection://f1d2f259-7c57-8389-8571-077ee5374c84" name="KTcs API 목록"/>
+<ancestor-2-database url="https://app.notion.com/p/4ab2f2597c57839a88c0013bdc29a6bb" title="KTcs API 목록"/>
+<ancestor-3-page url="https://app.notion.com/p/6a52f2597c5783db96fb8136736f121c" title="REST API 명세 — 전체 목록·공통 규약"/>
+<ancestor-4-page url="https://app.notion.com/p/3842f2597c578390abf7011c41d0304c" title="04. REST API 명세"/>
+<ancestor-5-page url="https://app.notion.com/p/ea22f2597c5782ecbce8017ce7f5ec43" title="여행봄 — 프로젝트 전체"/>
+</ancestor-path>
+<properties>
+{"API 설계 여부":"진행 중","API 이름":"API-026 가상 공급사 기존 예약 조회","API 테스트":"할 일","Method":"GET","url":"https://app.notion.com/p/3542f2597c57826e9b9881d07057b57e","userDefined:URL":"/mock-supplier/v1/bookings/\\{supplierBookingId\\}","백엔드 구현":"할 일","상태 코드":["200","401","404","503","500"],"설명":"가상 공급사 원예약 상태 조회. 내부 YB-001↔공급사 SUP-BOOK-001 매핑, 계약 확정과 실제 객실 제공 여부 분리. 계약 검토안.","인증 필요":"__YES__","프론트 구현":"할 일"}
+</properties>
+<iconMetadata>null</iconMetadata>
+<content>
+<quote>
+<b>API-026 가상 공급사 기존 예약 조회 \| 계약 v0.1 검토안</b>
+
+예약 YB-001은 여행봄 내부 예약번호이고, 공급사의 자체 식별자는 <code>SUP-BOOK-001</code>이다. <b>공급사 예약 확정은 호텔의 실제 객실 제공 보장을 뜻하지 않는다.</b>
+</quote>
+
+## API 개요
+
+- <b>Method / URI:</b> <code>GET /mock-supplier/v1/bookings/{supplierBookingId}</code>
+- <b>호출:</b> A팀 Spring → 가상 공급사 REST. 고객/상담사가 이 모의 공급사 URL을 직접 호출하지 않음.
+- <b>목적:</b> 이미 예약된 YB-001이 공급사 계약상 정상 확정인지, 취소/변경이 있었는지 확인.
+- <b>인증:</b> 개발용 내부 Bearer 서비스 인증.
+- <b>자료:</b> YB-001과 공급사 예약번호의 매핑을 Mock fixtures에 고정.
+- <b>실행 순서:</b> Spring 예약 매핑 조회 → Mock GET → 공급사 상태/기간 응답 → Spring 예약번호·기간 검증·원문 저장 → 필요 시 별도 호텔 재확인 027.
+
+## Request Header / Path / Query / Body
+
+| 항목 | 값 | 필요 |
+| --- | --- | --- |
+| Authorization | <code>Bearer {internalServiceToken}</code> | 예 |
+| Accept | <code>application/json</code> | 권장 |
+| supplierBookingId | Path, string <code>SUP-BOOK-001</code> | 예 |
+| Query / Request Body | 없음 | - |
+
+## 정상 Response — 200 OK
+
+```json
+{
+  "supplierBookingId": "SUP-BOOK-001",
+  "referenceBookingId": "YB-001",
+  "propertyId": "HOTEL-001",
+  "contractStatus": "CONFIRMED",
+  "stay": {
+    "checkInDate": "2026-11-10",
+    "checkOutDate": "2026-11-13",
+    "adults": 2,
+    "rooms": 1
+  },
+  "updatedAt": "2026-11-09T09:00:00+09:00"
+}
+```
+
+| 응답 필드 | 의미 |
+| --- | --- |
+| supplierBookingId / referenceBookingId | 공급사 자체 ID / 우리 서비스 예약 ID. 다른 네임스페이스 |
+| propertyId | 원래 호텔의 안정적 식별자 |
+| contractStatus | 공급사 계약 상태, 예: CONFIRMED / CANCELLED |
+| stay | 원래 고객이 예약한 전체 기간·인원·방 수 |
+| updatedAt | 공급사 계약 상태 갱신 시각. 실제 호텔 객실 확인 시각은 027에 별도 |
+
+<b>부정확한 해석 금지:</b> 위 응답은 YB-001이 공급사에 정상 등록된 사실만 반환한다. API-027이 11/10 객실 제공 불가를 보고해도 서로 다른 사실이므로 자동으로 계약 상태를 CANCELLED로 바꾸지 않는다.
+
+## 오류 응답 예시
+
+```json
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "공급사에서 해당 예약을 찾을 수 없습니다.",
+  "code": "SUPPLIER_BOOKING_NOT_FOUND",
+  "traceId": "req-example-026"
+}
+```
+
+## HTTP 상태 코드별 의미
+
+| HTTP | 코드 / 조건 |
+| --- | --- |
+| 200 | 예약 조회 성공 |
+| 401 | UNAUTHENTICATED\_SERVICE. 내부 토큰 누락/무효 |
+| 404 | SUPPLIER\_BOOKING\_NOT\_FOUND. 공급사에 ID가 없음(고객 실제 실패 확정 아님) |
+| 503 | SUPPLIER\_UNAVAILABLE. 모의 공급사 장애/무응답 |
+| 500 | INTERNAL\_ERROR. 예상치 못한 서버 오류 |
+
+## 설계 근거
+
+1. <b>GET 사용:</b> 기존 예약 조회에는 새 예약이나 다른 상태 변경이 없고 동일 공급사 예약번호의 현재 계약상 상태를 읽기 때문이다.
+2. <b>왜 공급사 ID로 조회하는가:</b> YB-001이라는 내부 식별자는 실 공급사의 고유 예약번호와 다를 수 있어 두 ID를 매핑해야 한다.
+3. <b>왜 호텔 제공 상태를 넣지 않는가:</b> 계약상 확정과 실제 체크인 가능 여부는 별도 시스템/시점에서 판단할 수 있어 한 응답에서 섞으면 진실성 오판을 초래한다.
+4. <b>왜 Spring에서 원문을 기록하는가:</b> 공급사 상태가 나중에 변경돼도 언제 어떤 계약 상태를 확인했는지 증빙하기 위함이다.
+5. <b>왜 실패한 GET이 예약 취소를 의미하지 않는가:</b> 조회 실패·공급사 미등록·네트워크 장애는 서로 다른 원인이므로 사실 검증·수동 대응이 필요하다.
+
+## A팀 구현 주의
+
+- 원예약의 계약상 <code>CONFIRMED</code>는 객실 제공 가능 여부가 아니다. 호텔 재확인 API-027과 결과를 혼동하지 않는다.
+- 공급사 자체 예약번호 SUP-BOOK-001과 내부 앱 예약번호 YB-001을 명확히 매핑한다.
+- 공급사 조회 실패/미등록은 실제 예약 취소가 확인됐다는 뜻이 아니다. 근거 원본과 수신 시각을 저장한다.
+</content>
+</page>
+
+<parent-data-source-schema url="collection://f1d2f259-7c57-8389-8571-077ee5374c84">
+The SQLite table definition for this page's parent data source. Use these column names and option values to set this page's properties, create sibling pages, or query the data source.
+<sqlite-table>
+CREATE TABLE IF NOT EXISTS "collection://f1d2f259-7c57-8389-8571-077ee5374c84" (
+	url TEXT UNIQUE,
+	createdTime TEXT, -- ISO-8601 datetime string, automatically set. This is the canonical time for when the page was created.
+	"상태 코드" TEXT, -- JSON array with zero or more of ["200", "201", "202", "204", "400", "401", "403", "404", "405", "409", "415", "422", "429", "500", "502", "503", "504"]
+	"백엔드 구현" TEXT, -- one of ["할 일", "진행 중", "완료"] Default: "할 일".
+	"Method" TEXT, -- one of ["GET", "POST", "PUT", "PATCH", "DELETE"]
+	"설명" TEXT,
+	"API 테스트" TEXT, -- one of ["할 일", "진행 중", "완료"] Default: "할 일".
+	"API 설계 여부" TEXT, -- one of ["할 일", "진행 중", "완료"] Default: "할 일".
+	"인증 필요" TEXT, -- "__YES__" = true, "__NO__" = false, NULL defaults to false
+	"프론트 구현" TEXT, -- one of ["할 일", "진행 중", "완료"] Default: "할 일".
+	"userDefined:URL" TEXT,
+	"API 이름" TEXT
+)
+</sqlite-table>
+</parent-data-source-schema>
