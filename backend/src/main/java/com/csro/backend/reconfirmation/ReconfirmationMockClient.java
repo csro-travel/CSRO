@@ -68,17 +68,19 @@ class ReconfirmationMockClient {
                     if (status != 200) {
                         throw failure(Step.API_026, status, response);
                     }
-                    return read(Step.API_026, status, response, SupplierBooking.class, localMock);
+                    return read(Step.API_026, status, response, SupplierBooking.class, localMock, null);
                 });
     }
 
     Received<HotelOutcome> reconfirm(HotelRequest request) {
+        byte[] requestBytes = JSON.writeValueAsBytes(request);
+        String requestJson = new String(requestBytes, StandardCharsets.UTF_8);
         return exchange(Step.API_027,
                 client.post().uri("/mock-hotel/v1/reconfirmations")
-                        .contentType(MediaType.APPLICATION_JSON).body(request),
+                        .contentType(MediaType.APPLICATION_JSON).body(requestBytes),
                 (status, response, localMock) -> switch (status) {
-                    case 200 -> read(Step.API_027, status, response, HotelReply.class, localMock);
-                    case 202 -> read(Step.API_027, status, response, HotelPending.class, localMock);
+                    case 200 -> read(Step.API_027, status, response, HotelReply.class, localMock, requestJson);
+                    case 202 -> read(Step.API_027, status, response, HotelPending.class, localMock, requestJson);
                     default -> throw failure(Step.API_027, status, response);
                 });
     }
@@ -104,14 +106,14 @@ class ReconfirmationMockClient {
 
     private static <T> Received<T> read(Step step, int status,
                                        RestClient.RequestHeadersSpec.ConvertibleClientHttpResponse response,
-                                       Class<? extends T> type, boolean localMock) {
+                                       Class<? extends T> type, boolean localMock, String requestJson) {
         try {
             byte[] bytes = response.bodyTo(byte[].class);
             OffsetDateTime receivedAt = OffsetDateTime.now(ZoneOffset.UTC);
             T body = bytes == null ? null : JSON.readValue(bytes, type);
             if (body != null) {
                 return new Received<>(body, new EvidenceBody(new String(bytes, StandardCharsets.UTF_8),
-                        receivedAt, localMock));
+                        receivedAt, localMock, requestJson));
             }
         } catch (RestClientException | JacksonException ex) {
             throw new BookingReconfirmationException(step, isTimeout(ex) ? Kind.TIMEOUT : Kind.INVALID_RESPONSE,
