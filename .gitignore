@@ -19,6 +19,7 @@ __pycache__/
 # Frontend
 node_modules/
 dist/
+/frontend/travel_bom/.next/
 
 # Generated local datasets and models
 /data/
