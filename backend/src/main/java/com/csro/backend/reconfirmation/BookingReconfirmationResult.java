@@ -8,7 +8,7 @@ import java.util.List;
 public record BookingReconfirmationResult(String bookingCode, SupplierBooking supplier, HotelOutcome hotel,
                                           EvidenceBody supplierEvidence, EvidenceBody hotelEvidence) {
 
-    public record EvidenceBody(String rawJson, OffsetDateTime receivedAt, boolean localMock) {}
+    public record EvidenceBody(String rawJson, OffsetDateTime receivedAt, boolean localMock, String requestJson) {}
 
     public record SupplierBooking(String supplierBookingId, String referenceBookingId,
                                   String propertyId, String contractStatus, Stay stay,
