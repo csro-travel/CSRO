@@ -52,25 +52,66 @@ STATEMENT = re.compile(
     rf"(?:(?P<available>{AVAILABLE})|(?P<unavailable>{UNAVAILABLE})|(?P<uncertain>{UNCERTAIN}))"
 )
 SENTENCE = re.compile(r"(?P<text>[^.!?。！？;\r\n]+)(?P<end>[.!?。！？;\r\n]+|$)")
+CORRECTION_PREFIX = re.compile(r"정정(?:합니다)?(?:\s*[:：,，]\s*|\s+)")
+CONDITION_PREFIX = re.compile(r"(?:단|다만)(?:\s*[,，:：]\s*|\s+)")
+CLAUSE_COMMA = re.compile(r"[,，]\s*")
+STAY_REQUIREMENT = re.compile(
+    r"(?:경우|때)(?:에\s*한(?:합니다|해|하여)|에만|만|\s*가능)"
+    r"|(?:취소|객실|공실|빈방|예약|숙박|투숙).*(?:해야|어야|아야|돼야|필요(?:합니다|해요|함|하다|$)|조건입니다)"
+)
+CONDITION_STAY_DATES = re.compile(rf"(?P<dates>{DATE_LIST})\s*(?:에는|은|는|만|(?=객실|숙박))")
+CANCELLATION_DEADLINE = re.compile(r"\s*(?:까지|이전|이내)")
+UNNAMED_SUBSET = re.compile(r"(?:일부|특정)\s*(?:숙박일|날짜|일자)")
+UNCONFIRMED_REMAINDER = re.compile(rf"(?:나머지|그\s*외)(?:\s*(?:숙박일|날짜))?(?:는|가)?\s*{UNCERTAIN}")
 
 
-def _statements(message: str) -> Iterator[re.Match[str]]:
+def _split_condition(text: str) -> tuple[str, str]:
+    named_dates = CONDITION_STAY_DATES.match(text)
+    start = named_dates.end() if named_dates is not None else 0
+    for comma in CLAUSE_COMMA.finditer(text, start):
+        following = text[comma.end():]
+        if STATEMENT.match(CORRECTION_PREFIX.sub("", following, count=1)):
+            return text[:comma.start()].rstrip(), following
+    return text, ""
+
+
+def _clauses(message: str) -> Iterator[re.Match[str] | str | None]:
     for sentence in SENTENCE.finditer(message):
         if "?" in sentence["end"] or "？" in sentence["end"]:
+            yield None
             continue
 
         remaining = sentence["text"].strip()
-        while statement := STATEMENT.match(remaining):
+        while remaining:
+            remaining = CORRECTION_PREFIX.sub("", remaining, count=1)
+            prefix = CONDITION_PREFIX.match(remaining)
+            if prefix is not None:
+                condition, remaining = _split_condition(remaining[prefix.end():])
+                yield condition if STAY_REQUIREMENT.search(condition) else None
+                continue
+
+            statement = STATEMENT.match(remaining)
+            if statement is None:
+                yield None
+                break
             tail = remaining[statement.end():].lstrip()
             if not tail:
                 yield statement
                 break
 
-            # A qualifier can change the claim. Continue only at another dated statement.
-            if not (tail.startswith(",") or statement[0].endswith(("고", "며", "지만"))):
+            # Separate known clauses without treating an arbitrary suffix as a complete claim.
+            if not (tail.startswith((",", "，")) or statement[0].endswith(("고", "며", "지만"))):
+                yield None
                 break
-            remaining = tail.removeprefix(",").lstrip()
-            if not STATEMENT.match(remaining):
+            remaining = tail[1:].lstrip() if tail.startswith((",", "，")) else tail
+            if UNCONFIRMED_REMAINDER.fullmatch(remaining):
+                yield statement
+                yield None
+                break
+            if not (
+                STATEMENT.match(remaining) or CONDITION_PREFIX.match(remaining) or CORRECTION_PREFIX.match(remaining)
+            ):
+                yield None
                 break
             yield statement
 
@@ -118,6 +159,21 @@ def _resolve_dates(text: str, stay_dates: list[date], local_day: date | None) ->
             yield matches[0]
 
 
+def _condition_dates(
+    text: str, previous_claim_dates: tuple[date, ...], stay_dates: list[date], local_day: date | None
+) -> Iterator[date]:
+    named_dates = CONDITION_STAY_DATES.match(text)
+    if named_dates is not None:
+        yield from _resolve_dates(named_dates["dates"], stay_dates, local_day)
+        return
+
+    # A deadline describes when the condition must be met, not which night it qualifies.
+    if not UNNAMED_SUBSET.search(text) and all(
+        CANCELLATION_DEADLINE.match(text, reference.end()) for reference in DATE_TOKEN.finditer(text)
+    ):
+        yield from previous_claim_dates
+
+
 def _message_local_date(request: ExtractionRequest) -> date | None:
     if request.messageOccurredAt is None:
         return None
@@ -150,19 +206,34 @@ def extract_claims(request: ExtractionRequest) -> ExtractionResponse:
     uncertain_dates: set[date] = set()
     if request.locale.casefold() == "ko-kr":
         local_day = _message_local_date(request)
-        for statement in _statements(request.originalMessage):
-            for stay_date in _resolve_dates(statement["dates"], request.stayDates, local_day):
-                if statement["uncertain"] is not None:
-                    uncertain_dates.add(stay_date)
-                    continue
+        previous_claim_dates: tuple[date, ...] = ()
+        for clause in _clauses(request.originalMessage):
+            if clause is None:
+                previous_claim_dates = ()
+                continue
+            if isinstance(clause, str):
+                uncertain_dates.update(_condition_dates(
+                    clause, previous_claim_dates, request.stayDates, local_day,
+                ))
+                previous_claim_dates = ()
+                continue
 
-                status = "AVAILABLE" if statement["available"] is not None else "UNAVAILABLE"
+            dates = tuple(_resolve_dates(clause["dates"], request.stayDates, local_day))
+            if clause["uncertain"] is not None:
+                uncertain_dates.update(dates)
+                previous_claim_dates = ()
+                continue
+
+            # Attach undated conditions only to the immediately preceding, fully resolved statement.
+            previous_claim_dates = dates if len(dates) == len(DATE_TOKEN.findall(clause["dates"])) else ()
+            status = "AVAILABLE" if clause["available"] is not None else "UNAVAILABLE"
+            for stay_date in dates:
                 previous = claims_by_date.get(stay_date)
                 if previous is None:
                     claims_by_date[stay_date] = Claim(
                         stayDate=stay_date,
                         reportedProvisionStatus=status,
-                        supportingText=statement[0],
+                        supportingText=clause[0],
                     )
                 elif previous.reportedProvisionStatus != status:
                     uncertain_dates.add(stay_date)
