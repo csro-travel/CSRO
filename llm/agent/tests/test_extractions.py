@@ -135,6 +135,78 @@ class ExtractionHttpTest(unittest.TestCase):
         self.assertEqual(body["claims"], [])
         self.assertEqual(body["unresolvedStayDates"], EXAMPLE["stayDates"])
 
+    def assert_extraction(self, message: str, expected_claims: list[tuple[str, str]]) -> None:
+        status, content_type, body = self.post({**EXAMPLE, "originalMessage": message})
+        self.assertEqual((status, content_type), (200, "application/json"))
+        self.assertIs(body["requiresHumanVerification"], True)
+        claims = body["claims"]
+        claim_dates = [claim["stayDate"] for claim in claims]
+        unresolved = body["unresolvedStayDates"]
+        self.assertCountEqual(claim_dates + unresolved, EXAMPLE["stayDates"])
+        for claim in claims:
+            self.assertTrue(claim["supportingText"])
+            self.assertIn(claim["supportingText"], message)
+
+        self.assertEqual(
+            (body["analysisStatus"], [(claim["stayDate"], claim["reportedProvisionStatus"]) for claim in claims]),
+            ("EXTRACTED" if expected_claims else "AMBIGUOUS", expected_claims),
+        )
+        expected_dates = {day for day, _ in expected_claims}
+        self.assertEqual(unresolved, [day for day in EXAMPLE["stayDates"] if day not in expected_dates])
+
+    def test_correction_does_not_pick_one_conflicting_claim(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 정정: 11월 10일은 객실 제공이 불가능합니다.",
+            [],
+        )
+
+    def test_undated_condition_qualifies_the_previous_claim(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 단, 기존 고객이 취소해야 합니다.",
+            [],
+        )
+
+    def test_undated_remainder_keeps_the_unavailable_claim(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 불가하고, 나머지는 확인 중입니다.",
+            [("2026-11-10", "UNAVAILABLE")],
+        )
+
+    def test_dated_condition_qualifies_only_the_named_date(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 불가능합니다. 11월 11일은 객실 제공이 가능합니다. "
+            "단, 11일은 기존 고객의 취소가 필요합니다.",
+            [("2026-11-10", "UNAVAILABLE")],
+        )
+
+    def test_named_condition_does_not_fall_back_to_the_previous_claim(self) -> None:
+        two_claims = "11월 10일은 객실 제공이 가능합니다. 11월 11일은 객실 제공이 가능합니다. "
+        for target, expected in (
+            ("10일", [("2026-11-11", "AVAILABLE")]),
+            ("13일", [("2026-11-10", "AVAILABLE"), ("2026-11-11", "AVAILABLE")]),
+        ):
+            with self.subTest(target=target):
+                self.assert_extraction(two_claims + f"단, {target}은 기존 고객의 취소가 필요합니다.", expected)
+
+    def test_undated_condition_does_not_attach_across_an_unrelated_sentence(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 조식은 별도입니다. 단, 기존 고객의 취소가 필요합니다.",
+            [("2026-11-10", "AVAILABLE")],
+        )
+
+    def test_inline_condition_keeps_the_following_dated_claim(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다, 단, 11일까지 기존 고객이 취소해야 합니다, "
+            "11월 11일은 객실 제공이 불가능합니다.",
+            [("2026-11-11", "UNAVAILABLE")],
+        )
+
+    def test_undated_condition_qualifies_one_statement_with_multiple_dates(self) -> None:
+        self.assert_extraction(
+            "11월 10일과 11일은 객실 제공이 가능합니다. 다만 기존 고객이 취소하는 경우에 한합니다.",
+            [],
+        )
+
     def test_partial_date_in_list_keeps_its_month(self) -> None:
         status, _, body = self.post({
             **EXAMPLE,
