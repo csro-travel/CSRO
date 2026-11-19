@@ -179,6 +179,26 @@ class ExtractionHttpTest(unittest.TestCase):
             [("2026-11-10", "UNAVAILABLE")],
         )
 
+    def test_cancellation_if_clause_qualifies_the_previous_claim(self) -> None:
+        self.assert_extraction(
+            "10일은 객실 제공이 가능합니다. 단, 기존 손님이 취소하면 가능합니다.",
+            [],
+        )
+
+    def test_condition_finds_the_named_date_after_its_reason(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 불가능합니다. 11월 11일은 객실 제공이 가능합니다. "
+            "다만, 기존 예약 때문에 11월 11일은 다른 고객의 취소가 필요합니다.",
+            [("2026-11-10", "UNAVAILABLE")],
+        )
+
+    def test_cancellation_if_clause_keeps_the_following_dated_claim(self) -> None:
+        self.assert_extraction(
+            "10일은 객실 제공이 가능합니다, 단, 기존 손님이 취소하면 가능합니다, "
+            "11일은 객실 제공이 불가능합니다.",
+            [("2026-11-11", "UNAVAILABLE")],
+        )
+
     def test_named_condition_does_not_fall_back_to_the_previous_claim(self) -> None:
         two_claims = "11월 10일은 객실 제공이 가능합니다. 11월 11일은 객실 제공이 가능합니다. "
         for target, expected in (

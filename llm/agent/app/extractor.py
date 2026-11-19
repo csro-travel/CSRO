@@ -57,18 +57,20 @@ CONDITION_PREFIX = re.compile(r"(?:단|다만)(?:\s*[,，:：]\s*|\s+)")
 CLAUSE_COMMA = re.compile(r"[,，]\s*")
 STAY_REQUIREMENT = re.compile(
     r"(?:경우|때)(?:에\s*한(?:합니다|해|하여)|에만|만|\s*가능)"
+    rf"|취소(?:하면|되면|한다면|된다면)\s*(?:{ROOM}{PROVISION})?가능"
     r"|(?:취소|객실|공실|빈방|예약|숙박|투숙).*(?:해야|어야|아야|돼야|필요(?:합니다|해요|함|하다|$)|조건입니다)"
 )
-CONDITION_STAY_DATES = re.compile(rf"(?P<dates>{DATE_LIST})\s*(?:에는|은|는|만|(?=객실|숙박))")
+CONDITION_STAY_DATES = re.compile(rf"(?<![\w/.-])(?P<dates>{DATE_LIST})\s*(?:에는|은|는|만|(?=객실|숙박))")
 CANCELLATION_DEADLINE = re.compile(r"\s*(?:까지|이전|이내)")
 UNNAMED_SUBSET = re.compile(r"(?:일부|특정)\s*(?:숙박일|날짜|일자)")
 UNCONFIRMED_REMAINDER = re.compile(rf"(?:나머지|그\s*외)(?:\s*(?:숙박일|날짜))?(?:는|가)?\s*{UNCERTAIN}")
 
 
 def _split_condition(text: str) -> tuple[str, str]:
-    named_dates = CONDITION_STAY_DATES.match(text)
-    start = named_dates.end() if named_dates is not None else 0
-    for comma in CLAUSE_COMMA.finditer(text, start):
+    named_dates = CONDITION_STAY_DATES.search(text)
+    for comma in CLAUSE_COMMA.finditer(text):
+        if named_dates is not None and named_dates.start("dates") < comma.start() < named_dates.end("dates"):
+            continue
         following = text[comma.end():]
         if STATEMENT.match(CORRECTION_PREFIX.sub("", following, count=1)):
             return text[:comma.start()].rstrip(), following
@@ -162,7 +164,7 @@ def _resolve_dates(text: str, stay_dates: list[date], local_day: date | None) ->
 def _condition_dates(
     text: str, previous_claim_dates: tuple[date, ...], stay_dates: list[date], local_day: date | None
 ) -> Iterator[date]:
-    named_dates = CONDITION_STAY_DATES.match(text)
+    named_dates = CONDITION_STAY_DATES.search(text)
     if named_dates is not None:
         yield from _resolve_dates(named_dates["dates"], stay_dates, local_day)
         return
