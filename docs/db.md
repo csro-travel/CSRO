@@ -1,0 +1,18 @@
+# DB 변경 기준
+
+## 유지할 구조
+
+- 두 팀의 Spring 업무 테이블은 같은 DB에 둔다. Mock 공급사 테이블과 변경 이력은 별도로 관리한다.
+- 예약당 활성 사건 최대 한 건, 예약마다 같은 숙박일 한 행, 현재 고객 제안에 포함된 견적만 선택할 수 있다는 제약을 보존한다.
+- 내부 BIGINT 키와 API·공급사 식별자를 구분한다. 숙박일은 `DATE`, 발생 시각은 `TIMESTAMPTZ`, 업무 금액은 KRW 정수로 유지한다.
+- 사건 생성·재사용은 같은 예약 행을 기준으로 직렬화한다. 외부 HTTP는 행 잠금 트랜잭션 밖에서 호출한다.
+
+## 허용 범위와 승인
+
+- 현재 물리 구조에 매핑하는 변경은 기존 스키마를 유지한다. 실제 테이블·컬럼·타입·제약을 바꾸려면 변경 이유와 양 팀 영향을 합의하고, [공통 Flyway 경로](../backend/src/main/resources/db/migration/)에 고유한 새 버전으로 작성해 팀장 PR 승인을 받는다.
+- 적용된 [V1](../backend/src/main/resources/db/migration/V1__initial_business_schema.sql)은 내용과 파일명을 보존한다. [YB-001 시드](../backend/src/main/resources/db/local/R__seed_yb001.sql)는 `local` 프로필의 별도 경로에 둔다.
+
+## 원본
+
+- [통합 ERD·테이블 정의서](https://app.notion.com/p/417e04d22bed812e86a7f2841b8073c5)
+- [공통 Flyway·PR 승인 규칙](https://app.notion.com/p/418e04d22bed816abcede010eed08fdd)
