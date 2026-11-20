@@ -99,7 +99,8 @@ public class BookingReconfirmationService {
                 || !booking.supplierBookingId().equals(reply.supplierBookingId())
                 || !booking.propertyId().equals(reply.propertyId())
                 || !StringUtils.hasText(reply.reconfirmationId()) || reply.nights() == null
-                || reply.occurredAt() == null || reply.sentAt() == null) {
+                || reply.occurredAt() == null || reply.sentAt() == null
+                || reply.occurredAt().isAfter(reply.sentAt())) {
             throw invalidReply(Step.API_027, 200);
         }
 

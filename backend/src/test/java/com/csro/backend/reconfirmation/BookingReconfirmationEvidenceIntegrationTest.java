@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -27,10 +28,14 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.test.context.SpringBootContextLoader;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.csro.backend.reconfirmation.BookingReconfirmationEvidenceService.Outcome;
@@ -44,7 +49,7 @@ import com.csro.backend.reconfirmation.BookingReconfirmationResult.SupplierBooki
 
 @EnabledIfEnvironmentVariable(named = "BOOKING_RECONFIRMATION_EVIDENCE_TEST", matches = "true")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@ActiveProfiles("local")
+@ContextConfiguration(loader = BookingReconfirmationEvidenceIntegrationTest.IsolatedDatabaseLoader.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class BookingReconfirmationEvidenceIntegrationTest {
@@ -56,6 +61,38 @@ class BookingReconfirmationEvidenceIntegrationTest {
     @Autowired ReconfirmationBookingRepository bookings;
     @Autowired JdbcClient jdbc;
     @Autowired PlatformTransactionManager transactions;
+
+    public static final class IsolatedDatabaseLoader extends SpringBootContextLoader {
+
+        private static final String ISOLATED_URL =
+                "jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test";
+
+        @Override
+        protected SpringApplication getSpringApplication() {
+            String url = System.getenv("BOOKING_RECONFIRMATION_TEST_DB_URL");
+            String password = System.getenv("BOOKING_RECONFIRMATION_TEST_DB_PASSWORD");
+            if (!ISOLATED_URL.equals(url) || password == null || password.isBlank()) {
+                throw new IllegalStateException("Evidence integration tests require "
+                        + "BOOKING_RECONFIRMATION_TEST_DB_URL=" + ISOLATED_URL
+                        + " and BOOKING_RECONFIRMATION_TEST_DB_PASSWORD");
+            }
+
+            SpringApplication application = super.getSpringApplication();
+            application.addInitializers(context -> {
+                // Use the validated endpoint for both JDBC and Flyway, even when the shell has Spring DB settings.
+                context.getBeanFactory().registerSingleton("dataSource", new DriverManagerDataSource(url, "yb", password));
+                TestPropertyValues.of(Map.of(
+                        "spring.flyway.url", url,
+                        "spring.flyway.user", "yb",
+                        "spring.flyway.password", password,
+                        "spring.flyway.enabled", "true",
+                        "spring.flyway.locations", "classpath:db/migration,classpath:db/local",
+                        "spring.jpa.hibernate.ddl-auto", "none"))
+                        .applyTo(context.getEnvironment());
+            });
+            return application;
+        }
+    }
 
     @BeforeAll
     void seedOnlyIsolatedDb() {
