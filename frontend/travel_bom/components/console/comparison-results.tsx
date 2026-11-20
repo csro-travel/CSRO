@@ -29,7 +29,7 @@ export function ComparisonResults({
         대체 숙소 비교 결과
       </h2>
       <p className="mt-1.5 text-sm text-muted-foreground">
-        자동 검색된 후보를 거리·가격·숙박 조건으로 비교합니다. 실제 예약은 진행되지 않았습니다.
+        시연용 후보를 거리·가격·숙박 조건으로 비교합니다.
       </p>
 
       <dl className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -56,10 +56,10 @@ export function ComparisonResults({
                 총액
               </th>
               <th scope="col" className="px-4 py-3.5 font-bold">
-                재고 확인 상태
+                시연용 재고 상태
               </th>
               <th scope="col" className="rounded-r-lg px-4 py-3.5 text-center font-bold">
-                상세
+                선택
               </th>
             </tr>
           </thead>
@@ -105,7 +105,7 @@ export function ComparisonResults({
                       type="button"
                       onClick={() => onSelect(stay.id)}
                       aria-pressed={selected}
-                      aria-label={`${stay.name} 조건 확인`}
+                      aria-label={`${stay.name} 후보 선택`}
                       className={cn(
                         'inline-flex h-9 items-center rounded-lg border px-4 text-xs font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none',
                         selected
@@ -113,7 +113,7 @@ export function ComparisonResults({
                           : 'bg-background hover:bg-muted',
                       )}
                     >
-                      조건 확인
+                      후보 선택
                     </button>
                   </td>
                 </tr>

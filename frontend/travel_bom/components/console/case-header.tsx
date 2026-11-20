@@ -10,12 +10,12 @@ type CaseHeaderProps = {
 export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps) {
   return (
     <section
-      aria-label="예약 케이스 정보"
+      aria-label="시연용 사건 정보"
       className="flex flex-col gap-5 rounded-2xl border bg-card p-6 md:flex-row md:items-center md:justify-between"
     >
       <div className="min-w-0">
         <h2 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg font-bold">
-          <span>{bookingCase.caseId}</span>
+          <span>시연 사건 {bookingCase.caseId}</span>
           <span aria-hidden="true" className="h-4 w-0.5 bg-foreground" />
           <span>예약번호 {bookingCase.reservationNo}</span>
         </h2>
@@ -52,7 +52,7 @@ export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps
         ) : (
           <Play className="size-5 fill-current" aria-hidden="true" />
         )}
-        {searching ? '탐색 중...' : '대체 숙소 자동 탐색'}
+        {searching ? '탐색 시연 중…' : '대체 숙소 탐색 시연'}
       </button>
     </section>
   )
