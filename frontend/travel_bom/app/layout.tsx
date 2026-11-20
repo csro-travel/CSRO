@@ -10,8 +10,8 @@ const notoSansKr = Noto_Sans_KR({
 })
 
 export const metadata: Metadata = {
-  title: '대체 숙소 자동 탐색 | 여행봄',
-  description: '체실 제공이 불가한 예약 건의 대체 숙소 후보를 자동 탐색하고 비교합니다.',
+  title: '대체 숙소 탐색 시연 | 여행봄',
+  description: '고정된 사례로 대체 숙소 후보 비교와 전달 동작을 시연합니다.',
   generator: 'v0.app',
   icons: {
     icon: [

@@ -37,8 +37,8 @@ export const alternativeStays: AlternativeStay[] = [
     stay: '2026.11.10 ~ 11.11 · 성인 2명',
     distanceKm: 0.8,
     totalPrice: 172000,
-    availability: '예약 가능 조회',
-    checkedAt: '11.09 10:34 기준',
+    availability: '시연용 예약 가능',
+    checkedAt: '시연 기준 11.09 10:34',
   },
   {
     id: 'jeju-hills',
@@ -47,8 +47,8 @@ export const alternativeStays: AlternativeStay[] = [
     stay: '2026.11.10 ~ 11.11 · 성인 2명',
     distanceKm: 1.4,
     totalPrice: 188000,
-    availability: '예약 가능 조회',
-    checkedAt: '11.09 10:35 기준',
+    availability: '시연용 예약 가능',
+    checkedAt: '시연 기준 11.09 10:35',
   },
   {
     id: 'jeju-coast',
@@ -57,8 +57,8 @@ export const alternativeStays: AlternativeStay[] = [
     stay: '2026.11.10 ~ 11.11 · 성인 2명',
     distanceKm: 2.6,
     totalPrice: 220000,
-    availability: '예약 가능 조회',
-    checkedAt: '11.09 10:35 기준',
+    availability: '시연용 예약 가능',
+    checkedAt: '시연 기준 11.09 10:35',
   },
 ]
 

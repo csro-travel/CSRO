@@ -31,12 +31,12 @@ export function SearchStatus({
         </span>
         <div>
           <p className="font-bold">
-            {searching ? '공급사 API 조회 중' : `탐색 완료 · 후보 ${candidateCount}곳`}
+            {searching ? '탐색 시연 중' : `시연용 숙소 후보 ${candidateCount}개 표시`}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {searching
-              ? '3개 공급사에 재고와 요금을 조회하고 있습니다'
-              : `3개 공급사 조회 완료 · 마지막 갱신 ${updatedAt}`}
+              ? '고정 후보를 불러오는 동작을 시연합니다.'
+              : `시연 화면 갱신 ${updatedAt} · 실제 공급사 조회 없음`}
           </p>
         </div>
       </div>
@@ -52,7 +52,7 @@ export function SearchStatus({
           className={cn('size-4 transition-transform', expanded && 'rotate-180')}
           aria-hidden="true"
         />
-        {expanded ? '결과 접기' : '탐색된 숙소 보기'}
+        {expanded ? '결과 접기' : '시연용 후보 보기'}
       </button>
     </section>
   )
