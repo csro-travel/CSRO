@@ -10,7 +10,7 @@
   "model_version": "process-synthetic-lightgbm-0.2-84d386281d22",
   "model_sha256": "84d386281d22f4050cb6a8a02cc03d3bcf09e64194213f613e1069e915d68c88",
   "reference_dataset_config_sha256": "bac079a2c386c7e50ad73e4ff5161af93ccefebdf8898a18041782ba98a30cdb",
-  "status_recorded_at": "2026-11-20, before baseline commit",
+  "status_recorded_at": "2026-11-20, after user Windows XGBoost tests and full comparison succeeded",
   "windows_verification": {
     "evidence_source": "user-provided PowerShell terminal output",
     "evidence_file": "docs/verification/windows-2026-11-20.md",
@@ -22,6 +22,45 @@
     "reference_model_retraining_reproduced": false
   },
   "reference_model_git_sharing": "Complete 8-file bundle; all other generated artifacts remain ignored",
-  "git_provenance_note": "Pre-commit status snapshot; resolve the published source commit with git log. Do not rewrite the original training checkpoint metadata.",
-  "xgboost_comparison_implemented": false
+  "git_provenance_note": "LightGBM baseline b2c05a8 was pushed by the user. This subsequent XGBoost delivery has passed user Windows verification but its publication commit has not yet been observed. Model lineage is identified by recorded source/protocol/artifact hashes; resolve later publication with git log.",
+  "xgboost_comparison_implemented": true,
+  "xgboost_comparison_verification": {
+    "experiment_version": "xgboost-comparison-0.2.0",
+    "cloud_full_comparison_completed": true,
+    "cloud_all_tests_passed": 73,
+    "cloud_all_tests_elapsed_seconds": 6.827,
+    "cloud_skipped_tests": 0,
+    "windows_comparison_training_verified": true,
+    "windows_comparison_tests_verified": true,
+    "original_lightgbm_model_unchanged": true,
+    "original_data_rules_unchanged": true,
+    "baseline_git_commit": "b2c05a86f6af636f8d4f1796feb24670240d5d0f",
+    "independent_new_holdout": false,
+    "automatically_promoted_or_deployed": false,
+    "validation_ap_recommendation": "xgboost",
+    "evidence": "docs/XGBOOST_COMPARISON.md",
+    "windows_initial_tests_passed": 71,
+    "windows_initial_tests_elapsed_seconds": 15.274,
+    "windows_initial_comparison_preflight_error": "Reference exposureRule validation threshold metrics did not reproduce",
+    "numeric_compatibility_fix": "Exact Fraction evaluation; no frozen-threshold or tolerance change",
+    "comparison_source_sha256": "2d4e75b648e965744c80bbdb48797217979c27b60d304cea1b762ae100f57e5c",
+    "windows_compatibility_fix_execution_verified": true,
+    "windows_numerical_diagnostic": {
+      "legacy_rule_score": 0.24981122759678273,
+      "frozen_threshold": 0.2498112275967828,
+      "difference": -5.551115123125783e-17,
+      "evidence": "user-provided Windows Python math output",
+      "cause_confirmed": true
+    },
+    "windows_tests_passed": 73,
+    "windows_tests_elapsed_seconds": 23.237,
+    "windows_reported_comparison_total_seconds": 4.6598440000088885,
+    "windows_selection_frozen_sha256": "b3c0ddeab6ec1f8617bb8336b2e3aa5307aaac3a933f5bb2edfc15ed100d4ba9",
+    "windows_reported_metrics_match_cloud_at_6_decimals": true,
+    "windows_model_sha256_provided": false,
+    "windows_evidence": "docs/verification/xgboost-windows-2026-11-20.md",
+    "cloud_reference_model_version": "process-synthetic-xgboost-compare-0.2-8a42ac7b3cea",
+    "cloud_original_xgboost_checkpoint_byte_identical_after_fix": true,
+    "cloud_all_original_validation_test_topk_metrics_identical_after_fix": true
+  }
 }
