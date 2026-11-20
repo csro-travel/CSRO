@@ -156,7 +156,8 @@ class BookingReconfirmationServiceTest {
                 REPLY.replace("HOTEL-001", "wrong"), REPLY.replace("2026-11-12", "2026-11-11"),
                 REPLY.replace("2026-11-12", "2026-11-13"),
                 REPLY.replaceFirst(",\\s*\\{\"stayDate\":\"2026-11-12\"[^}]*}", ""),
-                REPLY.replace("UNAVAILABLE", "UNRECOGNIZED"));
+                REPLY.replace("UNAVAILABLE", "UNRECOGNIZED"),
+                REPLY.replace("2026-11-09T10:05:00+09:00", "2026-11-09T10:07:00+09:00"));
     }
 
     @Test

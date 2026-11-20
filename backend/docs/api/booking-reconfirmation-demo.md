@@ -41,21 +41,21 @@ if (Get-NetTCPConnection -State Listen -LocalPort 25433 -ErrorAction SilentlyCon
 $demoName = 'csro-reconfirmation-demo-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $env:POSTGRES_PASSWORD = [guid]::NewGuid().ToString('N')
 $demoId = docker run --rm -d --name $demoName --tmpfs /var/lib/postgresql `
-    -p 127.0.0.1:25433:5432 -e POSTGRES_USER=yb -e POSTGRES_DB=yeohaengbom `
+    -p 127.0.0.1:25433:5432 -e POSTGRES_USER=yb -e POSTGRES_DB=yeohaengbom_reconfirmation_test `
     -e POSTGRES_PASSWORD postgres:18.7
 if ($LASTEXITCODE -ne 0 -or -not $demoId) { throw '격리 DB 시작 실패' }
 docker port $demoId 5432/tcp
 if ((docker port $demoId 5432/tcp) -ne '127.0.0.1:25433') { throw '격리 DB 포트 불일치' }
 $ready = $false
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
-    docker exec $demoId pg_isready -h 127.0.0.1 -U yb -d yeohaengbom
+    docker exec $demoId pg_isready -h 127.0.0.1 -U yb -d yeohaengbom_reconfirmation_test
     if ($LASTEXITCODE -eq 0) { $ready = $true; break }
     Start-Sleep -Seconds 1
 }
 if (-not $ready) { throw '격리 DB 준비 실패' }
 
 $env:SPRING_CONFIG_LOCATION = 'optional:file:./__reconfirmation_demo__.properties'
-$env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom'
+$env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test'
 $env:SPRING_DATASOURCE_USERNAME = 'yb'
 $env:SPRING_DATASOURCE_PASSWORD = $env:POSTGRES_PASSWORD
 $env:SPRING_FLYWAY_ENABLED = 'true'
@@ -117,7 +117,7 @@ ORDER BY b.booking_code, c.case_code;
 
 COMMIT;
 '@
-$snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)' -U yb -d yeohaengbom
+$snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)' -U yb -d yeohaengbom_reconfirmation_test
 ```
 
 초기에는 YB-001이 `CONFIRMED`, 3박은 `UNKNOWN / UNCONFIRMED`다. 근거와 사건이 없고 YB-002는 아직 없다.
@@ -125,12 +125,16 @@ $snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)
 ### 4. Spring 서비스 호출과 결과 확인
 
 ```powershell
+$env:BOOKING_RECONFIRMATION_TEST_DB_URL = $env:SPRING_DATASOURCE_URL
+$env:BOOKING_RECONFIRMATION_TEST_DB_PASSWORD = $env:POSTGRES_PASSWORD
 $env:BOOKING_RECONFIRMATION_EVIDENCE_TEST = 'true'
 ./gradlew.bat --no-daemon test --tests '*BookingReconfirmationEvidenceIntegrationTest'
 if ($LASTEXITCODE -ne 0) { throw '재확인 통합 시연 실패' }
 $env:BOOKING_RECONFIRMATION_EVIDENCE_TEST = 'false'
-$snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)' -U yb -d yeohaengbom
+$snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)' -U yb -d yeohaengbom_reconfirmation_test
 ```
+
+쓰기 통합 테스트에는 플래그와 전용 URL·비밀번호가 모두 필요하다. 테스트는 Spring 시작 전에 전용 DB 주소를 확인하고, JDBC와 Flyway를 그 주소에만 연결한다. 누락된 값이나 기본 개발 DB 주소는 즉시 거부된다. 전용 포트와 DB 이름을 가진 새 임시 컨테이너에서 실행한다.
 
 기존 [통합 테스트](../../src/test/java/com/csro/backend/reconfirmation/BookingReconfirmationEvidenceIntegrationTest.java)가 Spring 컨텍스트에서 `BookingReconfirmationEvidenceService.reconfirmAndApply("YB-001", "RECHECK-001")`를 호출한다. 같은 요청을 한 번 더 실행해 근거 ID와 활성 Case를 재사용하는지 검증한다. 이 Java 메서드는 내부 실행 진입점이다. 공개 HTTP 엔드포인트가 없으므로 브라우저에서 사건 생성이나 상담사 목록 조회를 호출할 수 없다. Mock의 Swagger는 외부 회신을 확인하는 별도 화면이다.
 
