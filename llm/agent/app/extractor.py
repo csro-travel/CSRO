@@ -58,11 +58,10 @@ CLAUSE_COMMA = re.compile(r"[,，]\s*")
 STAY_REQUIREMENT = re.compile(
     r"(?:경우|때)(?:에\s*한(?:합니다|해|하여)|에만|만|\s*가능)"
     rf"|취소(?:하면|되면|한다면|된다면)\s*(?:{ROOM}{PROVISION})?가능"
-    r"|(?:취소|객실|공실|빈방|예약|숙박|투숙).*(?:해야|어야|아야|돼야|필요(?:합니다|해요|함|하다|$)|조건입니다)"
+    r"|(?:취소|객실|공실|빈방|예약|숙박|투숙|보증금|입금).*(?:해야|어야|아야|돼야|필요(?:합니다|해요|함|하다|$)|조건입니다)"
 )
-CONDITION_STAY_DATES = re.compile(rf"(?<![\w/.-])(?P<dates>{DATE_LIST})\s*(?:에는|은|는|만|(?=객실|숙박))")
+CONDITION_STAY_DATES = re.compile(rf"(?<![\w/.-])(?P<dates>{DATE_LIST})\s*(?:에는|은|는|만|(?=객실|숙박|안내))")
 CANCELLATION_DEADLINE = re.compile(r"\s*(?:까지|이전|이내)")
-UNNAMED_SUBSET = re.compile(r"(?:일부|특정)\s*(?:숙박일|날짜|일자)")
 UNCONFIRMED_REMAINDER = re.compile(rf"(?:나머지|그\s*외)(?:\s*(?:숙박일|날짜))?(?:는|가)?\s*{UNCERTAIN}")
 
 
@@ -85,16 +84,20 @@ def _clauses(message: str) -> Iterator[re.Match[str] | str | None]:
 
         remaining = sentence["text"].strip()
         while remaining:
-            remaining = CORRECTION_PREFIX.sub("", remaining, count=1)
+            correction = CORRECTION_PREFIX.match(remaining)
+            if correction is not None:
+                remaining = remaining[correction.end():]
+            # Keep an unparsed correction so the preceding claim can be withheld.
+            unparsed = remaining if correction is not None else None
             prefix = CONDITION_PREFIX.match(remaining)
             if prefix is not None:
                 condition, remaining = _split_condition(remaining[prefix.end():])
-                yield condition if STAY_REQUIREMENT.search(condition) else None
+                yield condition if correction is not None or STAY_REQUIREMENT.search(condition) else None
                 continue
 
             statement = STATEMENT.match(remaining)
             if statement is None:
-                yield None
+                yield unparsed
                 break
             tail = remaining[statement.end():].lstrip()
             if not tail:
@@ -103,7 +106,7 @@ def _clauses(message: str) -> Iterator[re.Match[str] | str | None]:
 
             # Separate known clauses without treating an arbitrary suffix as a complete claim.
             if not (tail.startswith((",", "，")) or statement[0].endswith(("고", "며", "지만"))):
-                yield None
+                yield unparsed
                 break
             remaining = tail[1:].lstrip() if tail.startswith((",", "，")) else tail
             if UNCONFIRMED_REMAINDER.fullmatch(remaining):
@@ -113,7 +116,7 @@ def _clauses(message: str) -> Iterator[re.Match[str] | str | None]:
             if not (
                 STATEMENT.match(remaining) or CONDITION_PREFIX.match(remaining) or CORRECTION_PREFIX.match(remaining)
             ):
-                yield None
+                yield unparsed
                 break
             yield statement
 
@@ -170,7 +173,7 @@ def _condition_dates(
         return
 
     # A deadline describes when the condition must be met, not which night it qualifies.
-    if not UNNAMED_SUBSET.search(text) and all(
+    if all(
         CANCELLATION_DEADLINE.match(text, reference.end()) for reference in DATE_TOKEN.finditer(text)
     ):
         yield from previous_claim_dates

@@ -160,6 +160,45 @@ class ExtractionHttpTest(unittest.TestCase):
             [],
         )
 
+    def test_withdrawn_notice_leaves_previous_dates_unresolved(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 정정: 방금 안내는 취소합니다.",
+            [],
+        )
+
+    def test_deposit_condition_leaves_previous_availability_unresolved(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 단, 보증금 입금이 확인되어야 합니다.",
+            [],
+        )
+
+    def test_deposit_condition_keeps_the_next_date_unavailability(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 단, 보증금 입금이 확인되어야 합니다. "
+            "11월 11일은 객실 제공이 불가능합니다.",
+            [("2026-11-11", "UNAVAILABLE")],
+        )
+
+    def test_unrelated_cancellation_fee_keeps_unavailability(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 불가능합니다. 취소 수수료는 별도 안내합니다.",
+            [("2026-11-10", "UNAVAILABLE")],
+        )
+
+    def test_dated_withdrawal_keeps_an_unrelated_date(self) -> None:
+        self.assert_extraction(
+            "11월 10일은 객실 제공이 가능합니다. 11월 11일은 객실 제공이 불가능합니다. "
+            "정정: 11월 10일 안내는 취소합니다.",
+            [("2026-11-11", "UNAVAILABLE")],
+        )
+
+    def test_unspecified_subset_keeps_other_statements_intact(self) -> None:
+        self.assert_extraction(
+            "11월 12일은 객실 제공이 불가능합니다. 11월 10일과 11일은 객실 제공이 가능합니다. "
+            "단, 일부 숙박일은 재확인이 필요합니다.",
+            [("2026-11-12", "UNAVAILABLE")],
+        )
+
     def test_undated_condition_qualifies_the_previous_claim(self) -> None:
         self.assert_extraction(
             "11월 10일은 객실 제공이 가능합니다. 단, 기존 고객이 취소해야 합니다.",
