@@ -1,0 +1,27 @@
+{
+  "offline_implementation_complete": true,
+  "cloud_tests_passed": 62,
+  "full_generation_complete": true,
+  "model_experiment_complete": true,
+  "windows_runtime_verified": true,
+  "windows_cp313_wheels_available": true,
+  "http_api023_implemented": false,
+  "business_db_modified": false,
+  "model_version": "process-synthetic-lightgbm-0.2-84d386281d22",
+  "model_sha256": "84d386281d22f4050cb6a8a02cc03d3bcf09e64194213f613e1069e915d68c88",
+  "reference_dataset_config_sha256": "bac079a2c386c7e50ad73e4ff5161af93ccefebdf8898a18041782ba98a30cdb",
+  "status_recorded_at": "2026-11-20, before baseline commit",
+  "windows_verification": {
+    "evidence_source": "user-provided PowerShell terminal output",
+    "evidence_file": "docs/verification/windows-2026-11-20.md",
+    "tests_passed": 62,
+    "tests_elapsed_seconds": 15.287,
+    "reference_model_checksums_passed": true,
+    "reference_model_cli_inference_passed": true,
+    "full_100_hotel_generation_reproduced": false,
+    "reference_model_retraining_reproduced": false
+  },
+  "reference_model_git_sharing": "Complete 8-file bundle; all other generated artifacts remain ignored",
+  "git_provenance_note": "Pre-commit status snapshot; resolve the published source commit with git log. Do not rewrite the original training checkpoint metadata.",
+  "xgboost_comparison_implemented": false
+}

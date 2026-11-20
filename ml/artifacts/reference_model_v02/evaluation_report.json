@@ -1,0 +1,955 @@
+{
+  "auditSupplement": "audit_slices.json",
+  "dataSource": "PROCESS_SIMULATED",
+  "generalization": "future dates at the same simulated hotels; not unseen-hotel validation",
+  "interpretation": "Observed labels from simulated process under one fixed recovery policy; not real-world accuracy, calibrated failure probabilities or causal AI benefit.",
+  "realWorldPerformanceValidated": false,
+  "rulesVersion": "0.2.0",
+  "segmentLimitations": "Private audit joins are supplied in audit_slices.json after checkpoint/threshold freeze. They define diagnostic groups only and do not supply missing labels.",
+  "selection": {
+    "bestIteration": 43,
+    "earlyStoppingMetric": "average_precision",
+    "minChildSamples": 30,
+    "numLeaves": 7,
+    "validationAveragePrecision": 0.4477241845340288
+  },
+  "selectionFrozenBeforeTestSha256": "b9f6af5f357245c5068d64a9aadd9ce316d146444a1c948ca565fd648e021244",
+  "splitAuditIndependentCheck": {
+    "test": {
+      "calendarPanelRows": 6100,
+      "knownIncluded": 5204,
+      "maturityPurged": 0,
+      "notEligibleExcluded": 95,
+      "unknownExcluded": 801
+    },
+    "train": {
+      "calendarPanelRows": 18300,
+      "knownIncluded": 15246,
+      "maturityPurged": 342,
+      "notEligibleExcluded": 227,
+      "unknownExcluded": 2485
+    },
+    "validation": {
+      "calendarPanelRows": 3100,
+      "knownIncluded": 2341,
+      "maturityPurged": 339,
+      "notEligibleExcluded": 41,
+      "unknownExcluded": 379
+    }
+  },
+  "test": {
+    "exposureRule": {
+      "byCohortSize": {
+        "1": {
+          "coverage": {
+            "calendarRows": 275,
+            "eligibleRows": 275,
+            "knownRows": 264,
+            "labelCoverage": 0.96,
+            "notEligibleRows": 0,
+            "unknownRows": 11
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 0,
+            "precisionLowerBound": 0.0,
+            "precisionUpperBound": 0.0,
+            "selectedKnownRows": 1,
+            "selectedRows": 1,
+            "selectedUnknownRows": 0
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": null,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 0,
+              "fp": 0,
+              "tn": 264,
+              "tp": 0
+            },
+            "f1": null,
+            "knownPositives": 0,
+            "knownRows": 264,
+            "positiveRate": 0.0,
+            "precision": null,
+            "recall": null,
+            "rocAuc": null,
+            "threshold": 0.2498112275967828,
+            "undefinedReasons": {
+              "averagePrecision": "requires both observed classes for discrimination assessment",
+              "f1": "no observed or predicted positives",
+              "precision": "no predicted positives",
+              "recall": "no observed positive targets",
+              "rocAuc": "requires both observed classes"
+            }
+          }
+        },
+        "2-4": {
+          "coverage": {
+            "calendarRows": 2020,
+            "eligibleRows": 2020,
+            "knownRows": 1867,
+            "labelCoverage": 0.9242574257425743,
+            "notEligibleRows": 0,
+            "unknownRows": 153
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 1,
+            "precisionLowerBound": 0.011764705882352941,
+            "precisionUpperBound": 0.35294117647058826,
+            "selectedKnownRows": 56,
+            "selectedRows": 85,
+            "selectedUnknownRows": 29
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.03770014556040757,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 2,
+              "fp": 0,
+              "tn": 1865,
+              "tp": 0
+            },
+            "f1": 0.0,
+            "knownPositives": 2,
+            "knownRows": 1867,
+            "positiveRate": 0.0010712372790573112,
+            "precision": null,
+            "recall": 0.0,
+            "rocAuc": 0.9353887399463807,
+            "threshold": 0.2498112275967828,
+            "undefinedReasons": {
+              "precision": "no predicted positives"
+            }
+          }
+        },
+        "5+": {
+          "coverage": {
+            "calendarRows": 3710,
+            "eligibleRows": 3710,
+            "knownRows": 3073,
+            "labelCoverage": 0.8283018867924529,
+            "notEligibleRows": 0,
+            "unknownRows": 637
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 54,
+            "precisionLowerBound": 0.10305343511450382,
+            "precisionUpperBound": 0.3969465648854962,
+            "selectedKnownRows": 370,
+            "selectedRows": 524,
+            "selectedUnknownRows": 154
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.4146612408958721,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 67,
+              "fp": 5,
+              "tn": 2986,
+              "tp": 15
+            },
+            "f1": 0.29411764705882354,
+            "knownPositives": 82,
+            "knownRows": 3073,
+            "positiveRate": 0.026684022128213473,
+            "precision": 0.75,
+            "recall": 0.18292682926829268,
+            "rocAuc": 0.8879015094062676,
+            "threshold": 0.2498112275967828,
+            "undefinedReasons": {}
+          }
+        }
+      },
+      "byMonth": {
+        "2025-11": {
+          "coverage": {
+            "calendarRows": 2956,
+            "eligibleRows": 2956,
+            "knownRows": 2583,
+            "labelCoverage": 0.8738159675236806,
+            "notEligibleRows": 0,
+            "unknownRows": 373
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.4021131786416663,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 29,
+              "fp": 4,
+              "tn": 2541,
+              "tp": 9
+            },
+            "f1": 0.35294117647058826,
+            "knownPositives": 38,
+            "knownRows": 2583,
+            "positiveRate": 0.014711575687185443,
+            "precision": 0.6923076923076923,
+            "recall": 0.23684210526315788,
+            "rocAuc": 0.9096784200186123,
+            "threshold": 0.2498112275967828,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 30,
+            "eligibleKnownRows": 2583,
+            "eligibleLabelCoverage": 0.8738159675236806,
+            "eligibleRows": 2956,
+            "knownPositiveRecall": 0.6052631578947368,
+            "knownPrecision": 0.10952380952380952,
+            "precisionLowerBound": 0.07666666666666666,
+            "precisionUpperBound": 0.37666666666666665,
+            "selectedKnownRows": 210,
+            "selectedKnownTruePositives": 23,
+            "selectedLabelCoverage": 0.7,
+            "selectedRows": 300,
+            "selectedUnknownRows": 90,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        },
+        "2025-12": {
+          "coverage": {
+            "calendarRows": 3049,
+            "eligibleRows": 3049,
+            "knownRows": 2621,
+            "labelCoverage": 0.8596261069203017,
+            "notEligibleRows": 0,
+            "unknownRows": 428
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.4213956677544572,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 40,
+              "fp": 1,
+              "tn": 2574,
+              "tp": 6
+            },
+            "f1": 0.22641509433962265,
+            "knownPositives": 46,
+            "knownRows": 2621,
+            "positiveRate": 0.01755055322396032,
+            "precision": 0.8571428571428571,
+            "recall": 0.13043478260869565,
+            "rocAuc": 0.9272393414943014,
+            "threshold": 0.2498112275967828,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 31,
+            "eligibleKnownRows": 2621,
+            "eligibleLabelCoverage": 0.8596261069203017,
+            "eligibleRows": 3049,
+            "knownPositiveRecall": 0.6956521739130435,
+            "knownPrecision": 0.14746543778801843,
+            "precisionLowerBound": 0.1032258064516129,
+            "precisionUpperBound": 0.4032258064516129,
+            "selectedKnownRows": 217,
+            "selectedKnownTruePositives": 32,
+            "selectedLabelCoverage": 0.7,
+            "selectedRows": 310,
+            "selectedUnknownRows": 93,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        }
+      },
+      "knownLabelMetrics": {
+        "averagePrecision": 0.3993395053696923,
+        "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+        "confusionMatrix": {
+          "fn": 69,
+          "fp": 5,
+          "tn": 5115,
+          "tp": 15
+        },
+        "f1": 0.28846153846153844,
+        "knownPositives": 84,
+        "knownRows": 5204,
+        "positiveRate": 0.01614142966948501,
+        "precision": 0.75,
+        "recall": 0.17857142857142858,
+        "rocAuc": 0.9180210658482143,
+        "threshold": 0.2498112275967828,
+        "undefinedReasons": {}
+      },
+      "topK": {
+        "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+        "dailyBudgetK": 10,
+        "daysWithEligibleQueue": 61,
+        "eligibleKnownRows": 5204,
+        "eligibleLabelCoverage": 0.8666111573688593,
+        "eligibleRows": 6005,
+        "knownPositiveRecall": 0.6547619047619048,
+        "knownPrecision": 0.1288056206088993,
+        "precisionLowerBound": 0.09016393442622951,
+        "precisionUpperBound": 0.3901639344262295,
+        "selectedKnownRows": 427,
+        "selectedKnownTruePositives": 55,
+        "selectedLabelCoverage": 0.7,
+        "selectedRows": 610,
+        "selectedUnknownRows": 183,
+        "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+      }
+    },
+    "lightgbm": {
+      "byCohortSize": {
+        "1": {
+          "coverage": {
+            "calendarRows": 275,
+            "eligibleRows": 275,
+            "knownRows": 264,
+            "labelCoverage": 0.96,
+            "notEligibleRows": 0,
+            "unknownRows": 11
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 0,
+            "precisionLowerBound": null,
+            "precisionUpperBound": null,
+            "selectedKnownRows": 0,
+            "selectedRows": 0,
+            "selectedUnknownRows": 0
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": null,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 0,
+              "fp": 0,
+              "tn": 264,
+              "tp": 0
+            },
+            "f1": null,
+            "knownPositives": 0,
+            "knownRows": 264,
+            "positiveRate": 0.0,
+            "precision": null,
+            "recall": null,
+            "rocAuc": null,
+            "threshold": 0.22344968880463367,
+            "undefinedReasons": {
+              "averagePrecision": "requires both observed classes for discrimination assessment",
+              "f1": "no observed or predicted positives",
+              "precision": "no predicted positives",
+              "recall": "no observed positive targets",
+              "rocAuc": "requires both observed classes"
+            }
+          }
+        },
+        "2-4": {
+          "coverage": {
+            "calendarRows": 2020,
+            "eligibleRows": 2020,
+            "knownRows": 1867,
+            "labelCoverage": 0.9242574257425743,
+            "notEligibleRows": 0,
+            "unknownRows": 153
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 2,
+            "precisionLowerBound": 0.0425531914893617,
+            "precisionUpperBound": 0.3404255319148936,
+            "selectedKnownRows": 33,
+            "selectedRows": 47,
+            "selectedUnknownRows": 14
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.75,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 2,
+              "fp": 0,
+              "tn": 1865,
+              "tp": 0
+            },
+            "f1": 0.0,
+            "knownPositives": 2,
+            "knownRows": 1867,
+            "positiveRate": 0.0010712372790573112,
+            "precision": null,
+            "recall": 0.0,
+            "rocAuc": 0.9994638069705095,
+            "threshold": 0.22344968880463367,
+            "undefinedReasons": {
+              "precision": "no predicted positives"
+            }
+          }
+        },
+        "5+": {
+          "coverage": {
+            "calendarRows": 3710,
+            "eligibleRows": 3710,
+            "knownRows": 3073,
+            "labelCoverage": 0.8283018867924529,
+            "notEligibleRows": 0,
+            "unknownRows": 637
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 59,
+            "precisionLowerBound": 0.10479573712255773,
+            "precisionUpperBound": 0.35346358792184723,
+            "selectedKnownRows": 423,
+            "selectedRows": 563,
+            "selectedUnknownRows": 140
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.46029083417891214,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 56,
+              "fp": 10,
+              "tn": 2981,
+              "tp": 26
+            },
+            "f1": 0.4406779661016949,
+            "knownPositives": 82,
+            "knownRows": 3073,
+            "positiveRate": 0.026684022128213473,
+            "precision": 0.7222222222222222,
+            "recall": 0.3170731707317073,
+            "rocAuc": 0.8926454159225644,
+            "threshold": 0.22344968880463367,
+            "undefinedReasons": {}
+          }
+        }
+      },
+      "byMonth": {
+        "2025-11": {
+          "coverage": {
+            "calendarRows": 2956,
+            "eligibleRows": 2956,
+            "knownRows": 2583,
+            "labelCoverage": 0.8738159675236806,
+            "notEligibleRows": 0,
+            "unknownRows": 373
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.45569016725948985,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 26,
+              "fp": 6,
+              "tn": 2539,
+              "tp": 12
+            },
+            "f1": 0.42857142857142855,
+            "knownPositives": 38,
+            "knownRows": 2583,
+            "positiveRate": 0.014711575687185443,
+            "precision": 0.6666666666666666,
+            "recall": 0.3157894736842105,
+            "rocAuc": 0.939727018922552,
+            "threshold": 0.22344968880463367,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 30,
+            "eligibleKnownRows": 2583,
+            "eligibleLabelCoverage": 0.8738159675236806,
+            "eligibleRows": 2956,
+            "knownPositiveRecall": 0.7368421052631579,
+            "knownPrecision": 0.125,
+            "precisionLowerBound": 0.09333333333333334,
+            "precisionUpperBound": 0.3466666666666667,
+            "selectedKnownRows": 224,
+            "selectedKnownTruePositives": 28,
+            "selectedLabelCoverage": 0.7466666666666667,
+            "selectedRows": 300,
+            "selectedUnknownRows": 76,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        },
+        "2025-12": {
+          "coverage": {
+            "calendarRows": 3049,
+            "eligibleRows": 3049,
+            "knownRows": 2621,
+            "labelCoverage": 0.8596261069203017,
+            "notEligibleRows": 0,
+            "unknownRows": 428
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.4614303872745553,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 32,
+              "fp": 4,
+              "tn": 2571,
+              "tp": 14
+            },
+            "f1": 0.4375,
+            "knownPositives": 46,
+            "knownRows": 2621,
+            "positiveRate": 0.01755055322396032,
+            "precision": 0.7777777777777778,
+            "recall": 0.30434782608695654,
+            "rocAuc": 0.9199957788096242,
+            "threshold": 0.22344968880463367,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 31,
+            "eligibleKnownRows": 2621,
+            "eligibleLabelCoverage": 0.8596261069203017,
+            "eligibleRows": 3049,
+            "knownPositiveRecall": 0.717391304347826,
+            "knownPrecision": 0.14224137931034483,
+            "precisionLowerBound": 0.1064516129032258,
+            "precisionUpperBound": 0.3580645161290323,
+            "selectedKnownRows": 232,
+            "selectedKnownTruePositives": 33,
+            "selectedLabelCoverage": 0.7483870967741936,
+            "selectedRows": 310,
+            "selectedUnknownRows": 78,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        }
+      },
+      "knownLabelMetrics": {
+        "averagePrecision": 0.4549613688644131,
+        "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+        "confusionMatrix": {
+          "fn": 58,
+          "fp": 10,
+          "tn": 5110,
+          "tp": 26
+        },
+        "f1": 0.43333333333333335,
+        "knownPositives": 84,
+        "knownRows": 5204,
+        "positiveRate": 0.01614142966948501,
+        "precision": 0.7222222222222222,
+        "recall": 0.30952380952380953,
+        "rocAuc": 0.9281901041666667,
+        "threshold": 0.22344968880463367,
+        "undefinedReasons": {}
+      },
+      "topK": {
+        "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+        "dailyBudgetK": 10,
+        "daysWithEligibleQueue": 61,
+        "eligibleKnownRows": 5204,
+        "eligibleLabelCoverage": 0.8666111573688593,
+        "eligibleRows": 6005,
+        "knownPositiveRecall": 0.7261904761904762,
+        "knownPrecision": 0.1337719298245614,
+        "precisionLowerBound": 0.1,
+        "precisionUpperBound": 0.3524590163934426,
+        "selectedKnownRows": 456,
+        "selectedKnownTruePositives": 61,
+        "selectedLabelCoverage": 0.7475409836065574,
+        "selectedRows": 610,
+        "selectedUnknownRows": 154,
+        "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+      }
+    },
+    "pastRateReference": {
+      "byCohortSize": {
+        "1": {
+          "coverage": {
+            "calendarRows": 275,
+            "eligibleRows": 275,
+            "knownRows": 264,
+            "labelCoverage": 0.96,
+            "notEligibleRows": 0,
+            "unknownRows": 11
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 0,
+            "precisionLowerBound": 0.0,
+            "precisionUpperBound": 0.0,
+            "selectedKnownRows": 26,
+            "selectedRows": 26,
+            "selectedUnknownRows": 0
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": null,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 0,
+              "fp": 1,
+              "tn": 263,
+              "tp": 0
+            },
+            "f1": 0.0,
+            "knownPositives": 0,
+            "knownRows": 264,
+            "positiveRate": 0.0,
+            "precision": 0.0,
+            "recall": null,
+            "rocAuc": null,
+            "threshold": 0.023809523809523808,
+            "undefinedReasons": {
+              "averagePrecision": "requires both observed classes for discrimination assessment",
+              "recall": "no observed positive targets",
+              "rocAuc": "requires both observed classes"
+            }
+          }
+        },
+        "2-4": {
+          "coverage": {
+            "calendarRows": 2020,
+            "eligibleRows": 2020,
+            "knownRows": 1867,
+            "labelCoverage": 0.9242574257425743,
+            "notEligibleRows": 0,
+            "unknownRows": 153
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 1,
+            "precisionLowerBound": 0.005128205128205128,
+            "precisionUpperBound": 0.2153846153846154,
+            "selectedKnownRows": 154,
+            "selectedRows": 195,
+            "selectedUnknownRows": 41
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.021911734378222317,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 1,
+              "fp": 30,
+              "tn": 1835,
+              "tp": 1
+            },
+            "f1": 0.06060606060606061,
+            "knownPositives": 2,
+            "knownRows": 1867,
+            "positiveRate": 0.0010712372790573112,
+            "precision": 0.03225806451612903,
+            "recall": 0.5,
+            "rocAuc": 0.8942359249329759,
+            "threshold": 0.023809523809523808,
+            "undefinedReasons": {}
+          }
+        },
+        "5+": {
+          "coverage": {
+            "calendarRows": 3710,
+            "eligibleRows": 3710,
+            "knownRows": 3073,
+            "labelCoverage": 0.8283018867924529,
+            "notEligibleRows": 0,
+            "unknownRows": 637
+          },
+          "globalQueueSelections": {
+            "knownTruePositives": 44,
+            "precisionLowerBound": 0.11311053984575835,
+            "precisionUpperBound": 0.42159383033419023,
+            "selectedKnownRows": 269,
+            "selectedRows": 389,
+            "selectedUnknownRows": 120
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.25550238692090593,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 61,
+              "fp": 32,
+              "tn": 2959,
+              "tp": 21
+            },
+            "f1": 0.3111111111111111,
+            "knownPositives": 82,
+            "knownRows": 3073,
+            "positiveRate": 0.026684022128213473,
+            "precision": 0.39622641509433965,
+            "recall": 0.25609756097560976,
+            "rocAuc": 0.8467964870220417,
+            "threshold": 0.023809523809523808,
+            "undefinedReasons": {}
+          }
+        }
+      },
+      "byMonth": {
+        "2025-11": {
+          "coverage": {
+            "calendarRows": 2956,
+            "eligibleRows": 2956,
+            "knownRows": 2583,
+            "labelCoverage": 0.8738159675236806,
+            "notEligibleRows": 0,
+            "unknownRows": 373
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.15552118156339984,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 25,
+              "fp": 35,
+              "tn": 2510,
+              "tp": 13
+            },
+            "f1": 0.3023255813953488,
+            "knownPositives": 38,
+            "knownRows": 2583,
+            "positiveRate": 0.014711575687185443,
+            "precision": 0.2708333333333333,
+            "recall": 0.34210526315789475,
+            "rocAuc": 0.8006100713473271,
+            "threshold": 0.023809523809523808,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 30,
+            "eligibleKnownRows": 2583,
+            "eligibleLabelCoverage": 0.8738159675236806,
+            "eligibleRows": 2956,
+            "knownPositiveRecall": 0.5263157894736842,
+            "knownPrecision": 0.09174311926605505,
+            "precisionLowerBound": 0.06666666666666667,
+            "precisionUpperBound": 0.34,
+            "selectedKnownRows": 218,
+            "selectedKnownTruePositives": 20,
+            "selectedLabelCoverage": 0.7266666666666667,
+            "selectedRows": 300,
+            "selectedUnknownRows": 82,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        },
+        "2025-12": {
+          "coverage": {
+            "calendarRows": 3049,
+            "eligibleRows": 3049,
+            "knownRows": 2621,
+            "labelCoverage": 0.8596261069203017,
+            "notEligibleRows": 0,
+            "unknownRows": 428
+          },
+          "knownLabelMetrics": {
+            "averagePrecision": 0.1689632315108161,
+            "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+            "confusionMatrix": {
+              "fn": 37,
+              "fp": 28,
+              "tn": 2547,
+              "tp": 9
+            },
+            "f1": 0.21686746987951808,
+            "knownPositives": 46,
+            "knownRows": 2621,
+            "positiveRate": 0.01755055322396032,
+            "precision": 0.24324324324324326,
+            "recall": 0.1956521739130435,
+            "rocAuc": 0.8496285352469395,
+            "threshold": 0.023809523809523808,
+            "undefinedReasons": {}
+          },
+          "topK": {
+            "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+            "dailyBudgetK": 10,
+            "daysWithEligibleQueue": 31,
+            "eligibleKnownRows": 2621,
+            "eligibleLabelCoverage": 0.8596261069203017,
+            "eligibleRows": 3049,
+            "knownPositiveRecall": 0.5434782608695652,
+            "knownPrecision": 0.10822510822510822,
+            "precisionLowerBound": 0.08064516129032258,
+            "precisionUpperBound": 0.33548387096774196,
+            "selectedKnownRows": 231,
+            "selectedKnownTruePositives": 25,
+            "selectedLabelCoverage": 0.7451612903225806,
+            "selectedRows": 310,
+            "selectedUnknownRows": 79,
+            "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+          }
+        }
+      },
+      "knownLabelMetrics": {
+        "averagePrecision": 0.1492478432294398,
+        "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+        "confusionMatrix": {
+          "fn": 62,
+          "fp": 63,
+          "tn": 5057,
+          "tp": 22
+        },
+        "f1": 0.2603550295857988,
+        "knownPositives": 84,
+        "knownRows": 5204,
+        "positiveRate": 0.01614142966948501,
+        "precision": 0.25882352941176473,
+        "recall": 0.2619047619047619,
+        "rocAuc": 0.8255429222470239,
+        "threshold": 0.023809523809523808,
+        "undefinedReasons": {}
+      },
+      "topK": {
+        "boundMeaning": "Unknown selected outcomes may all be negative (lower) or positive (upper); not confidence intervals",
+        "dailyBudgetK": 10,
+        "daysWithEligibleQueue": 61,
+        "eligibleKnownRows": 5204,
+        "eligibleLabelCoverage": 0.8666111573688593,
+        "eligibleRows": 6005,
+        "knownPositiveRecall": 0.5357142857142857,
+        "knownPrecision": 0.10022271714922049,
+        "precisionLowerBound": 0.07377049180327869,
+        "precisionUpperBound": 0.3377049180327869,
+        "selectedKnownRows": 449,
+        "selectedKnownTruePositives": 45,
+        "selectedLabelCoverage": 0.7360655737704918,
+        "selectedRows": 610,
+        "selectedUnknownRows": 161,
+        "selectionPolicy": "Rank all eligible including UNKNOWN; score descending then hotelId ascending"
+      }
+    }
+  },
+  "testEvaluatedEligibleCoverage": {
+    "calendarRows": 6005,
+    "eligibleRows": 6005,
+    "knownRows": 5204,
+    "labelCoverage": 0.8666111573688593,
+    "notEligibleRows": 0,
+    "unknownRows": 801
+  },
+  "testPanelCoverage": {
+    "calendarRows": 6100,
+    "eligibleRows": 6005,
+    "knownRows": 5204,
+    "labelCoverage": 0.8666111573688593,
+    "notEligibleRows": 95,
+    "unknownRows": 801
+  },
+  "thresholdMeaning": "Evaluation thresholds, not Spring operational policy",
+  "thresholdsSelectedOnValidation": {
+    "exposureRule": {
+      "reason": "validation F1; tie precision, threshold",
+      "threshold": 0.2498112275967828,
+      "validationF1": 0.38095238095238093,
+      "validationPrecision": 0.6153846153846154
+    },
+    "lightgbm": {
+      "reason": "validation F1; tie precision, threshold",
+      "threshold": 0.22344968880463367,
+      "validationF1": 0.46808510638297873,
+      "validationPrecision": 0.6111111111111112
+    },
+    "pastRateReference": {
+      "reason": "validation F1; tie precision, threshold",
+      "threshold": 0.023809523809523808,
+      "validationF1": 0.21153846153846154,
+      "validationPrecision": 0.14666666666666667
+    }
+  },
+  "validation": {
+    "exposureRule": {
+      "averagePrecision": 0.3293694019987608,
+      "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+      "confusionMatrix": {
+        "fn": 21,
+        "fp": 5,
+        "tn": 2307,
+        "tp": 8
+      },
+      "f1": 0.38095238095238093,
+      "knownPositives": 29,
+      "knownRows": 2341,
+      "positiveRate": 0.012387868432293891,
+      "precision": 0.6153846153846154,
+      "recall": 0.27586206896551724,
+      "rocAuc": 0.8947545042357714,
+      "threshold": 0.2498112275967828,
+      "undefinedReasons": {}
+    },
+    "lightgbm": {
+      "averagePrecision": 0.4477241845340288,
+      "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+      "confusionMatrix": {
+        "fn": 18,
+        "fp": 7,
+        "tn": 2305,
+        "tp": 11
+      },
+      "f1": 0.46808510638297873,
+      "knownPositives": 29,
+      "knownRows": 2341,
+      "positiveRate": 0.012387868432293891,
+      "precision": 0.6111111111111112,
+      "recall": 0.3793103448275862,
+      "rocAuc": 0.9317280157499105,
+      "threshold": 0.22344968880463367,
+      "undefinedReasons": {}
+    },
+    "pastRateReference": {
+      "averagePrecision": 0.0916671440923655,
+      "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+      "confusionMatrix": {
+        "fn": 18,
+        "fp": 64,
+        "tn": 2248,
+        "tp": 11
+      },
+      "f1": 0.21153846153846154,
+      "knownPositives": 29,
+      "knownRows": 2341,
+      "positiveRate": 0.012387868432293891,
+      "precision": 0.14666666666666667,
+      "recall": 0.3793103448275862,
+      "rocAuc": 0.7882487173368333,
+      "threshold": 0.023809523809523808,
+      "undefinedReasons": {}
+    }
+  },
+  "validationImportanceCaveat": "Marginal permutation can break correlated feature structure; no importance rank is enforced.",
+  "validationPastRateAblation": {
+    "bestIteration": 177,
+    "differenceFullMinusAblated": 0.010412514956172514,
+    "fullModelValidationAveragePrecision": 0.4477241845340288,
+    "parameters": "same selected leaves/minimum child; train only; validation early stopping",
+    "removedFeature": "pastFailureRate90d",
+    "validationAveragePrecision": 0.4373116695778563
+  },
+  "validationPermutationImportance": [
+    {
+      "feature": "pastFailureRate90d",
+      "meanAveragePrecisionDrop": 0.25602648680175966,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.02389340435860088
+    },
+    {
+      "feature": "targetConfirmedBookingCount",
+      "meanAveragePrecisionDrop": 0.29536889954540435,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.030371734933912008
+    },
+    {
+      "feature": "bookingVolumeGrowth7d",
+      "meanAveragePrecisionDrop": -0.0004609103816754612,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.000755944490626564
+    },
+    {
+      "feature": "reconfirmationOverdueRate7d",
+      "meanAveragePrecisionDrop": 0.14073603625652104,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.030877557877782867
+    },
+    {
+      "feature": "inventoryUnavailableRate7d",
+      "meanAveragePrecisionDrop": 0.12368356668352778,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.01659881687667655
+    },
+    {
+      "feature": "isPeakDay",
+      "meanAveragePrecisionDrop": 0.01380239115528058,
+      "reason": null,
+      "repeats": 5,
+      "stdAveragePrecisionDrop": 0.012443019410503941
+    }
+  ]
+}

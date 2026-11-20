@@ -2,6 +2,8 @@
 
 여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](backend/docs/api/README.md)
 
+독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. 가상 데이터 실험과 CLI 범위이며, API-023 HTTP 서버·Spring 연동은 별도 작업이다.
+
 ## 로컬 환경
 
 아래는 Windows PowerShell 기준 절차입니다. 상태와 응답은 예상 결과입니다.
@@ -104,7 +106,7 @@ docker compose down
 
 ## Codex 문서 확인
 
-저장소 루트를 작업 디렉터리로 새 Codex 세션을 연다. Codex는 세션 시작 시 사용자 전역 지침과 저장소 루트부터 작업 디렉터리까지의 지침을 탐색한다. 이 저장소의 기본 지침은 루트 [AGENTS.md](AGENTS.md)이며 하위 지침 파일은 없다. 같은 디렉터리에 `AGENTS.override.md`가 있으면 우선한다. [Codex 공식 탐색 규칙](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+저장소 루트를 작업 디렉터리로 새 Codex 세션을 연다. Codex는 세션 시작 시 사용자 전역 지침과 저장소 루트부터 작업 디렉터리까지의 지침을 탐색한다. 이 저장소의 기본 지침은 루트 [AGENTS.md](AGENTS.md)이며 ML 하위 작업에는 [ml/AGENTS.md](ml/AGENTS.md)도 적용한다. 같은 디렉터리에 `AGENTS.override.md`가 있으면 우선한다. [Codex 공식 탐색 규칙](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 
 [업무](docs/business.md)·[API](docs/api.md)·[DB](docs/db.md) 문서는 일반 Markdown이다. Codex는 작업에 해당하는 문서와 원본을 `AGENTS.md`의 표에 따라 명시적으로 읽는다.
 

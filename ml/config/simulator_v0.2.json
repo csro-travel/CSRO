@@ -1,0 +1,359 @@
+{
+  "rules_version": "0.2.0",
+  "feature_set_version": "risk-features-0.2",
+  "status": "OWNER_DESIGN_PROPOSAL_NOT_TEAM_APPROVED",
+  "is_synthetic": true,
+  "seed": 42,
+  "timezone": "Asia/Seoul",
+  "as_of": {
+    "days_before_check_in": 1,
+    "local_time": "09:00:00"
+  },
+  "calendar_panel": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "simulation": {
+    "start": "2024-09-01T00:00:00+09:00",
+    "end": "2026-01-12T00:00:00+09:00",
+    "max_stay_nights": 4,
+    "max_reporting_delay_days": 7,
+    "hotel_count": 100,
+    "numeric_parameters_are": "hypothetical engineering assumptions; not real estimated statistics",
+    "config_frozen_for_final_test": false,
+    "hotel_room_capacity_inclusive": [
+      12,
+      40
+    ],
+    "stay_nights": {
+      "values": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "probabilities": [
+        0.4,
+        0.35,
+        0.2,
+        0.05
+      ]
+    },
+    "rooms_per_booking": 1,
+    "adults_per_booking": 2,
+    "room_type": "STANDARD",
+    "currency": "KRW",
+    "booking_lead_days": {
+      "values": [
+        1,
+        3,
+        7,
+        14,
+        30,
+        60,
+        90
+      ],
+      "probabilities": [
+        0.1,
+        0.15,
+        0.2,
+        0.2,
+        0.2,
+        0.1,
+        0.05
+      ]
+    },
+    "platform_channel_share": 0.6,
+    "base_utilization_uniform": [
+      0.6,
+      0.85
+    ],
+    "peak_demand_multiplier": 1.25,
+    "arrival_count_distribution": "Poisson(capacity * base_utilization * peak_multiplier / expected_stay_nights)",
+    "channel_acceptance": "PLATFORM uses last visible cached stock; OTHER uses atomic current PMS stock",
+    "profiles": {
+      "stable": {
+        "hotel_count": 75,
+        "initial_delivery_drop_probability_uniform": [
+          0.002,
+          0.01
+        ],
+        "delivery_delay_median_minutes": 2,
+        "cache_sync_interval_minutes_uniform": [
+          5,
+          15
+        ],
+        "outage_start_probability_per_day": 0.005,
+        "recovery_contact_success_probability": 0.95,
+        "evidence_delivery_drop_probability": 0.005
+      },
+      "degraded": {
+        "hotel_count": 20,
+        "initial_delivery_drop_probability_uniform": [
+          0.015,
+          0.05
+        ],
+        "delivery_delay_median_minutes": 30,
+        "cache_sync_interval_minutes_uniform": [
+          30,
+          120
+        ],
+        "outage_start_probability_per_day": 0.02,
+        "recovery_contact_success_probability": 0.8,
+        "evidence_delivery_drop_probability": 0.02
+      },
+      "fragile": {
+        "hotel_count": 5,
+        "initial_delivery_drop_probability_uniform": [
+          0.06,
+          0.12
+        ],
+        "delivery_delay_median_minutes": 180,
+        "cache_sync_interval_minutes_uniform": [
+          180,
+          360
+        ],
+        "outage_start_probability_per_day": 0.05,
+        "recovery_contact_success_probability": 0.55,
+        "evidence_delivery_drop_probability": 0.08
+      }
+    },
+    "delivery_delay_lognormal_sigma": 0.8,
+    "delivery_delay_max_hours": 48,
+    "hotel_outage_duration_hours_uniform": [
+      1,
+      24
+    ],
+    "outage_process": "At 08:00 daily, draw an outage only if no outage is active; it blocks hotel HTTP and PMS delivery until end time.",
+    "observed_delivery_error_retry_delays_hours": [
+      1,
+      6,
+      24
+    ],
+    "transport_lost_message_policy": "A silently dropped initial job is discovered by reconfirmation; do not pretend it was acknowledged by the PMS.",
+    "cancellation_probability": 0.03,
+    "no_show_probability": 0.01,
+    "cancellation_time_policy": "If selected, choose a uniform second between confirmation+1 second and check-in-1 second; channel/PMS release is an event, not a retroactive edit.",
+    "evidence_collector_first_delay_hours": 2,
+    "evidence_retry_hours": 6,
+    "inventory_probes": {
+      "daily_local_times": [
+        "08:00:00",
+        "18:00:00"
+      ],
+      "future_check_in_horizon_days": 7,
+      "conditions": {
+        "room_type": "STANDARD",
+        "nights": 1,
+        "adults": 2,
+        "rooms": 1,
+        "currency": "KRW"
+      },
+      "observed_value": "supplier visible cached stock, never private physical stock"
+    },
+    "synthetic_nightly_base_amount_krw_uniform_inclusive": [
+      80000,
+      200000
+    ],
+    "reconfirmation": {
+      "days_before_check_in": 1,
+      "local_time": "10:00:00",
+      "deadline_hours": 2,
+      "late_confirmed_policy": "send at confirmation if after the regular scheduled check"
+    },
+    "manual_recovery": {
+      "trigger": "expired reconfirmation deadline or hotel not-found",
+      "tasks_per_hotel_day": 3,
+      "process_at_local_time": "16:00:00",
+      "completion_delay_hours_uniform": [
+        1,
+        24
+      ],
+      "queue_order": "earliest check-in date, request time, booking ID; carry unfinished tasks forward",
+      "intervention_policy_independent_of_candidate_model": true,
+      "completion_delay_anchor": "processing start, not queue creation",
+      "failed_contact_policy": "same task carried to next day until final recovery deadline"
+    },
+    "arrival": {
+      "check_in_local_time": "15:00:00",
+      "arrival_jitter_hours_uniform": [
+        0,
+        4
+      ],
+      "final_recovery_grace_hours": 2,
+      "check_out_local_time": "11:00:00",
+      "protect_existing_pms_reservations": true
+    },
+    "event_tie_order": [
+      "RELEASE_OR_CANCEL",
+      "SERVICE_STATE",
+      "RESERVATION_OR_DELIVERY",
+      "QUERY_OR_EVIDENCE",
+      "AS_OF_SNAPSHOT",
+      "ARRIVAL_OR_ALLOCATION"
+    ],
+    "cache_confirmation_transaction": "Atomic full-stay check and decrement of cached rooms",
+    "cache_refresh_policy": "Replace cached stock from current PMS free stock; pending/lost supplier commitments are not known by PMS and may be overwritten",
+    "scheduled_action_guard": "Do not newly reserve after cancellation, no-show or terminal failure; release once; no resurrection after arrival+2h",
+    "atomic_rejection_night_policy": "Earliest blocking night evidenced unavailable; other unattempted nights UNKNOWN/NOT_ATTEMPTED; no later original stay attempts after terminal rejection",
+    "internal_arrival_demand_end_date": "2026-03-31",
+    "buffer_policy": "Generate confirmations for future arrivals through last target+max lead, process events only until simulation.end; buffer arrivals are never 2025 evaluation rows.",
+    "booking_request_time_policy": "check_in_date - lead_days, plus uniform integer second in 0..86399 local time",
+    "pms_ack_idempotency": "same booking/message ID returns prior reservation without another room decrement",
+    "cancellation_inventory_release": "release protected PMS nights once; refresh visible platform stock from current PMS snapshot instead of adding both cancellation and snapshot deltas",
+    "evidence_drop_scope": "Persistent loss of the source evidence-emission/outbox job at physical outcome time; logged mechanism, not per-poll label masking. Existing evidence can be collected after transient outage recovery."
+  },
+  "features": {
+    "ordered_names": [
+      "pastFailureRate90d",
+      "targetConfirmedBookingCount",
+      "bookingVolumeGrowth7d",
+      "reconfirmationOverdueRate7d",
+      "inventoryUnavailableRate7d",
+      "isPeakDay"
+    ],
+    "pastFailureRate90d": {
+      "history_days": 90,
+      "history_anchor": "as_of local date",
+      "denominator": "booking-level known outcomes available by as_of",
+      "prior_alpha": 1,
+      "prior_beta": 19
+    },
+    "bookingVolumeGrowth7d": {
+      "recent_days": 7,
+      "previous_days": 28,
+      "additive_pseudocount": 1,
+      "clip": [
+        -1,
+        10
+      ]
+    },
+    "reconfirmationOverdueRate7d": {
+      "window_days": 7,
+      "deadline_hours": 2,
+      "zero_denominator_value": 0,
+      "request_start": "first platform registered/sent request, including requests receiving errors"
+    },
+    "inventoryUnavailableRate7d": {
+      "window_days": 7,
+      "zero_denominator_value": 0
+    },
+    "isPeakDay": {
+      "check_in_weekdays_monday_zero": [
+        4,
+        5
+      ],
+      "peak_months": [
+        7,
+        8
+      ],
+      "synthetic_peak_dates": [
+        "2025-01-01",
+        "2025-05-05",
+        "2025-12-24",
+        "2025-12-25",
+        "2025-12-31"
+      ],
+      "calendar_is_not_a_claim_of_official_holiday_coverage": true
+    }
+  },
+  "labels": {
+    "cohort": "PLATFORM bookings CONFIRMED and not observed cancelled at as_of, fixed then",
+    "booking_positive": "one or more finally unfulfilled original nights with collected valid evidence",
+    "booking_negative": "all required original nights fulfilled and collected evidence complete",
+    "hotel_day_positive": "any fixed-cohort booking is positive",
+    "hotel_day_negative": "nonempty fixed cohort and every member is negative",
+    "unknown": "otherwise; includes unverifiable cancellation/no-show and missing evidence",
+    "empty_cohort": "NOT_ELIGIBLE; no supervised target",
+    "random_post_hoc_label_masking": false,
+    "semantic_correction_scope": "No false final evidence or post-hoc semantic retractions in v0.2. Versioned as-of adjudication required before adding those scenarios."
+  },
+  "evaluation": {
+    "train_dates": [
+      "2025-04-01",
+      "2025-09-30"
+    ],
+    "validation_dates": [
+      "2025-10-01",
+      "2025-10-31"
+    ],
+    "test_dates": [
+      "2025-11-01",
+      "2025-12-31"
+    ],
+    "train_label_available_before": "2025-09-30T09:00:00+09:00",
+    "validation_label_available_before": "2025-10-31T09:00:00+09:00",
+    "test_label_available_by": "2026-01-12T00:00:00+09:00",
+    "baseline": "1 - (1 - pastFailureRate90d) ** targetConfirmedBookingCount",
+    "reference_baseline": "pastFailureRate90d",
+    "daily_review_budget_k": 10,
+    "threshold_selection": "validation F1; tie: higher precision, then higher threshold",
+    "primary_selection_metric": "validation average precision",
+    "metrics": [
+      "average_precision",
+      "roc_auc",
+      "precision",
+      "recall",
+      "f1",
+      "confusion_matrix",
+      "label_coverage",
+      "top_k_with_unknown_coverage"
+    ],
+    "importance": "validation permutation importance and pastFailureRate90d ablation; no enforced rank",
+    "lightgbm": {
+      "objective": "binary",
+      "learning_rate": 0.03,
+      "n_estimators": 2000,
+      "early_stopping_rounds": 50,
+      "num_leaves_candidates": [
+        7,
+        15,
+        31
+      ],
+      "min_child_samples_candidates": [
+        30,
+        100
+      ],
+      "random_state": 42,
+      "deterministic": true,
+      "force_col_wise": true,
+      "num_threads": 1,
+      "bagging_seed": 42,
+      "feature_fraction_seed": 42,
+      "data_random_seed": 42,
+      "scale_pos_weight": 1.0
+    },
+    "final_model_policy": "Use selected Apr-Sep-trained checkpoint; no train+validation refit in v0.2"
+  },
+  "required_artifacts": [
+    "source_events",
+    "source_bookings",
+    "source_booking_nights",
+    "observed_evidence",
+    "private_truth_audit",
+    "feature_snapshots",
+    "labels",
+    "train.csv",
+    "validation.csv",
+    "test.csv",
+    "split_audit.csv",
+    "quality_report",
+    "dataset_manifest",
+    "model_file",
+    "model_metadata",
+    "evaluation_report"
+  ],
+  "forbidden_model_inputs": [
+    "hotelId",
+    "bookingId",
+    "scenario",
+    "latent_hotel_profile",
+    "private_drop_flag",
+    "future_events",
+    "label",
+    "label_available_at",
+    "audit_counts",
+    "private_truth"
+  ],
+  "future_work": "This file declares rules; no simulator, dataset or trained model is completed by its creation."
+}

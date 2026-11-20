@@ -1,0 +1,14 @@
+{
+  "hotelId": "HOTEL-001",
+  "targetCheckInDate": "2025-11-01",
+  "asOf": "2025-10-31T09:00:00+09:00",
+  "featureSetVersion": "risk-features-0.2",
+  "features": {
+    "pastFailureRate90d": 0.05,
+    "targetConfirmedBookingCount": 12,
+    "bookingVolumeGrowth7d": 0.4,
+    "reconfirmationOverdueRate7d": 0.2,
+    "inventoryUnavailableRate7d": 0.1,
+    "isPeakDay": false
+  }
+}

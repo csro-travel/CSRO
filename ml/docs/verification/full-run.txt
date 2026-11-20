@@ -1,0 +1,118 @@
+{"hotel": "HOTEL-002", "complete": 1, "total": 100, "bookings": 2543, "events": 34152, "elapsedSeconds": 4.5}
+{"hotel": "HOTEL-003", "complete": 2, "total": 100, "bookings": 2721, "events": 36839, "elapsedSeconds": 4.82}
+{"hotel": "HOTEL-001", "complete": 3, "total": 100, "bookings": 3525, "events": 45468, "elapsedSeconds": 6.2}
+{"hotel": "HOTEL-004", "complete": 4, "total": 100, "bookings": 5967, "events": 70675, "elapsedSeconds": 9.5}
+{"hotel": "HOTEL-008", "complete": 5, "total": 100, "bookings": 2094, "events": 30038, "elapsedSeconds": 12.24}
+{"hotel": "HOTEL-005", "complete": 6, "total": 100, "bookings": 5831, "events": 70018, "elapsedSeconds": 12.34}
+{"hotel": "HOTEL-006", "complete": 7, "total": 100, "bookings": 6722, "events": 78844, "elapsedSeconds": 13.92}
+{"hotel": "HOTEL-007", "complete": 8, "total": 100, "bookings": 5986, "events": 72001, "elapsedSeconds": 14.33}
+{"hotel": "HOTEL-010", "complete": 9, "total": 100, "bookings": 3347, "events": 43725, "elapsedSeconds": 16.4}
+{"hotel": "HOTEL-012", "complete": 10, "total": 100, "bookings": 4331, "events": 53858, "elapsedSeconds": 20.41}
+{"hotel": "HOTEL-011", "complete": 11, "total": 100, "bookings": 5003, "events": 60357, "elapsedSeconds": 21.11}
+{"hotel": "HOTEL-009", "complete": 12, "total": 100, "bookings": 7274, "events": 85790, "elapsedSeconds": 23.3}
+{"hotel": "HOTEL-013", "complete": 13, "total": 100, "bookings": 6053, "events": 72274, "elapsedSeconds": 25.75}
+{"hotel": "HOTEL-016", "complete": 14, "total": 100, "bookings": 2272, "events": 31755, "elapsedSeconds": 26.43}
+{"hotel": "HOTEL-015", "complete": 15, "total": 100, "bookings": 6968, "events": 83910, "elapsedSeconds": 31.39}
+{"hotel": "HOTEL-018", "complete": 16, "total": 100, "bookings": 4273, "events": 53576, "elapsedSeconds": 32.51}
+{"hotel": "HOTEL-014", "complete": 17, "total": 100, "bookings": 8073, "events": 94829, "elapsedSeconds": 32.61}
+{"hotel": "HOTEL-017", "complete": 18, "total": 100, "bookings": 5722, "events": 68766, "elapsedSeconds": 33.91}
+{"hotel": "HOTEL-019", "complete": 19, "total": 100, "bookings": 2624, "events": 35326, "elapsedSeconds": 34.91}
+{"hotel": "HOTEL-021", "complete": 20, "total": 100, "bookings": 2729, "events": 37043, "elapsedSeconds": 36.38}
+{"hotel": "HOTEL-020", "complete": 21, "total": 100, "bookings": 3348, "events": 43039, "elapsedSeconds": 37.06}
+{"hotel": "HOTEL-023", "complete": 22, "total": 100, "bookings": 3104, "events": 40808, "elapsedSeconds": 39.07}
+{"hotel": "HOTEL-025", "complete": 23, "total": 100, "bookings": 3359, "events": 42821, "elapsedSeconds": 41.45}
+{"hotel": "HOTEL-024", "complete": 24, "total": 100, "bookings": 4022, "events": 50258, "elapsedSeconds": 41.62}
+{"hotel": "HOTEL-026", "complete": 25, "total": 100, "bookings": 2851, "events": 38509, "elapsedSeconds": 42.89}
+{"hotel": "HOTEL-022", "complete": 26, "total": 100, "bookings": 8104, "events": 93251, "elapsedSeconds": 45.31}
+{"hotel": "HOTEL-029", "complete": 27, "total": 100, "bookings": 4840, "events": 59674, "elapsedSeconds": 49.36}
+{"hotel": "HOTEL-028", "complete": 28, "total": 100, "bookings": 7066, "events": 82944, "elapsedSeconds": 51.54}
+{"hotel": "HOTEL-027", "complete": 29, "total": 100, "bookings": 7443, "events": 86352, "elapsedSeconds": 52.23}
+{"hotel": "HOTEL-031", "complete": 30, "total": 100, "bookings": 2328, "events": 32070, "elapsedSeconds": 52.24}
+{"hotel": "HOTEL-030", "complete": 31, "total": 100, "bookings": 7751, "events": 89942, "elapsedSeconds": 55.66}
+{"hotel": "HOTEL-032", "complete": 32, "total": 100, "bookings": 6294, "events": 74058, "elapsedSeconds": 60.02}
+{"hotel": "HOTEL-034", "complete": 33, "total": 100, "bookings": 6687, "events": 78935, "elapsedSeconds": 60.86}
+{"hotel": "HOTEL-033", "complete": 34, "total": 100, "bookings": 6482, "events": 76362, "elapsedSeconds": 61.06}
+{"hotel": "HOTEL-035", "complete": 35, "total": 100, "bookings": 4693, "events": 58425, "elapsedSeconds": 61.99}
+{"hotel": "HOTEL-036", "complete": 36, "total": 100, "bookings": 3970, "events": 50072, "elapsedSeconds": 65.02}
+{"hotel": "HOTEL-037", "complete": 37, "total": 100, "bookings": 6171, "events": 73796, "elapsedSeconds": 68.92}
+{"hotel": "HOTEL-040", "complete": 38, "total": 100, "bookings": 4296, "events": 52993, "elapsedSeconds": 70.43}
+{"hotel": "HOTEL-038", "complete": 39, "total": 100, "bookings": 7697, "events": 89852, "elapsedSeconds": 71.11}
+{"hotel": "HOTEL-039", "complete": 40, "total": 100, "bookings": 8905, "events": 103301, "elapsedSeconds": 73.58}
+{"hotel": "HOTEL-041", "complete": 41, "total": 100, "bookings": 4676, "events": 58384, "elapsedSeconds": 74.65}
+{"hotel": "HOTEL-042", "complete": 42, "total": 100, "bookings": 4252, "events": 52356, "elapsedSeconds": 75.61}
+{"hotel": "HOTEL-044", "complete": 43, "total": 100, "bookings": 2599, "events": 35006, "elapsedSeconds": 76.96}
+{"hotel": "HOTEL-043", "complete": 44, "total": 100, "bookings": 5810, "events": 70333, "elapsedSeconds": 78.63}
+{"hotel": "HOTEL-046", "complete": 45, "total": 100, "bookings": 3521, "events": 45288, "elapsedSeconds": 80.22}
+{"hotel": "HOTEL-045", "complete": 46, "total": 100, "bookings": 5589, "events": 67876, "elapsedSeconds": 81.82}
+{"hotel": "HOTEL-047", "complete": 47, "total": 100, "bookings": 6348, "events": 74550, "elapsedSeconds": 84.83}
+{"hotel": "HOTEL-048", "complete": 48, "total": 100, "bookings": 5588, "events": 67431, "elapsedSeconds": 85.29}
+{"hotel": "HOTEL-050", "complete": 49, "total": 100, "bookings": 3759, "events": 47746, "elapsedSeconds": 86.33}
+{"hotel": "HOTEL-051", "complete": 50, "total": 100, "bookings": 2952, "events": 39014, "elapsedSeconds": 88.69}
+{"hotel": "HOTEL-049", "complete": 51, "total": 100, "bookings": 6763, "events": 81103, "elapsedSeconds": 88.82}
+{"hotel": "HOTEL-053", "complete": 52, "total": 100, "bookings": 4099, "events": 51809, "elapsedSeconds": 91.63}
+{"hotel": "HOTEL-055", "complete": 53, "total": 100, "bookings": 2715, "events": 36675, "elapsedSeconds": 92.28}
+{"hotel": "HOTEL-054", "complete": 54, "total": 100, "bookings": 3074, "events": 40069, "elapsedSeconds": 92.41}
+{"hotel": "HOTEL-052", "complete": 55, "total": 100, "bookings": 7070, "events": 83068, "elapsedSeconds": 94.68}
+{"hotel": "HOTEL-058", "complete": 56, "total": 100, "bookings": 4806, "events": 58542, "elapsedSeconds": 97.92}
+{"hotel": "HOTEL-057", "complete": 57, "total": 100, "bookings": 5679, "events": 69643, "elapsedSeconds": 99.5}
+{"hotel": "HOTEL-056", "complete": 58, "total": 100, "bookings": 8320, "events": 95515, "elapsedSeconds": 101.99}
+{"hotel": "HOTEL-059", "complete": 59, "total": 100, "bookings": 6464, "events": 77492, "elapsedSeconds": 102.89}
+{"hotel": "HOTEL-060", "complete": 60, "total": 100, "bookings": 4950, "events": 61528, "elapsedSeconds": 103.54}
+{"hotel": "HOTEL-062", "complete": 61, "total": 100, "bookings": 4836, "events": 58632, "elapsedSeconds": 108.02}
+{"hotel": "HOTEL-064", "complete": 62, "total": 100, "bookings": 3962, "events": 49527, "elapsedSeconds": 108.34}
+{"hotel": "HOTEL-061", "complete": 63, "total": 100, "bookings": 6880, "events": 81443, "elapsedSeconds": 108.35}
+{"hotel": "HOTEL-063", "complete": 64, "total": 100, "bookings": 4993, "events": 60318, "elapsedSeconds": 109.28}
+{"hotel": "HOTEL-068", "complete": 65, "total": 100, "bookings": 3907, "events": 49025, "elapsedSeconds": 114.02}
+{"hotel": "HOTEL-067", "complete": 66, "total": 100, "bookings": 6011, "events": 73254, "elapsedSeconds": 116.32}
+{"hotel": "HOTEL-065", "complete": 67, "total": 100, "bookings": 6256, "events": 74291, "elapsedSeconds": 116.46}
+{"hotel": "HOTEL-066", "complete": 68, "total": 100, "bookings": 7615, "events": 89772, "elapsedSeconds": 118.83}
+{"hotel": "HOTEL-070", "complete": 69, "total": 100, "bookings": 4029, "events": 51043, "elapsedSeconds": 121.57}
+{"hotel": "HOTEL-071", "complete": 70, "total": 100, "bookings": 4514, "events": 56412, "elapsedSeconds": 122.17}
+{"hotel": "HOTEL-069", "complete": 71, "total": 100, "bookings": 8301, "events": 95965, "elapsedSeconds": 124.83}
+{"hotel": "HOTEL-074", "complete": 72, "total": 100, "bookings": 2998, "events": 39982, "elapsedSeconds": 125.78}
+{"hotel": "HOTEL-072", "complete": 73, "total": 100, "bookings": 6715, "events": 79566, "elapsedSeconds": 126.98}
+{"hotel": "HOTEL-073", "complete": 74, "total": 100, "bookings": 5081, "events": 60911, "elapsedSeconds": 127.62}
+{"hotel": "HOTEL-076", "complete": 75, "total": 100, "bookings": 2445, "events": 34860, "elapsedSeconds": 128.79}
+{"hotel": "HOTEL-075", "complete": 76, "total": 100, "bookings": 7913, "events": 91249, "elapsedSeconds": 134.59}
+{"hotel": "HOTEL-079", "complete": 77, "total": 100, "bookings": 6042, "events": 77162, "elapsedSeconds": 136.25}
+{"hotel": "HOTEL-077", "complete": 78, "total": 100, "bookings": 7826, "events": 95259, "elapsedSeconds": 136.67}
+{"hotel": "HOTEL-078", "complete": 79, "total": 100, "bookings": 7583, "events": 95923, "elapsedSeconds": 137.95}
+{"hotel": "HOTEL-081", "complete": 80, "total": 100, "bookings": 3116, "events": 42471, "elapsedSeconds": 139.9}
+{"hotel": "HOTEL-082", "complete": 81, "total": 100, "bookings": 3522, "events": 48503, "elapsedSeconds": 140.81}
+{"hotel": "HOTEL-080", "complete": 82, "total": 100, "bookings": 5171, "events": 66000, "elapsedSeconds": 140.92}
+{"hotel": "HOTEL-086", "complete": 83, "total": 100, "bookings": 4185, "events": 54173, "elapsedSeconds": 145.76}
+{"hotel": "HOTEL-085", "complete": 84, "total": 100, "bookings": 4219, "events": 57095, "elapsedSeconds": 146.18}
+{"hotel": "HOTEL-084", "complete": 85, "total": 100, "bookings": 6161, "events": 75559, "elapsedSeconds": 147.16}
+{"hotel": "HOTEL-083", "complete": 86, "total": 100, "bookings": 7271, "events": 89739, "elapsedSeconds": 147.37}
+{"hotel": "HOTEL-089", "complete": 87, "total": 100, "bookings": 2336, "events": 33800, "elapsedSeconds": 150.06}
+{"hotel": "HOTEL-088", "complete": 88, "total": 100, "bookings": 5714, "events": 71753, "elapsedSeconds": 153.3}
+{"hotel": "HOTEL-090", "complete": 89, "total": 100, "bookings": 5960, "events": 75320, "elapsedSeconds": 154.83}
+{"hotel": "HOTEL-087", "complete": 90, "total": 100, "bookings": 8504, "events": 103097, "elapsedSeconds": 159.77}
+{"hotel": "HOTEL-093", "complete": 91, "total": 100, "bookings": 3540, "events": 48190, "elapsedSeconds": 161.38}
+{"hotel": "HOTEL-091", "complete": 92, "total": 100, "bookings": 7504, "events": 90638, "elapsedSeconds": 163.79}
+{"hotel": "HOTEL-094", "complete": 93, "total": 100, "bookings": 2741, "events": 38560, "elapsedSeconds": 164.99}
+{"hotel": "HOTEL-092", "complete": 94, "total": 100, "bookings": 6490, "events": 80666, "elapsedSeconds": 165.94}
+{"hotel": "HOTEL-097", "complete": 95, "total": 100, "bookings": 4073, "events": 63573, "elapsedSeconds": 170.58}
+{"hotel": "HOTEL-096", "complete": 96, "total": 100, "bookings": 4839, "events": 73765, "elapsedSeconds": 171.33}
+{"hotel": "HOTEL-095", "complete": 97, "total": 100, "bookings": 6517, "events": 80518, "elapsedSeconds": 171.39}
+{"hotel": "HOTEL-098", "complete": 98, "total": 100, "bookings": 6601, "events": 96057, "elapsedSeconds": 174.74}
+{"hotel": "HOTEL-100", "complete": 99, "total": 100, "bookings": 5004, "events": 74499, "elapsedSeconds": 177.06}
+{"hotel": "HOTEL-099", "complete": 100, "total": 100, "bookings": 7776, "events": 112395, "elapsedSeconds": 179.98}
+{
+  "isPilot": false,
+  "hotelCount": 100,
+  "calendarRows": 36500,
+  "totalBookings": 521654,
+  "totalEvents": 6481099,
+  "labelCounts": {
+    "0": 30567,
+    "UNKNOWN": 4863,
+    "1": 592,
+    "NOT_ELIGIBLE": 478
+  },
+  "splitRows": {
+    "train": 15246,
+    "validation": 2341,
+    "test": 5204
+  }
+}
