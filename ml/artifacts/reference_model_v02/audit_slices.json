@@ -1,0 +1,1733 @@
+{
+  "groups": {
+    "bookingEvidenceCoverage": {
+      "fully_observed": {
+        "eligibleRows": 5176,
+        "knownRows": 5176,
+        "labelCoverage": 1.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 31,
+              "precisionLowerBound": 0.07692307692307693,
+              "precisionUpperBound": 0.07692307692307693,
+              "selectedKnownRows": 403,
+              "selectedRows": 403,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.23647290708906485,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 49,
+                "fp": 5,
+                "tn": 5115,
+                "tp": 7
+              },
+              "f1": 0.20588235294117646,
+              "knownPositives": 56,
+              "knownRows": 5176,
+              "positiveRate": 0.010819165378670788,
+              "precision": 0.5833333333333334,
+              "recall": 0.125,
+              "rocAuc": 0.8997506277901786,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {}
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 37,
+              "precisionLowerBound": 0.08564814814814815,
+              "precisionUpperBound": 0.08564814814814815,
+              "selectedKnownRows": 432,
+              "selectedRows": 432,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.2772486626888052,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 45,
+                "fp": 10,
+                "tn": 5110,
+                "tp": 11
+              },
+              "f1": 0.2857142857142857,
+              "knownPositives": 56,
+              "knownRows": 5176,
+              "positiveRate": 0.010819165378670788,
+              "precision": 0.5238095238095238,
+              "recall": 0.19642857142857142,
+              "rocAuc": 0.9127319335937499,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 24,
+              "precisionLowerBound": 0.056074766355140186,
+              "precisionUpperBound": 0.056074766355140186,
+              "selectedKnownRows": 428,
+              "selectedRows": 428,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.07194866238395833,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 44,
+                "fp": 63,
+                "tn": 5057,
+                "tp": 12
+              },
+              "f1": 0.183206106870229,
+              "knownPositives": 56,
+              "knownRows": 5176,
+              "positiveRate": 0.010819165378670788,
+              "precision": 0.16,
+              "recall": 0.21428571428571427,
+              "rocAuc": 0.7848144531249999,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {}
+            }
+          }
+        },
+        "unknownRows": 0
+      },
+      "none_observed": {
+        "eligibleRows": 12,
+        "knownRows": 0,
+        "labelCoverage": 0.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 0,
+              "selectedRows": 1,
+              "selectedUnknownRows": 1
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 0
+              },
+              "f1": null,
+              "knownPositives": 0,
+              "knownRows": 0,
+              "positiveRate": null,
+              "precision": null,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "f1": "no observed or predicted positives",
+                "precision": "no predicted positives",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": null,
+              "precisionUpperBound": null,
+              "selectedKnownRows": 0,
+              "selectedRows": 0,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 0
+              },
+              "f1": null,
+              "knownPositives": 0,
+              "knownRows": 0,
+              "positiveRate": null,
+              "precision": null,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "f1": "no observed or predicted positives",
+                "precision": "no predicted positives",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 0,
+              "selectedRows": 1,
+              "selectedUnknownRows": 1
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 0
+              },
+              "f1": null,
+              "knownPositives": 0,
+              "knownRows": 0,
+              "positiveRate": null,
+              "precision": null,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "f1": "no observed or predicted positives",
+                "precision": "no predicted positives",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 12
+      },
+      "partly_observed": {
+        "eligibleRows": 817,
+        "knownRows": 28,
+        "labelCoverage": 0.03427172582619339,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 24,
+              "precisionLowerBound": 0.11650485436893204,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 24,
+              "selectedRows": 206,
+              "selectedUnknownRows": 182
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 20,
+                "fp": 0,
+                "tn": 0,
+                "tp": 8
+              },
+              "f1": 0.4444444444444444,
+              "knownPositives": 28,
+              "knownRows": 28,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.2857142857142857,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 24,
+              "precisionLowerBound": 0.1348314606741573,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 24,
+              "selectedRows": 178,
+              "selectedUnknownRows": 154
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 13,
+                "fp": 0,
+                "tn": 0,
+                "tp": 15
+              },
+              "f1": 0.6976744186046512,
+              "knownPositives": 28,
+              "knownRows": 28,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.5357142857142857,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 21,
+              "precisionLowerBound": 0.11602209944751381,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 21,
+              "selectedRows": 181,
+              "selectedUnknownRows": 160
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 18,
+                "fp": 0,
+                "tn": 0,
+                "tp": 10
+              },
+              "f1": 0.5263157894736842,
+              "knownPositives": 28,
+              "knownRows": 28,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.35714285714285715,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 789
+      }
+    },
+    "hotelSize": {
+      "12-19": {
+        "eligibleRows": 1688,
+        "knownRows": 1550,
+        "labelCoverage": 0.9182464454976303,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 12,
+              "precisionLowerBound": 0.11650485436893204,
+              "precisionUpperBound": 0.4077669902912621,
+              "selectedKnownRows": 73,
+              "selectedRows": 103,
+              "selectedUnknownRows": 30
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.5588146046247855,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 12,
+                "fp": 2,
+                "tn": 1528,
+                "tp": 8
+              },
+              "f1": 0.5333333333333333,
+              "knownPositives": 20,
+              "knownRows": 1550,
+              "positiveRate": 0.012903225806451613,
+              "precision": 0.8,
+              "recall": 0.4,
+              "rocAuc": 0.9271732026143791,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {}
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 16,
+              "precisionLowerBound": 0.13559322033898305,
+              "precisionUpperBound": 0.3305084745762712,
+              "selectedKnownRows": 95,
+              "selectedRows": 118,
+              "selectedUnknownRows": 23
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.6239771893634969,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 11,
+                "fp": 1,
+                "tn": 1529,
+                "tp": 9
+              },
+              "f1": 0.6,
+              "knownPositives": 20,
+              "knownRows": 1550,
+              "positiveRate": 0.012903225806451613,
+              "precision": 0.9,
+              "recall": 0.45,
+              "rocAuc": 0.9518954248366013,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 12,
+              "precisionLowerBound": 0.05581395348837209,
+              "precisionUpperBound": 0.2372093023255814,
+              "selectedKnownRows": 176,
+              "selectedRows": 215,
+              "selectedUnknownRows": 39
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.16126407950023353,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 8,
+                "fp": 26,
+                "tn": 1504,
+                "tp": 12
+              },
+              "f1": 0.41379310344827586,
+              "knownPositives": 20,
+              "knownRows": 1550,
+              "positiveRate": 0.012903225806451613,
+              "precision": 0.3157894736842105,
+              "recall": 0.6,
+              "rocAuc": 0.8198856209150327,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {}
+            }
+          }
+        },
+        "unknownRows": 138
+      },
+      "20-29": {
+        "eligibleRows": 2061,
+        "knownRows": 1793,
+        "labelCoverage": 0.8699660359049005,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 23,
+              "precisionLowerBound": 0.09504132231404959,
+              "precisionUpperBound": 0.41735537190082644,
+              "selectedKnownRows": 164,
+              "selectedRows": 242,
+              "selectedUnknownRows": 78
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.352699517117405,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 29,
+                "fp": 3,
+                "tn": 1756,
+                "tp": 5
+              },
+              "f1": 0.23809523809523808,
+              "knownPositives": 34,
+              "knownRows": 1793,
+              "positiveRate": 0.018962632459564976,
+              "precision": 0.625,
+              "recall": 0.14705882352941177,
+              "rocAuc": 0.9265625522522825,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {}
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 25,
+              "precisionLowerBound": 0.09057971014492754,
+              "precisionUpperBound": 0.35507246376811596,
+              "selectedKnownRows": 203,
+              "selectedRows": 276,
+              "selectedUnknownRows": 73
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.4420751936615364,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 25,
+                "fp": 4,
+                "tn": 1755,
+                "tp": 9
+              },
+              "f1": 0.3829787234042553,
+              "knownPositives": 34,
+              "knownRows": 1793,
+              "positiveRate": 0.018962632459564976,
+              "precision": 0.6923076923076923,
+              "recall": 0.2647058823529412,
+              "rocAuc": 0.9114553723706652,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 21,
+              "precisionLowerBound": 0.07806691449814127,
+              "precisionUpperBound": 0.379182156133829,
+              "selectedKnownRows": 188,
+              "selectedRows": 269,
+              "selectedUnknownRows": 81
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.1630393053641188,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 25,
+                "fp": 29,
+                "tn": 1730,
+                "tp": 9
+              },
+              "f1": 0.25,
+              "knownPositives": 34,
+              "knownRows": 1793,
+              "positiveRate": 0.018962632459564976,
+              "precision": 0.23684210526315788,
+              "recall": 0.2647058823529412,
+              "rocAuc": 0.8562184396214426,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {}
+            }
+          }
+        },
+        "unknownRows": 268
+      },
+      "30-40": {
+        "eligibleRows": 2256,
+        "knownRows": 1861,
+        "labelCoverage": 0.8249113475177305,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 20,
+              "precisionLowerBound": 0.07547169811320754,
+              "precisionUpperBound": 0.3584905660377358,
+              "selectedKnownRows": 190,
+              "selectedRows": 265,
+              "selectedUnknownRows": 75
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.3660461351073194,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 28,
+                "fp": 0,
+                "tn": 1831,
+                "tp": 2
+              },
+              "f1": 0.125,
+              "knownPositives": 30,
+              "knownRows": 1861,
+              "positiveRate": 0.016120365394948953,
+              "precision": 1.0,
+              "recall": 0.06666666666666667,
+              "rocAuc": 0.8973511742217368,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {}
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 20,
+              "precisionLowerBound": 0.09259259259259259,
+              "precisionUpperBound": 0.3611111111111111,
+              "selectedKnownRows": 158,
+              "selectedRows": 216,
+              "selectedUnknownRows": 58
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.3804880406203881,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 22,
+                "fp": 5,
+                "tn": 1826,
+                "tp": 8
+              },
+              "f1": 0.37209302325581395,
+              "knownPositives": 30,
+              "knownRows": 1861,
+              "positiveRate": 0.016120365394948953,
+              "precision": 0.6153846153846154,
+              "recall": 0.26666666666666666,
+              "rocAuc": 0.9409339158929547,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 12,
+              "precisionLowerBound": 0.09523809523809523,
+              "precisionUpperBound": 0.42063492063492064,
+              "selectedKnownRows": 85,
+              "selectedRows": 126,
+              "selectedUnknownRows": 41
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.12169605588973231,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 29,
+                "fp": 8,
+                "tn": 1823,
+                "tp": 1
+              },
+              "f1": 0.05128205128205128,
+              "knownPositives": 30,
+              "knownRows": 1861,
+              "positiveRate": 0.016120365394948953,
+              "precision": 0.1111111111111111,
+              "recall": 0.03333333333333333,
+              "rocAuc": 0.8275623520844712,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {}
+            }
+          }
+        },
+        "unknownRows": 395
+      }
+    },
+    "mechanism": {
+      "DELIVERY_MISSING_AND_REGISTRATION_UNRESOLVED_DURING_OUTAGE": {
+        "eligibleRows": 6,
+        "knownRows": 6,
+        "labelCoverage": 1.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 5,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 5,
+              "selectedRows": 5,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 5,
+                "fp": 0,
+                "tn": 0,
+                "tp": 1
+              },
+              "f1": 0.2857142857142857,
+              "knownPositives": 6,
+              "knownRows": 6,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.16666666666666666,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 6,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 6,
+              "selectedRows": 6,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 6,
+                "fp": 0,
+                "tn": 0,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 6,
+              "knownRows": 6,
+              "positiveRate": 1.0,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "precision": "no predicted positives",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 5,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 5,
+              "selectedRows": 5,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 3,
+                "fp": 0,
+                "tn": 0,
+                "tp": 3
+              },
+              "f1": 0.6666666666666666,
+              "knownPositives": 6,
+              "knownRows": 6,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.5,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 0
+      },
+      "DELIVERY_MISSING_AND_SYNC_OVERBOOKING_CAPACITY": {
+        "eligibleRows": 63,
+        "knownRows": 63,
+        "labelCoverage": 1.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 39,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 39,
+              "selectedRows": 39,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 55,
+                "fp": 0,
+                "tn": 0,
+                "tp": 8
+              },
+              "f1": 0.22535211267605634,
+              "knownPositives": 63,
+              "knownRows": 63,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.12698412698412698,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 42,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 42,
+              "selectedRows": 42,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 48,
+                "fp": 0,
+                "tn": 0,
+                "tp": 15
+              },
+              "f1": 0.38461538461538464,
+              "knownPositives": 63,
+              "knownRows": 63,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.23809523809523808,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 30,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 30,
+              "selectedRows": 30,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 50,
+                "fp": 0,
+                "tn": 0,
+                "tp": 13
+              },
+              "f1": 0.34210526315789475,
+              "knownPositives": 63,
+              "knownRows": 63,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.20634920634920634,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 0
+      },
+      "DELIVERY_MISSING_AND_SYNC_OVERBOOKING_CAPACITY | SYNC_OVERBOOKING_CAPACITY": {
+        "eligibleRows": 2,
+        "knownRows": 2,
+        "labelCoverage": 1.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 2,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 2,
+              "selectedRows": 2,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 2
+              },
+              "f1": 1.0,
+              "knownPositives": 2,
+              "knownRows": 2,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 2,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 2,
+              "selectedRows": 2,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 2
+              },
+              "f1": 1.0,
+              "knownPositives": 2,
+              "knownRows": 2,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 2,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 2,
+              "selectedRows": 2,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 0,
+                "tn": 0,
+                "tp": 2
+              },
+              "f1": 1.0,
+              "knownPositives": 2,
+              "knownRows": 2,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 1.0,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 0
+      },
+      "NO_SIMULATED_FAILURE": {
+        "eligibleRows": 5921,
+        "knownRows": 5120,
+        "labelCoverage": 0.8647187975004222,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 0.32972972972972975,
+              "selectedKnownRows": 372,
+              "selectedRows": 555,
+              "selectedUnknownRows": 183
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 5,
+                "tn": 5115,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 0,
+              "knownRows": 5120,
+              "positiveRate": 0.0,
+              "precision": 0.0,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 0.28051001821493626,
+              "selectedKnownRows": 395,
+              "selectedRows": 549,
+              "selectedUnknownRows": 154
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 10,
+                "tn": 5110,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 0,
+              "knownRows": 5120,
+              "positiveRate": 0.0,
+              "precision": 0.0,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 0.2849557522123894,
+              "selectedKnownRows": 404,
+              "selectedRows": 565,
+              "selectedUnknownRows": 161
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 0,
+                "fp": 63,
+                "tn": 5057,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 0,
+              "knownRows": 5120,
+              "positiveRate": 0.0,
+              "precision": 0.0,
+              "recall": null,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "recall": "no observed positive targets",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 801
+      },
+      "SYNC_OVERBOOKING_CAPACITY": {
+        "eligibleRows": 13,
+        "knownRows": 13,
+        "labelCoverage": 1.0,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 9,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 9,
+              "selectedRows": 9,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 9,
+                "fp": 0,
+                "tn": 0,
+                "tp": 4
+              },
+              "f1": 0.47058823529411764,
+              "knownPositives": 13,
+              "knownRows": 13,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.3076923076923077,
+              "rocAuc": null,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 11,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 11,
+              "selectedRows": 11,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 4,
+                "fp": 0,
+                "tn": 0,
+                "tp": 9
+              },
+              "f1": 0.8181818181818182,
+              "knownPositives": 13,
+              "knownRows": 13,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.6923076923076923,
+              "rocAuc": null,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 8,
+              "precisionLowerBound": 1.0,
+              "precisionUpperBound": 1.0,
+              "selectedKnownRows": 8,
+              "selectedRows": 8,
+              "selectedUnknownRows": 0
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": null,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 9,
+                "fp": 0,
+                "tn": 0,
+                "tp": 4
+              },
+              "f1": 0.47058823529411764,
+              "knownPositives": 13,
+              "knownRows": 13,
+              "positiveRate": 1.0,
+              "precision": 1.0,
+              "recall": 0.3076923076923077,
+              "rocAuc": null,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "averagePrecision": "requires both observed classes for discrimination assessment",
+                "rocAuc": "requires both observed classes"
+              }
+            }
+          }
+        },
+        "unknownRows": 0
+      }
+    },
+    "simulatorProfile": {
+      "degraded": {
+        "eligibleRows": 1202,
+        "knownRows": 1010,
+        "labelCoverage": 0.8402662229617305,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 14,
+              "precisionLowerBound": 0.04895104895104895,
+              "precisionUpperBound": 0.27972027972027974,
+              "selectedKnownRows": 220,
+              "selectedRows": 286,
+              "selectedUnknownRows": 66
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.227905280952908,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 26,
+                "fp": 0,
+                "tn": 984,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 26,
+              "knownRows": 1010,
+              "positiveRate": 0.02574257425742574,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": 0.7887742338961852,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "precision": "no predicted positives"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 16,
+              "precisionLowerBound": 0.08163265306122448,
+              "precisionUpperBound": 0.2857142857142857,
+              "selectedKnownRows": 156,
+              "selectedRows": 196,
+              "selectedUnknownRows": 40
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.2769385517394705,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 23,
+                "fp": 3,
+                "tn": 981,
+                "tp": 3
+              },
+              "f1": 0.1875,
+              "knownPositives": 26,
+              "knownRows": 1010,
+              "positiveRate": 0.02574257425742574,
+              "precision": 0.5,
+              "recall": 0.11538461538461539,
+              "rocAuc": 0.857195903689806,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 9,
+              "precisionLowerBound": 0.02830188679245283,
+              "precisionUpperBound": 0.18553459119496854,
+              "selectedKnownRows": 268,
+              "selectedRows": 318,
+              "selectedUnknownRows": 50
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.044524148692142475,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 26,
+                "fp": 0,
+                "tn": 984,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 26,
+              "knownRows": 1010,
+              "positiveRate": 0.02574257425742574,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": 0.5989290181363351,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "precision": "no predicted positives"
+              }
+            }
+          }
+        },
+        "unknownRows": 192
+      },
+      "fragile": {
+        "eligibleRows": 302,
+        "knownRows": 181,
+        "labelCoverage": 0.5993377483443708,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 37,
+              "precisionLowerBound": 0.14285714285714285,
+              "precisionUpperBound": 0.555984555984556,
+              "selectedKnownRows": 152,
+              "selectedRows": 259,
+              "selectedUnknownRows": 107
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.6809186731160197,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 24,
+                "fp": 5,
+                "tn": 137,
+                "tp": 15
+              },
+              "f1": 0.5084745762711864,
+              "knownPositives": 39,
+              "knownRows": 181,
+              "positiveRate": 0.2154696132596685,
+              "precision": 0.75,
+              "recall": 0.38461538461538464,
+              "rocAuc": 0.8206031058143736,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {}
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 38,
+              "precisionLowerBound": 0.1735159817351598,
+              "precisionUpperBound": 0.5844748858447488,
+              "selectedKnownRows": 129,
+              "selectedRows": 219,
+              "selectedUnknownRows": 90
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.7454957188293749,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 16,
+                "fp": 7,
+                "tn": 135,
+                "tp": 23
+              },
+              "f1": 0.6666666666666666,
+              "knownPositives": 39,
+              "knownRows": 181,
+              "positiveRate": 0.2154696132596685,
+              "precision": 0.7666666666666667,
+              "recall": 0.5897435897435898,
+              "rocAuc": 0.8713434452871073,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {}
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 36,
+              "precisionLowerBound": 0.13688212927756654,
+              "precisionUpperBound": 0.5399239543726235,
+              "selectedKnownRows": 157,
+              "selectedRows": 263,
+              "selectedUnknownRows": 106
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.25677235373372165,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 17,
+                "fp": 63,
+                "tn": 79,
+                "tp": 22
+              },
+              "f1": 0.3548387096774194,
+              "knownPositives": 39,
+              "knownRows": 181,
+              "positiveRate": 0.2154696132596685,
+              "precision": 0.25882352941176473,
+              "recall": 0.5641025641025641,
+              "rocAuc": 0.59254243409173,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {}
+            }
+          }
+        },
+        "unknownRows": 121
+      },
+      "stable": {
+        "eligibleRows": 4501,
+        "knownRows": 4013,
+        "labelCoverage": 0.8915796489668962,
+        "models": {
+          "exposureRule": {
+            "globalQueueSelections": {
+              "knownTruePositives": 4,
+              "precisionLowerBound": 0.06153846153846154,
+              "precisionUpperBound": 0.2153846153846154,
+              "selectedKnownRows": 55,
+              "selectedRows": 65,
+              "selectedUnknownRows": 10
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.04131031127020004,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 19,
+                "fp": 0,
+                "tn": 3994,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 19,
+              "knownRows": 4013,
+              "positiveRate": 0.00473461250934463,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": 0.8746277310702897,
+              "threshold": 0.2498112275967828,
+              "undefinedReasons": {
+                "precision": "no predicted positives"
+              }
+            }
+          },
+          "lightgbm": {
+            "globalQueueSelections": {
+              "knownTruePositives": 7,
+              "precisionLowerBound": 0.035897435897435895,
+              "precisionUpperBound": 0.15897435897435896,
+              "selectedKnownRows": 171,
+              "selectedRows": 195,
+              "selectedUnknownRows": 24
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.04470891102739556,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 19,
+                "fp": 0,
+                "tn": 3994,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 19,
+              "knownRows": 4013,
+              "positiveRate": 0.00473461250934463,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": 0.8717418232612075,
+              "threshold": 0.22344968880463367,
+              "undefinedReasons": {
+                "precision": "no predicted positives"
+              }
+            }
+          },
+          "pastRateReference": {
+            "globalQueueSelections": {
+              "knownTruePositives": 0,
+              "precisionLowerBound": 0.0,
+              "precisionUpperBound": 0.1724137931034483,
+              "selectedKnownRows": 24,
+              "selectedRows": 29,
+              "selectedUnknownRows": 5
+            },
+            "knownLabelMetrics": {
+              "averagePrecision": 0.008491871605891708,
+              "averagePrecisionMethod": "sklearn.average_precision_score; not trapezoidal PR integration",
+              "confusionMatrix": {
+                "fn": 19,
+                "fp": 0,
+                "tn": 3994,
+                "tp": 0
+              },
+              "f1": 0.0,
+              "knownPositives": 19,
+              "knownRows": 4013,
+              "positiveRate": 0.00473461250934463,
+              "precision": null,
+              "recall": 0.0,
+              "rocAuc": 0.6300569274965079,
+              "threshold": 0.023809523809523808,
+              "undefinedReasons": {
+                "precision": "no predicted positives"
+              }
+            }
+          }
+        },
+        "unknownRows": 488
+      }
+    }
+  },
+  "realWorldPerformanceValidated": false,
+  "scope": "Post-selection audit only. Private simulator state defines diagnostic groups, never targets or model inputs.",
+  "selectionFrozenBeforeTestSha256": "b9f6af5f357245c5068d64a9aadd9ce316d146444a1c948ca565fd648e021244",
+  "sourceFileSha256": {
+    "HOTEL-001/features.parquet": "478c51ba0bf5b54948d1d94ac3ea5c5d9298ad8b84f8b5fb90cafc37b8756db9",
+    "HOTEL-001/hotel_profile.json": "dd0ef0c627b00357bf40616c15681ae79a482b6a4bfbe8dd65ede2e4d49dab8f",
+    "HOTEL-001/truth.parquet": "b5e85b675547bee0dc49697276eb7f6f0fbc908b718c600a361dc5e30927acbc",
+    "HOTEL-002/features.parquet": "fde4fe45bd1e6caa0227c9aba4e7ae1d89ef878db19f7990aa41b5b5622e8b3c",
+    "HOTEL-002/hotel_profile.json": "1be60ebaf67fdc96d5b5d8f853681161fba44dee049cd66101fd7fd0d5de9db4",
+    "HOTEL-002/truth.parquet": "94a92d7175e8d57d87126cc3350ad56752a71ba921f3af2b896cc3f38e482939",
+    "HOTEL-003/features.parquet": "6b07bc13e54a9521b29a0f25e03a33d434294774849f05c87b5fdc970e84cf3b",
+    "HOTEL-003/hotel_profile.json": "463f56e80c313f07367b5ad531f04bbce98e5a4548c1c5af43d10761a7f9055a",
+    "HOTEL-003/truth.parquet": "1e47ef2d1bc4492b931d9741c16a0c74a8892bffde82383e997f01936722e656",
+    "HOTEL-004/features.parquet": "b19dbedac2abbe14c5c91db603f6cea90228029ab8ad63bfb18a59be5399441a",
+    "HOTEL-004/hotel_profile.json": "b301f384bfe0e73e6f85806b1eb67216ef9efa5fcd3678fe6ec027ce264ef509",
+    "HOTEL-004/truth.parquet": "4f9aad60ed16d376f1ad880dd72d1b076beff0e8cc2fe4b58bc04b3d75bf10e7",
+    "HOTEL-005/features.parquet": "73c1a74c13f35fb1fdb7ced0050c8e105b4983e40292082850f75d4bfb56f521",
+    "HOTEL-005/hotel_profile.json": "26404c54630266c4a61ba88d51e7241e99ad3ef9ffeae4a79580de1b5590924e",
+    "HOTEL-005/truth.parquet": "629053815d9edc77570d4741de2b9bff2ec994b82fe7b2c093b6c82a93faafb6",
+    "HOTEL-006/features.parquet": "fc09314fe5c3aea3112a794bb56edcbc405e4067ff3cf5255323ded8cf96cba4",
+    "HOTEL-006/hotel_profile.json": "8b4959b6b86cee3abc6d5d83e39236db9212b506260d8afad8e2e083439bcdbb",
+    "HOTEL-006/truth.parquet": "e421f017b358a6e0ca7cd4a09590d51e42e0d636954025e2d9ba93c491a624f8",
+    "HOTEL-007/features.parquet": "734ce34e64982f539b025df750d2908089611d1a42dfa974384d2477b993a653",
+    "HOTEL-007/hotel_profile.json": "09651e2c50222e0bc3f379f871df5eae2126c37f06caa61b5cc7c619369bc01e",
+    "HOTEL-007/truth.parquet": "0811877aeb914968266e290847854524c2d632a020a59f3b3673f050e1007f0e",
+    "HOTEL-008/features.parquet": "c0bc80802c07407a3119fe289a32336a9865dd46a52b3a7339cc7eeb9f9eea9a",
+    "HOTEL-008/hotel_profile.json": "13166718c89860bcc318c832f939edf4b3df7932ca8c0c17cb35b0ba18637742",
+    "HOTEL-008/truth.parquet": "ff2e15dea2d03e3a07036bc460c4a44291830ff03bb2faa5e9c905c272eeedbe",
+    "HOTEL-009/features.parquet": "c275247fe5be0c7180f7eea1f6023a0fdb932eb73dc2a809b45264b3e48b60a7",
+    "HOTEL-009/hotel_profile.json": "c9405fc293bf3b5309b6a0b72e6bc6984fa75495cf6b3df630e474f8eed11d40",
+    "HOTEL-009/truth.parquet": "c31399e8fca015706dab9a6e800068f030fa523605e53cd45c30d6360165b37b",
+    "HOTEL-010/features.parquet": "7c0ebccbe654cc03f69bb884ba9d4f147a7876a8209d05c37e3fe9825207c99d",
+    "HOTEL-010/hotel_profile.json": "8be540bbca8c609674ae27d4a22514de7be42d34c32804ec2b54f3014e07e472",
+    "HOTEL-010/truth.parquet": "744643c2700f2b2b33865ca3df312e5a999f834087c0c8540bff9a800a2dd5c9",
+    "HOTEL-011/features.parquet": "5e232780497b29a181ff0307b3d81719cfb39d7e572de79eb135257a618e601c",
+    "HOTEL-011/hotel_profile.json": "2e9bb1d1fd7986ad110f9e10622fe489c3d3005f88baab212660a61b86da679b",
+    "HOTEL-011/truth.parquet": "a4d3d2a7160dfc6932c7aee05cee0a282733a236083326fb623128b95fd56dab",
+    "HOTEL-012/features.parquet": "d3e38b20c3204459f6293ca31d7cf4a2df90d006ebf2339aa4f55157b75ed3cd",
+    "HOTEL-012/hotel_profile.json": "9199dc1440d4a46bc20ce48c06c9f65d846e5b32668291b3947aafed72aeff6b",
+    "HOTEL-012/truth.parquet": "613a77f34396b22bd31cdd0020c558acb7e7487c798d255aa10b3148e79160b0",
+    "HOTEL-013/features.parquet": "5eadc72a12a69ab5e2c80d410b891d592732e58cda6f3e2ebfd44142afa1591d",
+    "HOTEL-013/hotel_profile.json": "8ae5ba2202ea9b40c3a9e4bc4e0ce05596a053b0c0edc05e2fb6378ebc238876",
+    "HOTEL-013/truth.parquet": "cfe57155466fc9de6348b91226ec3a5d6cc9fb661eb3a112f6fea9a6a0e0b451",
+    "HOTEL-014/features.parquet": "994247f7ba131e254fe92f72304105cb5a6264512aa0770c28ec790f726ce2e7",
+    "HOTEL-014/hotel_profile.json": "1b15f446d7a3e9ea1c03c474d70187d13eb63f14133c108ba087e77ab1b2c50b",
+    "HOTEL-014/truth.parquet": "b9c93d616a315c28d1b9dcd44864d62970c751a7edacef24be1dd474191b4a59",
+    "HOTEL-015/features.parquet": "27c07dbc872e3df2e9e0ec21e601f2404234aafabecad2af38f85a16259703d5",
+    "HOTEL-015/hotel_profile.json": "bc79305a10b0e340de0eff7630fe035c2cde57ee654688bc19dc9bc2a767f256",
+    "HOTEL-015/truth.parquet": "cecac66ec90c9d02abc1b7da68df6477ba8f74f329ba0583fe3a8906911d218f",
+    "HOTEL-016/features.parquet": "233ffd940fc3348b2882a779ec8babf49abd97f63641cb14996f37fd84bb314a",
+    "HOTEL-016/hotel_profile.json": "5597277081011b1abdad360a5c9c3420ecfa5360a9147d7ad86bf6073c81b1ee",
+    "HOTEL-016/truth.parquet": "b3cbf42c3cfd9350de9da1e0f285f021497cd95dd449fd9a711f43587c07311c",
+    "HOTEL-017/features.parquet": "8a9518a7a700818a9ad19283b7ed1c45fcd1af456d96383708a711b5d29d4d44",
+    "HOTEL-017/hotel_profile.json": "3395bb67f5b3ce0b74ce48829482a6fb6dc1558da8262a68cdc78340f1a10d6f",
+    "HOTEL-017/truth.parquet": "8802438b373aa9b565503d3e6fc2aeaf255592d58b7a739dcb00232be1def8da",
+    "HOTEL-018/features.parquet": "d6e36bcc885609162a011aee8fc0f65b46a853b175dbd06adc8dc73d6f37463a",
+    "HOTEL-018/hotel_profile.json": "197e109881093905aa7c2bb79fa582d0e3d813e6365b4e2fb88b3ae70d413797",
+    "HOTEL-018/truth.parquet": "639f43ebeb153ba17d3fcd9ae4f39378a071445c7c61bd7760c6618313bb4757",
+    "HOTEL-019/features.parquet": "90dacd99c088449de5ade40fcea58378087f988cb2eeec3c825e8158b965738e",
+    "HOTEL-019/hotel_profile.json": "04b0a657c5bd180960ac748f684047a4003526d43386b2bc1fca4d27a9c84cd1",
+    "HOTEL-019/truth.parquet": "a305a55425918a25cef2b4a8faed2d20135b102057f2d5bd4575e9872ed4ae5e",
+    "HOTEL-020/features.parquet": "dbe19f05a8b1164095e6931baf008dcc06c525cb21a0084f0af726329c54c820",
+    "HOTEL-020/hotel_profile.json": "285c690e98aa8de29d77d289905a0e881d84cbf8f6d50576d75611c87e9abc86",
+    "HOTEL-020/truth.parquet": "1e32450b32dfa21d69f3bd3f98a36b59fabff46ab53a020a0a51cafad77186b2",
+    "HOTEL-021/features.parquet": "c193d8aca57dd37dfe22582be6cdf4e10f04b315148aa2bd3fd4ecf0406bc157",
+    "HOTEL-021/hotel_profile.json": "78351872efdaa7158d084845df2b6b00c051929052fc94b4877e1de65195cbb0",
+    "HOTEL-021/truth.parquet": "cb8952c817bec6c863dfab0c7df2e715dc801c2425a1346b4ca09d7efe281903",
+    "HOTEL-022/features.parquet": "c110b0fd05997368401b5ca04cb80960f366611c4eda4ddee0b89be28b043b1c",
+    "HOTEL-022/hotel_profile.json": "8d6c0056f94e5a46326cd5b528a127facee918ea9a50aec560abf33662734bd5",
+    "HOTEL-022/truth.parquet": "78d127723339548cf27662b4187ca923ded022a74fc39257decd5e096fc0b4f9",
+    "HOTEL-023/features.parquet": "f6375d985d72c368f215ac4975b33617b68a87c5917d40230535c490a4622b83",
+    "HOTEL-023/hotel_profile.json": "4b5d2949f8ea1d75f5602da107afdb4775143b9005c091ceefce796f979b7b2f",
+    "HOTEL-023/truth.parquet": "ed65a80ac9d898033a2fea41bc14c8a187c657235421830e4c7147298cff78a7",
+    "HOTEL-024/features.parquet": "31cb5c4a9fabf935b24c08117a5617c12b6c88177ba2826cd33781a83d7e260b",
+    "HOTEL-024/hotel_profile.json": "d18d664a1aec0928c4acd2a68bcc4d58e28e550256b44a1b559baef56f86d916",
+    "HOTEL-024/truth.parquet": "359d30889ea8ee8f1f055309bf4dacbb527492cf2f6001af4c0fb1354d4b1e28",
+    "HOTEL-025/features.parquet": "7d8ae1963ec1072c1864a682abc2a9b18b3ab23f1d8afad90b2b28ec23373d83",
+    "HOTEL-025/hotel_profile.json": "517f8533368e2d9ec647673543d61bbc6372862a20c367835cd76f65c6d9a559",
+    "HOTEL-025/truth.parquet": "104eb767d9da2ca8000362a7d80937973982b9dad3b185a223a4682f61539ff6",
+    "HOTEL-026/features.parquet": "2a86ae25c42d6062bb366492cd9600a8564ed0ee410e9289e9d20b8fe80ab01d",
+    "HOTEL-026/hotel_profile.json": "536d90eda23614c402050885f8bc279820d44c2c91e6c34bb6fd43030000e50c",
+    "HOTEL-026/truth.parquet": "a38c08c7e2311a2c3fb7e858069af78a7c099e573d8aca8af2708545cb3e2152",
+    "HOTEL-027/features.parquet": "8b0cf636e71c2b2dc20ed45cb7338ccd56ef64adfe848f33bf061614fed435a6",
+    "HOTEL-027/hotel_profile.json": "ebfcc85c06b9f639f55b2e54c705d3a0e220a08243df4025b35a71d946cdefe1",
+    "HOTEL-027/truth.parquet": "8bae7a7425b31965c7c671cd9e88d0e6d627e79c4fb154e6381ae26b0efb6a39",
+    "HOTEL-028/features.parquet": "d3212fdd2c292c67c4e274bf88ce80900f1480ba39628f425b40a62264b3921f",
+    "HOTEL-028/hotel_profile.json": "f00f2703da3a179682b54767110ea3057e301b76c9710a9a75351bd510f4d717",
+    "HOTEL-028/truth.parquet": "111a780163f39550b148747511d3d4643658dbaba7af46bb5e30f464203853dc",
+    "HOTEL-029/features.parquet": "f9d551fa0e247b308a41a030e01e9b27fb6d67da1b10f1aa695b14cec7c4f5b4",
+    "HOTEL-029/hotel_profile.json": "e2064b16c7e43241a503f8390a23d8f84b265f609643869e2131e69c6fc613ca",
+    "HOTEL-029/truth.parquet": "1a672b4e029d8ad9be38180162311aaed41da401bdc4ddfaf139b53fa2154b7d",
+    "HOTEL-030/features.parquet": "d458c665ea6ef3fbab844c26eb734dfb90cbe2fd0e4148843116526bb5ebd823",
+    "HOTEL-030/hotel_profile.json": "a872f076b8923afd8ff9807faebd9e73bb98785f04a72774c8ac540e8fc68b5a",
+    "HOTEL-030/truth.parquet": "8b3eba1b700ab393b85ab40cc851f35ddccc8349698f157765dfe2762e13e271",
+    "HOTEL-031/features.parquet": "3cfe236feea9b63e06af74b5215c0bc9a09f921618d0a1913092b6a1ddceb356",
+    "HOTEL-031/hotel_profile.json": "3a7a2f4bdc9f97b4e6bc402f0bf2176116c4aa3a2a9afc434ae71b5e3e0696d0",
+    "HOTEL-031/truth.parquet": "c8db106cc5ba0b0e7b909355f5e0defc2b0497be69f7dede5d9d9a408acebf40",
+    "HOTEL-032/features.parquet": "c28ccc1fd0672dd713ab244c809e5027edf8891eef073ad9445fd1ef6a715134",
+    "HOTEL-032/hotel_profile.json": "f79099ea37ef1a92f1b20e8625159c3dbc2442debe35ac811684aa8e40a77095",
+    "HOTEL-032/truth.parquet": "b82ecd1e6a1ff7a31c2b4d7674358d77079be577ac35abbd437e2abe28df59df",
+    "HOTEL-033/features.parquet": "013f9637fd1690653c4914602c3a56e0b20045d059ce44f71fbb57cba1e57c34",
+    "HOTEL-033/hotel_profile.json": "e222ba86401505617f7a9cf4f5eb1abbc2c98cdbe45638a6752985462e0f7929",
+    "HOTEL-033/truth.parquet": "3bd0b51b8d710bde068071bde28b52308497b28d0bd8130cfbc30886c8682e63",
+    "HOTEL-034/features.parquet": "4753b03554090453d91c0e6da4cb00000c67fc4baa9c97089c28babe0a81b303",
+    "HOTEL-034/hotel_profile.json": "557110c8404384f48ebb938fcd061bc12604ef47e99365777c35d9e1ae58047f",
+    "HOTEL-034/truth.parquet": "167123c30045538dcc96814ecdf27b6e0d79bb5a0803311ea98c490d2ff05938",
+    "HOTEL-035/features.parquet": "6320b3daa11948839b69df10cd11f989108bd846b125620c3682029924a71c86",
+    "HOTEL-035/hotel_profile.json": "5b5055037694c21f2b606645f68e88e0c2c57377c3bad74b8da3d52b5302865b",
+    "HOTEL-035/truth.parquet": "5cb2341049a78c004baa954f22f7ae851c8cc4f2cf1e49be6da9cd204e9deff5",
+    "HOTEL-036/features.parquet": "b6db53635b7dff67f2625501a738ab5ede30c9c1a0450536f110f4a3f58a1654",
+    "HOTEL-036/hotel_profile.json": "ad6411520578a9138eed6fdabb6d83c45a5cdae1d1835c5e294e4e3b1f2c4c91",
+    "HOTEL-036/truth.parquet": "a601b763d483127536aff1003251642c4c270d49e84cd8da5b8c73c1c5f8bcb3",
+    "HOTEL-037/features.parquet": "6de761033ffd1a0823ee3216d792b5529b881f97e18ba1cecc2ca7f6828be8ea",
+    "HOTEL-037/hotel_profile.json": "f729e8261882e38247b9fc8e1793e86683a16e6e19fed3287c342cf47a8c8640",
+    "HOTEL-037/truth.parquet": "9e7dd6d5d104bd54b388abc2fb60bb4b1a724422be0ff04680aa07111117c47a",
+    "HOTEL-038/features.parquet": "3bdb4676c7c8fe0083556cc5721526b0d1de96f6bb498eb9fd68d5dc4b080445",
+    "HOTEL-038/hotel_profile.json": "fdb15ad7f407bb70dc17c661bd1191bb7da31b4dae4a63fc5ac8f98ea2a71f10",
+    "HOTEL-038/truth.parquet": "5d9af1e51ab460d4ee857d31bcfb8dc4b8e93f35ba99dcfb474a5bda43c36291",
+    "HOTEL-039/features.parquet": "6e9745f605dac9560b9d1a899eb6642abcf0a1d821fe789a5d88cfe09704c34e",
+    "HOTEL-039/hotel_profile.json": "ec7efde798e3bb81dc7fb18df103fc3c5d46773a716323b7499c342bf82ece2f",
+    "HOTEL-039/truth.parquet": "c44e8474066bd30fd83841a06d0745151095305bf68e915e24dba290522c8d11",
+    "HOTEL-040/features.parquet": "7b94307ec1a3e7de1f5da9bb628630bff6c059d5d9661277407fe1e97bfb8b37",
+    "HOTEL-040/hotel_profile.json": "e563e422887c06997e21aa1f6e56fc3b8b234205a1cfd0f0164829e31722c629",
+    "HOTEL-040/truth.parquet": "48859bc932f0195371ce04b00c1b721f75ed8a9c904f2be8558875f544857f90",
+    "HOTEL-041/features.parquet": "6c27ef40ab350285f3000ed70bdf58ad0dd34e11e8404c83842db6c092f66293",
+    "HOTEL-041/hotel_profile.json": "5fdb4e63e4ceceac69bf3c9c95ef734a7e995de12b6e1b9def570e23d3836bf7",
+    "HOTEL-041/truth.parquet": "c42e9e6e7866fd553a2c51f55e32dfe46f077f47a06e060029319c1b0d30bcba",
+    "HOTEL-042/features.parquet": "d1d8c2ccaa73824110251ee0cd0f02c9f3593d27112d56419e421e2a3a2f45ed",
+    "HOTEL-042/hotel_profile.json": "6dd81bffde20441b488bdafa134873138e9a9a8423b87dac274b1a3d20b76210",
+    "HOTEL-042/truth.parquet": "43a004f10d5b664bc4c380111474e9211ede0fc5521b300f92f8514a701db162",
+    "HOTEL-043/features.parquet": "55925a2a659a2392359ff98d4a36387aaa22ac58336a935af63e8af2d472578e",
+    "HOTEL-043/hotel_profile.json": "ec3c8997c88e0c5b49bded0486bdfbdbb3042c8f4910c54acc02cdf9e4cdc9b3",
+    "HOTEL-043/truth.parquet": "3b33b11492b8b3a41d1302f30041d6ae3e5b885e1ff8c84df5885c224f75a0d3",
+    "HOTEL-044/features.parquet": "b5dda30b56d58fc984cc8518b878fd9e165cb6e2ed335b5314c53ea7e7279b8d",
+    "HOTEL-044/hotel_profile.json": "ac889a5f7b3bc5268f5590fb59861554337c94b97927d9fcb216eebfd1603dad",
+    "HOTEL-044/truth.parquet": "005c39f87a4a54c3e0b2645be64cec49400288dd459cd8b459f8e30bab28404d",
+    "HOTEL-045/features.parquet": "10e8f675457d58b42cc8ff6f7f7ff2048ec25dd3608648c6775979f5be1e2505",
+    "HOTEL-045/hotel_profile.json": "ef9e99f6149bed0c4b601848e6a705a6c4ed83e138803de56d615fcf0c4f4125",
+    "HOTEL-045/truth.parquet": "2b2c2e5479bb8163abec1f59ac75119d0a359bd77d896b6fdf497e7e7f483e4e",
+    "HOTEL-046/features.parquet": "f5b0cfe067f4ef734a670ffa007eaa5a25e6cdc7d6b4d93387e6f6364f476ea4",
+    "HOTEL-046/hotel_profile.json": "33e234b67accb63ac48999d546d86b5117d6bbb503405c0e46d7f4e71eae89b0",
+    "HOTEL-046/truth.parquet": "c172896cac0428687cf45cf7617cb3a908df7dc0d4a3478c02f1046170767809",
+    "HOTEL-047/features.parquet": "9d30dea306c9ad90cc00bf95ba69d7bd2674f657ff3fab1e085a26e1a6b5c19c",
+    "HOTEL-047/hotel_profile.json": "505c668955ca4784b07e55b8fb1f46dfdfc05d0dc25520c3a8ccaa48da03f2fd",
+    "HOTEL-047/truth.parquet": "c1fa0634f85975a58ee676de3da71de2591286b686fc1079384572125ba52a98",
+    "HOTEL-048/features.parquet": "7907948dc23815a0ac6b947e8184454fd8724210f13c4948224a4b63598df901",
+    "HOTEL-048/hotel_profile.json": "18987a966e39752b885d88ea785786afb7de44450c9f8df3578d7932a5469622",
+    "HOTEL-048/truth.parquet": "f83a6dfe955176d87d2e18b2ddc688cd3fdda0d286f9dad8ae0bd09e7e9f68fb",
+    "HOTEL-049/features.parquet": "315a1fc12565ae7c5804f741f9923199d2a367affac8f35a166ad0ad38736126",
+    "HOTEL-049/hotel_profile.json": "53cbde80420b2618f6ee96ea6a18e52c0ed5fcd3d72bc50184c8a0f94345981a",
+    "HOTEL-049/truth.parquet": "94d7787db3360b53937b1940b53ae1fdf565e4809a655c23cab2d6838f2180f6",
+    "HOTEL-050/features.parquet": "28d43dd29221edb6ab83f922a11d7d3dca2cfa0ceaba319486ac530bd178810e",
+    "HOTEL-050/hotel_profile.json": "413d5d9c3bf2f63728030b3a5d3f78fd594f344b599421c7dee5d7985d7127ba",
+    "HOTEL-050/truth.parquet": "ca7a62e606df93516e39bdf25fe19dc3c5350b3726c0dfb8e9e56925db61ab0f",
+    "HOTEL-051/features.parquet": "dbf7023cb84f594416ab0dfc54ac4a2240509e3d78b7cf4eea65c272622464d8",
+    "HOTEL-051/hotel_profile.json": "62da0400ec079353cbc8caaf2a5cde8ce4f8184f71b4e27cffb13a59581885ec",
+    "HOTEL-051/truth.parquet": "779d2ff915c4f15e36632f23cfffc05fd49f642a88b6d8f182503098dc565e8e",
+    "HOTEL-052/features.parquet": "97e9c5ea365bb6bd73b6914e462e6a8156b7c62f069814f72dcfed40325440c4",
+    "HOTEL-052/hotel_profile.json": "070f36c3e37935d4f6f15331b0fa043f2d542dc468cf0bab233904f7f539f33c",
+    "HOTEL-052/truth.parquet": "d5128786f23b92928e883acba9cb423cc89ea0f5181beac6379d909e0ab2c4d2",
+    "HOTEL-053/features.parquet": "8122e2c5f3fef68902537d556c9666e4f55481d55d997c3254026b51232f14b7",
+    "HOTEL-053/hotel_profile.json": "5cb42ea124e36b7d5bb353316f397daaefef8bc91cf48b93cd9d52df4d287494",
+    "HOTEL-053/truth.parquet": "8c0911782587701abc9b52a9c0ee24d48e923df3eb31509e840f85c7961c66ce",
+    "HOTEL-054/features.parquet": "8c792383917640203365b301c9aa00cca21c8a0d6e7ce46c68388ec786ed9777",
+    "HOTEL-054/hotel_profile.json": "8bd45b2c895eee86dece1df2c81e574a3c164843076efbbec3c18f5d1d7c3264",
+    "HOTEL-054/truth.parquet": "11df9a5eae2310ae8e53fd930a5c55be9299cc229c2abb82780e362c3687c200",
+    "HOTEL-055/features.parquet": "dba2b70c71e7ddd19070bbda8f48a2ce54236c738b589487122051dbdeeb9aee",
+    "HOTEL-055/hotel_profile.json": "0daab867446341a6f9e5172b277889cb74ac45b19fc665edbe1a68710c64a3fe",
+    "HOTEL-055/truth.parquet": "7e8c124f78374218e817de356af6fb665b30e571a55d9cc66f2ee5b8d95c5088",
+    "HOTEL-056/features.parquet": "5ef87714fb2b16b6fffbbbd7e1e1756c3c4c105f52effc101c1d8143e6061dcc",
+    "HOTEL-056/hotel_profile.json": "a1e2a2007c0987ec5831388aaa6a66fe3da355ebe9610aef40fb05c8da9bc1a9",
+    "HOTEL-056/truth.parquet": "67ab8bcfd9b5bf7b8c189b179baa9d3810c2c4eb97985e496b7ab86867248ebd",
+    "HOTEL-057/features.parquet": "854aa2ea85116c1eb859abea65dc42b839e23b794a5836e75f39696277066920",
+    "HOTEL-057/hotel_profile.json": "64c6f86afa654ab7fbd7c778eda7a070c5249dc93450dc4913fe9de570821eb5",
+    "HOTEL-057/truth.parquet": "69e089a6aae70c2cc26c0bba0c29741322867d9775f64a9202b3b10a53d9c141",
+    "HOTEL-058/features.parquet": "5ef292e5edd96ff401a0bc6803bba7845b8a973439bc53c5d9f56af4895b1058",
+    "HOTEL-058/hotel_profile.json": "8c65f875b0b4036caab3de0b202b25588da400a93b3c305a0bf99667056600e6",
+    "HOTEL-058/truth.parquet": "e198aab2ec9a42081fef9f7345ab52e0222d75981c810c940bf0957af3c41241",
+    "HOTEL-059/features.parquet": "34397fa5f9780f2dd964a7c79a091bc03b45fd40996458bf8d66ca19f0a47010",
+    "HOTEL-059/hotel_profile.json": "676874035af9daf76fb34ad6b6914131310d8b384036520ca17a178170502f7c",
+    "HOTEL-059/truth.parquet": "cec42cf4b6c89148294ae25da6eca48939f2f436456b2814e9bbd543fd5c357d",
+    "HOTEL-060/features.parquet": "233d0e5d959b269afb5181e6043e7a98c3aa1078986acf50b540260f39f21abf",
+    "HOTEL-060/hotel_profile.json": "546b6d274cef2055378a800219623ce25a3f3034fdf68570bd858ab4568090e2",
+    "HOTEL-060/truth.parquet": "f49f3b50b0b75ac56eea8edc6e91c57bef1ee0fa462c3ba3b4a9bef1dc7fd3be",
+    "HOTEL-061/features.parquet": "839c8fbdb61f8a4aeaa2fd44e6f0a82856b377d247752421ca7bce185d113990",
+    "HOTEL-061/hotel_profile.json": "84044f68f76db4e116f2c373aa7c4905962982978f3d9067b38504f5c5e1fc64",
+    "HOTEL-061/truth.parquet": "12a62cdaae05d737d38431a15915cfe570730203993b8d4ec5760df22375d73b",
+    "HOTEL-062/features.parquet": "e1bea71f4376e8567cc196ce66d1213774b2461ca0b957676984ec290ef1536a",
+    "HOTEL-062/hotel_profile.json": "341dcbe1f034a9ce50af4934f68f89072488753c22d4cb95ffb0b629ed221d76",
+    "HOTEL-062/truth.parquet": "e4cb68c38ad5c203a781579adf290ba5af6b966aa4b60abb13d87e26a2cac8d8",
+    "HOTEL-063/features.parquet": "dced5992253b1944fbfb4441a39658c48a20de42229029668cc8e79e49841942",
+    "HOTEL-063/hotel_profile.json": "094ab0782eb7e9eca420685c61d29a5600c18dc34294c6feec8e88fdb05d438d",
+    "HOTEL-063/truth.parquet": "c2499476e28de8c83e07d7401bf39a95e0043b3eb0a98580de1963e3a599b74f",
+    "HOTEL-064/features.parquet": "3ce9e9bbcf6142190087bff5753f964168517787b2f432343388c504232d8490",
+    "HOTEL-064/hotel_profile.json": "b18b699d4eb614cdcc96cb9130f4ba3b62fde1f04d93417f05af1fd6c6871e7c",
+    "HOTEL-064/truth.parquet": "bfd8563343c6bfaee1d9906f610e5efd2c09b8cbc3faa75e32abe8a208f7205d",
+    "HOTEL-065/features.parquet": "dbf03172880d2dbf5b7907f861d8cf2eaf6058f3c3297ee73e2d86f40e7584f1",
+    "HOTEL-065/hotel_profile.json": "58f4c2921236749f8587657c3b8c10d28fd0c64f43e29432018691c1954517f0",
+    "HOTEL-065/truth.parquet": "a2ec2082fb69aa1c5c350838ddf1779f82e02c646c15af4243d2f231a7172eef",
+    "HOTEL-066/features.parquet": "7773b5b3bb9216c1e7b1fc0746a55a80cdab9bb9c4ae41e51da57c25073becf1",
+    "HOTEL-066/hotel_profile.json": "5239633c471a400e29f1be1f46ff74847fd84cc940d44e3fb6263a02911862da",
+    "HOTEL-066/truth.parquet": "6966927d1b9ecc4d9877d4929d03c14fe9cf422389fc41e2508ede24efe77894",
+    "HOTEL-067/features.parquet": "4d011f5e6ad0843c4ef114cdc693533392a3695435036269708482e8b2f05d2e",
+    "HOTEL-067/hotel_profile.json": "d989e3afdb2f301a42b57b9a94d97bce07c221f1ec6641bd5b2caea67fe4966b",
+    "HOTEL-067/truth.parquet": "5c91cc27479c708d389d8605445c0d643b40729d7c79441e76e981a8632f29f2",
+    "HOTEL-068/features.parquet": "32c411d51951b76e6e44868ced37b6a695900ed9c70606d25b931b9e9a8108b8",
+    "HOTEL-068/hotel_profile.json": "c51e2141bf703df7cabab8f1807070785c47d70e71e1e1c41fb93b88752b6669",
+    "HOTEL-068/truth.parquet": "023d99d3692dd666a6200e572a2e61fbe0be470dbc42ee6fd10b3d4abd4ee774",
+    "HOTEL-069/features.parquet": "c4be60f9765d26a39ff54e0d5866d858cfa68891b05ad81a94823097654dfd98",
+    "HOTEL-069/hotel_profile.json": "ad83e83b95a02e3e6f6777e1b512fc4b7a087c0b485ea748623acd83129148fc",
+    "HOTEL-069/truth.parquet": "b0fbe46cf90868df44e27f390168bfdc535441396284510e59cf2481c856a784",
+    "HOTEL-070/features.parquet": "9621fca703ecb4a8846b0c207b7bf1a6496c3ae6eeb96f03676b550c472d7aee",
+    "HOTEL-070/hotel_profile.json": "38cb2cef2437a1c18e24177563528ce477bcb2302c66dca9d995304e083bc632",
+    "HOTEL-070/truth.parquet": "fcd393e78a1f82a549f379c6b9d9fdf2a54bcb975c236ef7fd4fa08b7e369183",
+    "HOTEL-071/features.parquet": "5e98c1c2a75874d07d1392a859f7c3b3d737054db0bddff2a30edb87c33a5304",
+    "HOTEL-071/hotel_profile.json": "11ba823a85aaf38110d418ccd94ba6c72d326841cca9beca5f0e88b678868037",
+    "HOTEL-071/truth.parquet": "c57f1b39d7ea9d2061b9e6996ea3955c74a52542e4094732b77e463311a5e6de",
+    "HOTEL-072/features.parquet": "5c8f027833cb2c679f3b328cb399989362f4e0e82334b7cca26fcd6f48e845b6",
+    "HOTEL-072/hotel_profile.json": "6235b93bc580be03f0615352e0aee027d3efbb1afe2c7f46ae4a5d8368763e1b",
+    "HOTEL-072/truth.parquet": "d17e40e22f202b20120c6787fe3e8efbfbe2df38aae4ee6d16b03bd21f6b330e",
+    "HOTEL-073/features.parquet": "e65e8b01af489f1d06a3d649949a33a27a3c116953ab74913cbf9906cf151767",
+    "HOTEL-073/hotel_profile.json": "5c65434a6261b99227387239b736eae7b3ec8ac6b751ae890c6215f2a8ccba0a",
+    "HOTEL-073/truth.parquet": "38f5e0fae4a26c40210865bd955bb70e73635bdba46f744c73b93aae557dacb2",
+    "HOTEL-074/features.parquet": "3190b0d0f701c49d38fda88f654a79e67c3e0bd8bd7555fe9212b6764e00813f",
+    "HOTEL-074/hotel_profile.json": "f10e159556a045f1837f23f4071834ae5cd6df6fcb250a336a4101c8f6b3ab9c",
+    "HOTEL-074/truth.parquet": "ecc9c1cca430d0cd9fa20e6934033abdb8821819dd8bcbef44bb4b184b2e749a",
+    "HOTEL-075/features.parquet": "a60763240d59029a75e3dac46e6c41a91d69a3dfc5f6ea42f33ccc86483bfa0b",
+    "HOTEL-075/hotel_profile.json": "44e966b1fc485bf87589b97263762fb29cf9f4ff47ca4e5c702c2f1fcf1ac88d",
+    "HOTEL-075/truth.parquet": "95e6946127504c0b1ebbbb4e15162f38471866117f02bef5d05a9088b295fa75",
+    "HOTEL-076/features.parquet": "b081eb8a47c6cbe3faed50decf2f4c4ef66d1817428b47b8cbfbc1d86a6344a0",
+    "HOTEL-076/hotel_profile.json": "f83e11f16d2bd1377523a90b35d420984f3ff2b303ec2a23fc855ecc49f64020",
+    "HOTEL-076/truth.parquet": "2b4d37de1f3d8f6b0ee3c070771e503a13ae52f52659ca826bbf7fa9929857c3",
+    "HOTEL-077/features.parquet": "6a463548b40010c1e981729d6ffca8b5e83f9aa885857e85007d08b858abb545",
+    "HOTEL-077/hotel_profile.json": "aae319213886a441dadef26961203f8346cd0660ff2312acdff268094d917ffd",
+    "HOTEL-077/truth.parquet": "cc33a368cc7b0beb5ad984d2ea8467e449ee1620f347e4802d777a73bf9d0645",
+    "HOTEL-078/features.parquet": "3de7655f87cc3834c6f59d72cdc069514ab1344525d310e8156d1222d0a321f3",
+    "HOTEL-078/hotel_profile.json": "7fa45feaf0256274f671650e7279ad169d26de4c938a080d8d4c3d2810e8674f",
+    "HOTEL-078/truth.parquet": "7d589d81bb02452936aa71e67bd4e30143085ada5ec246231eee94bc79280a43",
+    "HOTEL-079/features.parquet": "e87a21639e541b8d44111a78c3a5585edf2a2abed9d007cd2826582c0796c412",
+    "HOTEL-079/hotel_profile.json": "51eae49c7190085cfe88f2b61a8d4f8a3c445638f16b14527f6b4ccb39ca7304",
+    "HOTEL-079/truth.parquet": "8be0f8b836ba758492ed2eb91bc4437294dde44d3f902108671094ed4c2a32ed",
+    "HOTEL-080/features.parquet": "6eb76da705245fb3e06bc41a555893c03a7724bb3d75745df878879e0f768a20",
+    "HOTEL-080/hotel_profile.json": "a62725756ad776678089f5c26f83e9d89f0438dafd81b2342b0f3b7fdfa5a629",
+    "HOTEL-080/truth.parquet": "d62683e336d8b10473c1e538dae3c5d3e9ecc6e0729867fd59104766f0973044",
+    "HOTEL-081/features.parquet": "7197cc91ae405a0ccfc0b3510cc168c0606e46b59fad6fc5c490594dded617cb",
+    "HOTEL-081/hotel_profile.json": "de2c32e7ac668563d8c7553e5a9073014cb8a6ef03815a8e514748ee018aa07e",
+    "HOTEL-081/truth.parquet": "51d8cc85a3c3ce3b729e3633f90fe002e7a92ecfdd072fe682e143dfc01fec57",
+    "HOTEL-082/features.parquet": "2f3fc570dfff839860965b3e93622041746e1fb1ae116e84c21c25ae90264439",
+    "HOTEL-082/hotel_profile.json": "4d4599ad4d3942c6b3231959d2af93bd4e7c1c7fa78103c2cba75bd820219157",
+    "HOTEL-082/truth.parquet": "2eadc427302cc001c11ba714af0ea0d280ce4fd84f0819de9dde3464f0eeed1c",
+    "HOTEL-083/features.parquet": "17b2e3ed9f2d506a3c67c24df18af02c95feb3ed9e29af90a7c2374a2d4ffdb3",
+    "HOTEL-083/hotel_profile.json": "707f429434a84cd2bb3f89266a09bfaa060119f3f22fa872c3903f5059ab066e",
+    "HOTEL-083/truth.parquet": "354bea8fe3fb9cad29529ac93a6bc0142585786afe68dfcda3efdf1892852560",
+    "HOTEL-084/features.parquet": "8decd03a47958f9f8243b7f538628e3f7544dc309cf2633527f1dac07f2d31da",
+    "HOTEL-084/hotel_profile.json": "cc1b01468fde99c1309a3e413ee58db444d8be6b535f5cd7c6d71c38cbdc71c9",
+    "HOTEL-084/truth.parquet": "077ab63730669f4a90138e5721ce21a400d179397ac77219643dfbbf56891f1c",
+    "HOTEL-085/features.parquet": "b79720d743843f89cca0fe2392e37ad5c5ac42a990dba4cd8e5020afc1187f87",
+    "HOTEL-085/hotel_profile.json": "e6eba0fb5576e75a3758d384d99912231f4bda77b46c504b78e1493aad99c0f4",
+    "HOTEL-085/truth.parquet": "c0a3c8840c6b038d2e5876d976bd3513fe7364cf089aeba333a61b24a0112a69",
+    "HOTEL-086/features.parquet": "574813b07e3247fa2662324fb92f31eff74bb7a0ba8c15f9c291a50115a010ab",
+    "HOTEL-086/hotel_profile.json": "de8130f4c96fbbfda5e4c10f0736c282c4687903f2774a965cb67810a7172ee9",
+    "HOTEL-086/truth.parquet": "ab21db3f21f8ee20ab59126dc0fe3019fbbe5b2eabdf96d04fe98e167fdebf14",
+    "HOTEL-087/features.parquet": "70b2c03dd4deaeec9f59b6c37fd25dc242881c0f94220a9b880fa46d8fc80efe",
+    "HOTEL-087/hotel_profile.json": "4ca56f7e244ef62f57687c88ebcee2b6a522e23472ed9c8551d3b9ade4113e2d",
+    "HOTEL-087/truth.parquet": "bddf8def5df44d6249d0d5c35ac6fe244d92374061786ee14f8d636275a08718",
+    "HOTEL-088/features.parquet": "71d6dbee74e3420533e0babfefb6556d40a8d4688250de0e1cfec86a2585a6d9",
+    "HOTEL-088/hotel_profile.json": "60356b0135291a73d8db19989d86dbdfde4889bd4bb29573a962ece4d9722621",
+    "HOTEL-088/truth.parquet": "1508f03c30cadf905f5e986b1f8523742ee01d833810717bfca0cc9e5cda7738",
+    "HOTEL-089/features.parquet": "11e7275863a3e125ff19959b7ed86b0221ef36b15500d70600ced5868c6b48a2",
+    "HOTEL-089/hotel_profile.json": "3c7ae145668ba0dd36905169a2b18c9ffa3b2d261affae93900ba1c057f83e3c",
+    "HOTEL-089/truth.parquet": "ef348ba56542aaaa217ee5700bdf52a5fb5c85af2870bd8d951ecd3a4e0a28c3",
+    "HOTEL-090/features.parquet": "eb19195095de4e7384d890c75255190afe122c11aaecd8af22a525f79de58c73",
+    "HOTEL-090/hotel_profile.json": "6de6f2f605b958a3ac9dc40d333078994e0db6b2531a891286554ef88e321a18",
+    "HOTEL-090/truth.parquet": "98b64f82acb26702f85602772b5bd2f64559ea68aebc51fc93caab6989188b63",
+    "HOTEL-091/features.parquet": "0ff9d4e380dd7c7c4d7fbf7d3528b1651d31ee18d4eeb56f12e9e8bec193287e",
+    "HOTEL-091/hotel_profile.json": "362d4872c347869ebe5b15a32e00e00a37ecda6e5bd751e79220c753d9659914",
+    "HOTEL-091/truth.parquet": "439d54181c44c5e7e37c5cfd8f95391270c58bb87a292a00dc399933df16526c",
+    "HOTEL-092/features.parquet": "a761c0e31f4c4a2ddb9c1cfd02f5629c4715a49bcf410d4cae797555a0acc789",
+    "HOTEL-092/hotel_profile.json": "ad8c7c259e870e3441efd83cb7d0d0e89047d1b1cff1c53d80aa013c9fc9dcca",
+    "HOTEL-092/truth.parquet": "5dec835d145b0da85f0a5a5294aa96345500715a4ca6e45fe8be94dc282a8437",
+    "HOTEL-093/features.parquet": "fdd130f584b216e2020b1c70d13f00b6403ed2bf430724113d5aeb8efedd99e0",
+    "HOTEL-093/hotel_profile.json": "3ce70356032fa252f0d8e74659127f72e816ca1e2c22ac819c0881ea6f6640b5",
+    "HOTEL-093/truth.parquet": "db5e7dc3818a1c6a2193dc013ca0ecf93aecf17a780f53c881af475baca4c917",
+    "HOTEL-094/features.parquet": "98b485bdab0bb813ccfb557fc7989505567f91a6d1f795bb626f340a570be8d5",
+    "HOTEL-094/hotel_profile.json": "6df251987ee8a67c08806c0c97c01601299fdedb81dd2080ae36a0c7fce7975d",
+    "HOTEL-094/truth.parquet": "39c298f3e948577eeead54f76d4648a40c5f36c5196bc07b8b95aa2c6524b85e",
+    "HOTEL-095/features.parquet": "ae231030dc97206ca924d0210c265677992213905f0b28f5aeebc3c896f92113",
+    "HOTEL-095/hotel_profile.json": "7e1eceaa5726c4d0404dd8efcf902bfca159e7e9cb48247b3edff8bd4100b70a",
+    "HOTEL-095/truth.parquet": "e4b1dfc11a90290fb632aca839336b33b82f788f5c4fd89ae504c163574e6094",
+    "HOTEL-096/features.parquet": "e483abf7266f5cec8721968e5af47747a4abaecdbfda591bd9675ab2627e035e",
+    "HOTEL-096/hotel_profile.json": "e088cd51db5a68d6d9d681453cf76a597c25eaef52ac77812baf75c86cc13505",
+    "HOTEL-096/truth.parquet": "2f54753dfb472a21476a1b731d39326168fb40f0abf7973ec45c20e8cfd2782e",
+    "HOTEL-097/features.parquet": "617ec06e98f3bcfe13710611c1c80c694fd1303b905ffef69c81066d28cce33c",
+    "HOTEL-097/hotel_profile.json": "c8dbb89fb5e24421a8e05c7e3b9aabb2282fc2d78d044d9a9135291ec364436e",
+    "HOTEL-097/truth.parquet": "8cbe2b919e75b68a3ce4c23b643d51fd59b6c7865d62bc9cfd00a5397ddbd358",
+    "HOTEL-098/features.parquet": "c99891bbfbb447addbf595e662d3dc1af39234edfc24200f13e75cd1317273f7",
+    "HOTEL-098/hotel_profile.json": "148886e8ca7e354b1716e07de94247d93ba4e8a9b587eaef82a68382ba573b14",
+    "HOTEL-098/truth.parquet": "87a0696031f291b358984dc0f10a80262b6d187583a613c9bd8d2e6e32d9a808",
+    "HOTEL-099/features.parquet": "28fe42bc940f1f3d91045efb2328d115c514298ebf4c343bec038d21bfe968a0",
+    "HOTEL-099/hotel_profile.json": "7913c659032dc3a3d0344086543196d3ebde93d45f80d2906254a85099f9ac64",
+    "HOTEL-099/truth.parquet": "782026411242fa6c517260000d98661583156bffdf8286b6100ed9c3eb8c4d71",
+    "HOTEL-100/features.parquet": "0205649e755a88d069e4dc3b7777b9b3b96135e26e10da5231230cacdd103e23",
+    "HOTEL-100/hotel_profile.json": "551c24c2dfda16de94534ee11ef6ef441451572083ce07ee02c8528825048ecd",
+    "HOTEL-100/truth.parquet": "7f63fc2b87e0beb350c84513691a0ac01467b4dc7806727d5c4d19f6a2b9e892"
+  }
+}

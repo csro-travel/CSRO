@@ -1,0 +1,7 @@
+numLeaves,minChildSamples,bestIteration,validationAveragePrecision,earlyStoppingMetric
+7,30,43,0.4477241845340288,average_precision
+7,100,28,0.44458065037572364,average_precision
+15,30,44,0.44441626322441,average_precision
+15,100,36,0.44648896139495015,average_precision
+31,30,11,0.4458033508415169,average_precision
+31,100,29,0.4387372509127174,average_precision

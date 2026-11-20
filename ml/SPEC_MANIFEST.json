@@ -1,0 +1,11 @@
+{
+  "files": {
+    "config/simulator_v0.2.json": "f66f62862b49626cafa4723f414a65a1114028ef3cfa5e35d585c8d25c70bc49",
+    "docs/DECISIONS_v0.2.md": "8a12b223adda0d455c16f60e6f20dff0499203cb08be657e09bf240ab0423073",
+    "docs/ML_DATA_RULES_v0.2.md": "907c5dd7563986f4d58e70121ea810394a51cc4d4456c4f996cac37592848026",
+    "schemas/features-v0.2.schema.json": "c2671e2f89b0462f07a35048a23b7c7b9c2ba43ca7b43083c7b2da1ecbffd5fd",
+    "schemas/request-example-v0.2.json": "75eed777aaacfec44592aad2f004da5484753d5b7a9bc2ea3f9bfed86e9656cc"
+  },
+  "rules_version": "0.2.0",
+  "scope": "design reference files only; current implementation status is IMPLEMENTATION_STATUS.json"
+}

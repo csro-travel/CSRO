@@ -1,0 +1,16 @@
+{
+  "configSha256": "bac079a2c386c7e50ad73e4ff5161af93ccefebdf8898a18041782ba98a30cdb",
+  "featureSetVersion": "risk-features-0.2",
+  "files": {
+    "audit_slices.json": "80208e755e2870f4ffcc6350f3baa28e3fae6df886cd0c93eb6fe11ccedc22b6",
+    "evaluation_report.json": "d3b2a6b68884f8966dfac0ebd4ee0428e24ac88becd612609796414228480705",
+    "evaluation_report.md": "560aba3110a8a19109480b64a5f3bb58fac205bdc45bae546af11f9f5ee272cb",
+    "model.txt": "84d386281d22f4050cb6a8a02cc03d3bcf09e64194213f613e1069e915d68c88",
+    "model_metadata.json": "b51d14d160265f20ad2ba088ecac75e1929679c2115300d701f65a1a53ce8dfc",
+    "search_results.csv": "b6438b95fc88ca229dc0cdcdd4a034661ae8168e91329bc52a532da0413bcee0",
+    "test_predictions.csv": "4b9fd541a178f8f9bd614cbb98f35f7f19bba89ae6bc1f233ccc44cad95a5d74"
+  },
+  "isSynthetic": true,
+  "modelVersion": "process-synthetic-lightgbm-0.2-84d386281d22",
+  "type": "model"
+}

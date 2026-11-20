@@ -1,0 +1,4 @@
+# Frozen model manifests verify exact bytes on every platform.
+artifacts/reference_model_v02/** -text
+# CSV artifacts were generated with CRLF; preserve them and recognize CR at EOL.
+artifacts/reference_model_v02/*.csv whitespace=cr-at-eol

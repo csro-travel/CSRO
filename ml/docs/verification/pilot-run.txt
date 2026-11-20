@@ -1,0 +1,21 @@
+{"hotel": "HOTEL-076", "complete": 1, "total": 3, "bookings": 1921, "events": 27323, "elapsedSeconds": 3.22}
+{"hotel": "HOTEL-001", "complete": 2, "total": 3, "bookings": 2777, "events": 35423, "elapsedSeconds": 4.29}
+{"hotel": "HOTEL-096", "complete": 3, "total": 3, "bookings": 3845, "events": 58039, "elapsedSeconds": 5.05}
+{
+  "isPilot": true,
+  "hotelCount": 3,
+  "calendarRows": 774,
+  "totalBookings": 8543,
+  "totalEvents": 120785,
+  "labelCounts": {
+    "0": 612,
+    "UNKNOWN": 119,
+    "1": 31,
+    "NOT_ELIGIBLE": 12
+  },
+  "splitRows": {
+    "train": 413,
+    "validation": 0,
+    "test": 0
+  }
+}

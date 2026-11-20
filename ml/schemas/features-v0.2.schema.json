@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:csro:risk-features:0.2",
+  "title": "risk-features-0.2: owner design proposal",
+  "description": "Exactly six numeric/boolean feature fields. Metadata and audit columns belong outside this object.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pastFailureRate90d",
+    "targetConfirmedBookingCount",
+    "bookingVolumeGrowth7d",
+    "reconfirmationOverdueRate7d",
+    "inventoryUnavailableRate7d",
+    "isPeakDay"
+  ],
+  "properties": {
+    "pastFailureRate90d": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Beta(1,19)-smoothed booking-level observed original non-fulfillment rate; not the unsmoothed empirical ratio."
+    },
+    "targetConfirmedBookingCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Size of frozen D-1 platform CONFIRMED booking cohort."
+    },
+    "bookingVolumeGrowth7d": {
+      "type": "number",
+      "minimum": -1,
+      "maximum": 10,
+      "description": "Add-one-smoothed recent7d vs preceding28d/4 growth, clipped."
+    },
+    "reconfirmationOverdueRate7d": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "inventoryUnavailableRate7d": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "isPeakDay": {
+      "type": "boolean"
+    }
+  }
+}
