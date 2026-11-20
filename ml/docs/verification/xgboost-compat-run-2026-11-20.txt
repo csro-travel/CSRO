@@ -1,0 +1,12 @@
+{
+  "output": "artifacts/xgboost_comparison_v02_compat",
+  "interpretation": "EXPLORATORY_FOLLOWUP_NOT_NEW_HOLDOUT: LightGBM test outcomes were already seen before this comparison was proposed. No real-world performance, independent final validation, calibrated probability, or causal benefit is established.",
+  "validationComparisonRecommendation": "xgboost",
+  "runtimeSeconds": {
+    "preflight": 0.3744113520006067,
+    "candidateTraining": 1.6352661729979445,
+    "validationDiagnostics": 0.0785180240018235,
+    "postFreezeHoldoutValidationAndScoring": 1.2863926099998935,
+    "total": 3.4045365849997324
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "experiment_version": "xgboost-comparison-0.2.0",
+  "baseline_git_commit": "b2c05a86f6af636f8d4f1796feb24670240d5d0f",
+  "data_rules_version": "0.2.0",
+  "feature_set_version": "risk-features-0.2",
+  "seed": 42,
+  "xgboost": {
+    "version": "3.4.1",
+    "package": "xgboost-cpu",
+    "params": {
+      "objective": "binary:logistic",
+      "tree_method": "hist",
+      "device": "cpu",
+      "eta": 0.03,
+      "seed": 42,
+      "nthread": 1,
+      "subsample": 1.0,
+      "colsample_bytree": 1.0,
+      "colsample_bylevel": 1.0,
+      "colsample_bynode": 1.0,
+      "lambda": 1.0,
+      "alpha": 0.0,
+      "gamma": 0.0,
+      "scale_pos_weight": 1.0,
+      "disable_default_eval_metric": 1,
+      "verbosity": 0
+    },
+    "max_depth_candidates": [3, 4, 5],
+    "min_child_weight_candidates": [1, 5],
+    "num_boost_round": 2000,
+    "early_stopping_rounds": 50,
+    "early_stopping_metric": "sklearn.average_precision_score"
+  },
+  "selection": {
+    "metric": "validation_average_precision",
+    "tie_break": ["lower_max_depth", "higher_min_child_weight"],
+    "threshold": "validation F1; tie precision, threshold"
+  },
+  "evaluation": {
+    "daily_review_budget_k": 10,
+    "train_dates": ["2025-04-01", "2025-09-30"],
+    "validation_dates": ["2025-10-01", "2025-10-31"],
+    "test_dates": ["2025-11-01", "2025-12-31"],
+    "test_outcomes_already_seen_for_lightgbm": true,
+    "interpretation": "EXPLORATORY_FOLLOWUP_NOT_NEW_HOLDOUT"
+  },
+  "feature_importance": {
+    "permutation_repeats": 5,
+    "seed": 42
+  },
+  "expected_reference": {
+    "reference_model_manifest_sha256": "2ec5ed599f2d4af29519cd3a0f01804d744ea58e917846d2a3c41040cb5c5162",
+    "model_sha256": "84d386281d22f4050cb6a8a02cc03d3bcf09e64194213f613e1069e915d68c88",
+    "model_version": "process-synthetic-lightgbm-0.2-84d386281d22",
+    "data_config_sha256": "bac079a2c386c7e50ad73e4ff5161af93ccefebdf8898a18041782ba98a30cdb",
+    "full_dataset_manifest_sha256": "a9a64d8700c246bb78c663c2e29864fda7ab5528f7432f4223f5bef9a968261f"
+  },
+  "output_policy": {
+    "replace_lightgbm_reference_model": false,
+    "overwrite_existing_output": false,
+    "refit_with_validation": false,
+    "modify_data_or_labels": false,
+    "deployment_selection": "Not decided by this experiment"
+  }
+}

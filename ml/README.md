@@ -6,6 +6,8 @@
 
 2026-11-20 사용자 Windows PC에서 **자동 테스트 62개·기준 모델 무결성 검사·CLI 예측**을 확인했습니다. [Windows 검증 범위와 출력](docs/verification/windows-2026-11-20.md)을 참고하세요. 전체 100호텔 데이터 재생성과 기준 모델 재학습은 클라우드에서 검증했으며, 이번 Windows 실행으로 재현한 범위에는 포함하지 않습니다.
 
+XGBoost 후속 비교도 별도 명령으로 제공합니다. 같은 CSV·특성·라벨·기간을 사용한 [비교 기준과 결과](docs/XGBOOST_COMPARISON.md), 기존 폴더에서 실행하는 [Windows 절차](docs/XGBOOST_WINDOWS.md)를 참고하세요. 추가 설치는 `requirements-xgboost.txt`로 하며 기존 LightGBM 기준 모델을 교체하지 않습니다. 수치 경계 호환성 보완 후 클라우드와 사용자 Windows에서 전체 73개 테스트와 비교 실행을 확인했습니다. [Windows XGBoost 성공 기록](docs/verification/xgboost-windows-2026-11-20.md)에 범위와 결과를 남겼습니다.
+
 **과거 장애율을 주요 신호로 삼는다는 점은 팀 합의입니다. 여섯 특성의 구체적 선택·산식과 시뮬레이터 수치 매개변수는 담당 설계안입니다.** 실제 장애 분포나 팀 전체의 승인 완료 규칙으로 설명하지 않습니다. 상세 기준은 [ML_DATA_RULES_v0.2.md](docs/ML_DATA_RULES_v0.2.md), 선택 이유는 [DECISIONS_v0.2.md](docs/DECISIONS_v0.2.md)를 봅니다.
 
 ## 1. 기존 프로젝트에서의 위치와 범위
@@ -188,4 +190,4 @@ ML은 `feature/ml-v02` 같은 별도 작업 브랜치로 구분하는 것을 권
 
 이 모델은 `artifacts/model_v02`와 경로를 구분하므로 내 PC의 새 학습 출력을 덮어쓰지 않습니다. 모델 디렉터리 내부에는 별도 README나 로그를 추가하지 마세요. 무결성 검사는 선언한 파일 집합을 정확히 확인합니다. `audit_slices.json`은 모델/CSV/원천 manifest가 같은 실험인지 확인한 뒤에만 결합한 사후 진단이며 학습 입력이 아닙니다.
 
-`SOURCE_MANIFEST.json`은 현재 소스·문서 전달본의 해시입니다. 11월 18일 최초 전달본 manifest는 `docs/provenance/SOURCE_MANIFEST_2026-11-18.json`에 보존합니다. 11월 20일 보완은 검증 기록·공유 설정·문서만 바꾸며, 규칙·특성·생성/학습 코드·기준 모델은 그대로 유지합니다. XGBoost 비교는 아직 포함하지 않았으며 별도 후속 실험으로 추가합니다.
+`SOURCE_MANIFEST.json`은 현재 소스·문서 전달본의 해시입니다. 11월 18일 최초 전달본과 11월 20일 LightGBM 기준 커밋의 manifest는 `docs/provenance/`에 보존합니다. 규칙·특성·기존 생성/LightGBM 학습 코드·기준 모델은 그대로 유지하며, `travel_ml/xgboost_compare.py`에 후속 비교를 추가합니다. 새 XGBoost 결과는 별도 출력으로 관리하고 데이터·기준 모델을 덮어쓰지 않습니다.
