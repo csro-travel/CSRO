@@ -19,7 +19,7 @@
 | `mock-server` API-026·027 | 2026년 YB-001 등 고정 HTTP fixture. 그대로 유지하며 2025년 학습 정답으로 복제하지 않음 |
 | Spring 업무 DB·Flyway | 이 실험으로 자동 변경하지 않음. Python이 실행 중인 업무 상태를 직접 쓰지 않음 |
 | `tools/data_generator` 이전 초안 | 별도 1,080건 시나리오 데이터 생성기. 이번 과정 기반 v0.2 결과로 이름만 바꾸어 사용하지 않음 |
-| API-023 | v0.2 입력과 모델 CLI 예제를 제공. HTTP 서버·Spring 호출 연동은 별도 작업 |
+| API-023 | v0.2 입력·CLI와 Python HTTP 추론 서버 제공. Spring 집계·호출·저장·후속 업무는 별도 작업 |
 | Mock 테스트 | Mock 계약 테스트 28건과 ML 시뮬레이션·모델 검증을 구분 |
 
 ## 3. 전체 데이터의 시간 범위
@@ -93,7 +93,7 @@
 
 각 특성의 분모·무관측 원인·raw 값·clipping 여부는 감사 열로 보존하지만 모델 입력에 추가하지 않습니다. 입력은 스키마에 명시한 위 여섯 개만 선택합니다. 호텔 ID, 예약 ID, 미래 사건, 숨은 성향, 장애 원인, truth, 정답, 정답 시각은 제외합니다.
 
-현재 API-023의 임시 `risk-features-0.1`과 이름·순서·자료형이 같은 것으로 가정하지 않습니다. `examples/risk-request.json`은 새 계약의 CLI 요청 예제이며 HTTP endpoint 구현 완료를 뜻하지 않습니다.
+현재 API-023의 임시 `risk-features-0.1`과 이름·순서·자료형이 같은 것으로 가정하지 않습니다. `examples/risk-request.json`은 v0.2 CLI와 HTTP의 공통 요청 예제입니다. [HTTP 계약](api/API-023.md)과 [실행·Spring 인계](api/API-023_HANDOFF.md)를 따르며, Python 단독 호출과 Spring 통합 완료를 구분합니다.
 
 ## 7. 학습·모델 선택·최종 평가
 
@@ -146,7 +146,7 @@ Windows 사용자는 README의 `py -3.13`과 `.venv\Scripts\python.exe` 명령�
 
 ## 9. 남은 서비스 연동과 해석의 한계
 
-- API-023 HTTP 추론 서버와 Spring의 요청 생성·모델 버전 관리
+- API-023의 Spring 요청 생성·호출·위험 평가 저장·모델 버전 관리(Python HTTP 서버는 구현)
 - 실제 업무에서 t 당시 이용 가능했던 이벤트를 추출하는 파이프라인
 - 위험 점수로 우선 대상을 좁힌 뒤 근거 검증·사건 처리로 이어지는 서비스 연결
 - 운영 선별 기준·공통 서버·모니터링·실제 인증·배포

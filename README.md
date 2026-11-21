@@ -2,7 +2,7 @@
 
 여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](backend/docs/api/README.md)
 
-독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. 가상 데이터 실험과 CLI 범위이며, API-023 HTTP 서버·Spring 연동은 별도 작업이다.
+독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. Spring의 특징값 집계·호출·업무 DB 저장·재확인 연결은 별도 작업이다.
 
 ## 로컬 환경
 

@@ -1,0 +1,16 @@
+{
+  "evidenceSource": "user-provided Windows PowerShell test output",
+  "evidenceSha256": "96de536013191476c7c8f3404b6fe7ca0864e1f669b2ee6ccf04c2e1f9343d8f",
+  "expectedSuiteTests": 91,
+  "completedTestLines": 51,
+  "completedRiskApiTests": 11,
+  "hasCompletionSummary": false,
+  "fatalMessages": 42,
+  "firstFatalMessages": [
+    "[LightGBM] [Fatal] Model format error, expect a tree here. met",
+    "[LightGBM] [Fatal] Model format error, expect a tree here. met 265"
+  ],
+  "stoppedAt": "test_risk_runtime.RiskRuntimeTests.test_missing_corrupt_and_feature_incompatible_models_fail_closed",
+  "windowsExitCodeProvided": false,
+  "fixedCodeRetestedOnWindows": false
+}
