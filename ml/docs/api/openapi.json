@@ -1,0 +1,422 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CSRO API-023 Risk Assessment",
+    "description": "Read-only inference with the saved LightGBM reference model and risk-features-0.2. Spring supplies the six as-of feature values and owns all business state changes. The documented 2025 example is synthetic, not an aggregate of the 2026 YB booking database.",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Check process liveness",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Check model and authentication readiness",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Model or service authentication is not ready."
+          }
+        }
+      }
+    },
+    "/internal/v1/risk-assessments": {
+      "post": {
+        "tags": [
+          "API-023"
+        ],
+        "summary": "API-023: assess one hotel and check-in date",
+        "description": "Authenticate before parsing the body. The six supplied features must use risk-features-0.2 and D-1 09:00 Asia/Seoul. Returns the actual saved-model score with the input asOf unchanged. A score is a risk signal, not proof that an original room cannot be provided.",
+        "operationId": "assess_risk_internal_v1_risk_assessments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "hotelId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "targetCheckInDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "asOf": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "D-1 09:00 Asia/Seoul, with a UTC offset; returned verbatim."
+                  },
+                  "featureSetVersion": {
+                    "type": "string",
+                    "enum": [
+                      "risk-features-0.2"
+                    ]
+                  },
+                  "features": {
+                    "properties": {
+                      "pastFailureRate90d": {
+                        "type": "number",
+                        "maximum": 1.0,
+                        "minimum": 0.0
+                      },
+                      "targetConfirmedBookingCount": {
+                        "type": "integer",
+                        "minimum": 0.0
+                      },
+                      "bookingVolumeGrowth7d": {
+                        "type": "number",
+                        "maximum": 10.0,
+                        "minimum": -1.0
+                      },
+                      "reconfirmationOverdueRate7d": {
+                        "type": "number",
+                        "maximum": 1.0,
+                        "minimum": 0.0
+                      },
+                      "inventoryUnavailableRate7d": {
+                        "type": "number",
+                        "maximum": 1.0,
+                        "minimum": 0.0
+                      },
+                      "isPeakDay": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "pastFailureRate90d",
+                      "targetConfirmedBookingCount",
+                      "bookingVolumeGrowth7d",
+                      "reconfirmationOverdueRate7d",
+                      "inventoryUnavailableRate7d",
+                      "isPeakDay"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "hotelId",
+                  "targetCheckInDate",
+                  "asOf",
+                  "featureSetVersion",
+                  "features"
+                ]
+              },
+              "example": {
+                "hotelId": "HOTEL-001",
+                "targetCheckInDate": "2025-11-01",
+                "asOf": "2025-10-31T09:00:00+09:00",
+                "featureSetVersion": "risk-features-0.2",
+                "features": {
+                  "pastFailureRate90d": 0.05,
+                  "targetConfirmedBookingCount": 12,
+                  "bookingVolumeGrowth7d": 0.4,
+                  "reconfirmationOverdueRate7d": 0.2,
+                  "inventoryUnavailableRate7d": 0.1,
+                  "isPeakDay": false
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Saved-model inference result, without an envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "hotelId": {
+                      "type": "string"
+                    },
+                    "targetCheckInDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "asOf": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "riskScore": {
+                      "type": "number",
+                      "maximum": 1.0,
+                      "minimum": 0.0
+                    },
+                    "modelVersion": {
+                      "type": "string"
+                    },
+                    "featureSetVersion": {
+                      "type": "string",
+                      "enum": [
+                        "risk-features-0.2"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "hotelId",
+                    "targetCheckInDate",
+                    "asOf",
+                    "riskScore",
+                    "modelVersion",
+                    "featureSetVersion"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_RISK_REQUEST: invalid JSON, content type, or request structure/type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "about:blank"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED_SERVICE: a configured service Bearer token is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "about:blank"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "FEATURE_SCHEMA_UNSUPPORTED or INVALID_FEATURE_VALUES: incompatible features or D-1 values.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "about:blank"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MODEL_UNAVAILABLE: no verified inference model is ready.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "about:blank"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR: unexpected inference failure; internal details are omitted.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "example": "about:blank"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "code",
+                    "traceId"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MLServiceBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "MLServiceBearer": {
+        "type": "http",
+        "description": "Service token configured through ML_SERVICE_TOKEN; no default token exists.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
