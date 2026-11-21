@@ -8,6 +8,12 @@
 
 XGBoost 후속 비교도 별도 명령으로 제공합니다. 같은 CSV·특성·라벨·기간을 사용한 [비교 기준과 결과](docs/XGBOOST_COMPARISON.md), 기존 폴더에서 실행하는 [Windows 절차](docs/XGBOOST_WINDOWS.md)를 참고하세요. 추가 설치는 `requirements-xgboost.txt`로 하며 기존 LightGBM 기준 모델을 교체하지 않습니다. 수치 경계 호환성 보완 후 클라우드와 사용자 Windows에서 전체 73개 테스트와 비교 실행을 확인했습니다. [Windows XGBoost 성공 기록](docs/verification/xgboost-windows-2026-11-20.md)에 범위와 결과를 남겼습니다.
 
+**API-023 HTTP 추론 서버**를 추가했습니다. 저장한 LightGBM 기준 모델을 시작 시 한 번 읽고 서비스 Bearer 인증·v0.2 입력 검증·추론·Problem 오류 응답을 제공합니다. [HTTP 계약](docs/api/API-023.md), [Windows 실행·Spring 인계](docs/api/API-023_HANDOFF.md), [클라우드 검증 범위](docs/verification/api023-cloud-2026-11-20.md)를 참고하세요. 추가 설치는 `requirements-api.txt`입니다. 사용자 Windows에서 전체 91개 테스트(19.192초)와 실제 HTTP 점검 8개를 확인했습니다. [Windows 최종 기록](docs/verification/api023-windows-2026-11-21.md)에 근거를 남겼으며 Spring 업무 연결은 별도 작업입니다.
+
+2026-11-21 병합 후 main `85c391e`에서도 전체 91개 테스트와 실제 HTTP 점검 8개를 확인했습니다. 현재 작업 브랜치는 `1121cy-api023`이며 [main 기준 적용 기록](docs/verification/api023-main-2026-11-21.md)에 검증 범위를 남겼습니다.
+
+사용자 Windows의 첫 전체 실행은 임시 모델을 만드는 테스트의 줄바꿈 변환 문제로 중단됐습니다. 해당 테스트를 바이트 단위 저장으로 수정했고, Linux 전체 91개·Windows 줄바꿈 모의 검사·사용자 Windows 재실행을 통과했습니다. [원인·수정·검증 기록](docs/verification/api023-windows-fixture-fix-2026-11-21.md)을 참고하세요. 기존 모델과 API 실행 코드는 그대로입니다.
+
 **과거 장애율을 주요 신호로 삼는다는 점은 팀 합의입니다. 여섯 특성의 구체적 선택·산식과 시뮬레이터 수치 매개변수는 담당 설계안입니다.** 실제 장애 분포나 팀 전체의 승인 완료 규칙으로 설명하지 않습니다. 상세 기준은 [ML_DATA_RULES_v0.2.md](docs/ML_DATA_RULES_v0.2.md), 선택 이유는 [DECISIONS_v0.2.md](docs/DECISIONS_v0.2.md)를 봅니다.
 
 ## 1. 기존 프로젝트에서의 위치와 범위
@@ -33,13 +39,13 @@ C:\Users\cy102\Downloads\CSRO\
 
 파일을 직접 복사해야 Windows PC에 생깁니다. 기존 `mock-server`, Spring 코드, DB, Flyway, 프로젝트 루트 `.env`를 덮어쓸 필요는 없습니다.
 
-이 폴더는 **오프라인 데이터 생성·모델 학습·CLI 추론** 범위입니다. API-023 HTTP 서버, Spring 연동, Agent의 업무 처리, 공통 서버 배포를 구현하지 않습니다. 실행에 PostgreSQL이나 Docker도 필요하지 않습니다. `mock-server`의 API-026·027 고정 응답과 2026년 YB-001은 별개로 유지합니다.
+이 폴더는 **오프라인 데이터 생성·모델 학습·CLI 추론과 API-023 Python HTTP 추론**을 포함합니다. Spring의 특징값 집계·호출·위험 평가 저장·후속 업무, Agent 업무 처리와 공통 서버 배포는 별도 작업입니다. 실행에 PostgreSQL이나 Docker는 필요하지 않습니다. `mock-server`의 API-026·027 고정 응답과 2026년 YB-001은 별개로 유지합니다.
 
 기존 `tools/data_generator`의 1,080건 생성기나 CSV는 이번 과정 기반 v0.2 산출물이 아닙니다. 폴더나 버전 이름만 바꾸어 재사용하지 않습니다.
 
 ## 2. Windows 환경 설치
 
-VS Code의 PowerShell 터미널을 **저장소 루트**에서 열고 실행합니다. 현재 PC의 Python 실행은 **`py -3.13`**을 사용합니다. 설치 이후 모든 명령은 이 폴더의 가상환경 Python을 직접 호출합니다. `CSRO-ml` worktree를 사용한다면 그 폴더가 저장소 루트입니다.
+VS Code의 PowerShell 터미널을 기존 **`CSRO` 저장소 루트**에서 열고 실행합니다. 현재 PC의 Python 실행은 **`py -3.13`**을 사용합니다. 설치 이후 모든 명령은 이 폴더의 가상환경 Python을 직접 호출합니다. 이미 `.venv`가 있으면 다시 만들 필요가 없습니다.
 
 ```powershell
 Set-Location .\ml
@@ -110,7 +116,7 @@ py -3.13 -m venv .venv
 
 추론 점수는 검증된 객실 미제공 사실이 아닙니다. 위험 점수만으로 예약 취소·사건 확정·숙박일 제공 불가를 저장하지 않습니다.
 
-이 명령은 JSON 파일을 읽는 **로컬 CLI 추론 예제**입니다. API-023 HTTP endpoint가 추가되거나 Spring에서 자동으로 호출되는 것은 아닙니다. 요청 예시의 숫자는 계약 형태를 확인하기 위한 값이며 실제 호텔의 관측값이 아닙니다.
+이 명령은 JSON 파일을 읽는 **로컬 CLI 추론 예제**입니다. HTTP 서버는 [별도 실행 절차](docs/api/API-023_HANDOFF.md)로 시작합니다. Spring의 자동 호출은 연결 전입니다. 요청 예시의 숫자는 계약 형태를 확인하기 위한 값이며 실제 호텔의 관측값이 아닙니다.
 
 기존 `risk-features-0.1` 입력과 이번 `risk-features-0.2`를 혼용하지 않습니다. 모델·메타데이터·입력의 특성 이름·순서·자료형·버전이 일치해야 합니다.
 

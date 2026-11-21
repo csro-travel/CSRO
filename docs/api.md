@@ -16,3 +16,7 @@
 - [REST API 목록·공통 규약 및 상세 명세 인덱스](https://app.notion.com/p/414e04d22bed81cb9c46fbe6dc645f63)
 - [공통 상태코드·오류 응답](https://app.notion.com/p/417e04d22bed81589c21e3a3a43951b9)
 - [API-001 고객 예약 상세 조회](https://app.notion.com/p/417e04d22bed816b92f8f8e9fbe7091e)
+
+## API-023 구현
+
+[Notion API-023](https://app.notion.com/p/cc12f2597c5782d2873d01e8b0c11e51)의 URI·응답·인증·오류·책임 경계에 따라 Python 내부 추론 서버를 구현한다. 원문의 가상 v0.1 특성 대신 기존 ML 모델의 명시적인 `risk-features-0.2` 여섯 특성만 받는다. v0.1은 422로 거부하며 특성 산식의 팀 전체 승인이나 Spring 연동 완료를 뜻하지 않는다. [구현 계약](../ml/docs/api/API-023.md) · [실행·인계](../ml/docs/api/API-023_HANDOFF.md)
