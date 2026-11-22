@@ -10,6 +10,8 @@ XGBoost 후속 비교도 별도 명령으로 제공합니다. 같은 CSV·특성
 
 **API-023 HTTP 추론 서버**를 추가했습니다. 저장한 LightGBM 기준 모델을 시작 시 한 번 읽고 서비스 Bearer 인증·v0.2 입력 검증·추론·Problem 오류 응답을 제공합니다. [HTTP 계약](docs/api/API-023.md), [Windows 실행·Spring 인계](docs/api/API-023_HANDOFF.md), [클라우드 검증 범위](docs/verification/api023-cloud-2026-11-20.md)를 참고하세요. 추가 설치는 `requirements-api.txt`입니다. 사용자 Windows에서 전체 91개 테스트(19.192초)와 실제 HTTP 점검 8개를 확인했습니다. [Windows 최종 기록](docs/verification/api023-windows-2026-11-21.md)에 근거를 남겼으며 Spring 업무 연결은 별도 작업입니다.
 
+**합성 관측 이벤트 → API-023 입력 변환**은 [오프라인 실행 절차](docs/RISK_EVENT_PROJECTION.md)를 제공합니다. 기존 여섯 특성 계산기를 그대로 사용해 요청·대상 예약 코드·추적 해시를 로컬 파일에 저장합니다. HTTP 계약을 추가하지 않으며, Spring의 자동 DB 이벤트 수집이나 과거 상태 복원까지 구현한 기능은 아닙니다. YB-001 예제는 이력 없는 기본값을 보존하므로 기본 F1 정책에서 선별되지 않습니다.
+
 2026-11-21 병합 후 main `85c391e`에서도 전체 91개 테스트와 실제 HTTP 점검 8개를 확인했습니다. 현재 작업 브랜치는 `1121cy-api023`이며 [main 기준 적용 기록](docs/verification/api023-main-2026-11-21.md)에 검증 범위를 남겼습니다.
 
 사용자 Windows의 첫 전체 실행은 임시 모델을 만드는 테스트의 줄바꿈 변환 문제로 중단됐습니다. 해당 테스트를 바이트 단위 저장으로 수정했고, Linux 전체 91개·Windows 줄바꿈 모의 검사·사용자 Windows 재실행을 통과했습니다. [원인·수정·검증 기록](docs/verification/api023-windows-fixture-fix-2026-11-21.md)을 참고하세요. 기존 모델과 API 실행 코드는 그대로입니다.
@@ -196,4 +198,4 @@ ML은 `feature/ml-v02` 같은 별도 작업 브랜치로 구분하는 것을 권
 
 이 모델은 `artifacts/model_v02`와 경로를 구분하므로 내 PC의 새 학습 출력을 덮어쓰지 않습니다. 모델 디렉터리 내부에는 별도 README나 로그를 추가하지 마세요. 무결성 검사는 선언한 파일 집합을 정확히 확인합니다. `audit_slices.json`은 모델/CSV/원천 manifest가 같은 실험인지 확인한 뒤에만 결합한 사후 진단이며 학습 입력이 아닙니다.
 
-`SOURCE_MANIFEST.json`은 현재 소스·문서 전달본의 해시입니다. 11월 18일 최초 전달본과 11월 20일 LightGBM 기준 커밋의 manifest는 `docs/provenance/`에 보존합니다. 규칙·특성·기존 생성/LightGBM 학습 코드·기준 모델은 그대로 유지하며, `travel_ml/xgboost_compare.py`에 후속 비교를 추가합니다. 새 XGBoost 결과는 별도 출력으로 관리하고 데이터·기준 모델을 덮어쓰지 않습니다.
+`SOURCE_MANIFEST.json`은 마지막 기록 당시 전달본의 소스·문서 해시입니다. 이번 오프라인 이벤트 변환기는 Git 변경과 전용 테스트로 추적하며, 해당 전달본 manifest를 새로 기록하지 않습니다. 실행 시 생성 산출물·모델을 확인하는 `verify`는 각 출력 폴더의 별도 manifest를 사용합니다. 11월 18일 최초 전달본과 11월 20일 LightGBM 기준 커밋의 manifest는 `docs/provenance/`에 보존합니다. 규칙·특성·기존 생성/LightGBM 학습 코드·기준 모델은 그대로 유지하며, `travel_ml/xgboost_compare.py`에 후속 비교를 추가합니다. 새 XGBoost 결과는 별도 출력으로 관리하고 데이터·기준 모델을 덮어쓰지 않습니다.
