@@ -100,7 +100,7 @@ Swagger는 서버 실행 후 `http://127.0.0.1:8002/docs`에서 확인한다. **
 | 인증·입력 오류 | 토큰 누락 401, 잘못된 JSON 400, 미지원 버전 422, 범위 초과 422 |
 | HTTP 점검 요약 | `Running API-023 checks: passed (8 checks)` |
 
-자동 테스트 91개와 별도 실행 서버의 HTTP 점검 8개는 서로 다른 검증 범위다. [자동 테스트 출력](../verification/api023-windows-tests-2026-11-21.txt)과 [HTTP 점검 출력](../verification/api023-windows-live-2026-11-21.txt)을 각각 보존한다.
+자동 테스트 91개와 별도 실행 서버의 HTTP 점검 8개는 서로 다른 검증 범위다. 결과·검증 한계는 [Windows 최종 검증 요약](../verification/api023-windows-2026-11-21.md)에 남기며, 반복 실행 원시 콘솔 로그는 Git에서 관리하지 않는다.
 
 초기 실행은 임시 테스트 모델을 텍스트로 다시 쓰는 과정에서 Windows 줄바꿈으로 바뀌어 중단됐다. [원인·바이트 보존 수정 기록](../verification/api023-windows-fixture-fix-2026-11-21.md)의 수정 적용 후 위 91개 테스트와 HTTP 점검이 통과했다. 원본 기준 모델과 실제 추론 점수를 변경한 수정은 아니다.
 
