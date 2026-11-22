@@ -1,6 +1,6 @@
 # Windows API-023 테스트의 임시 모델 줄바꿈 수정
 
-2026-11-21 사용자 Windows 실행은 전체 테스트 완료 전에 중단됐다. `test_risk_api`의 11개를 포함해 51개가 `ok`로 표시됐지만, `test_missing_corrupt_and_feature_incompatible_models_fail_closed` 중 LightGBM Fatal 메시지가 나오고 PowerShell로 돌아왔다. `Ran 91 tests`·최종 `OK`가 없으므로 성공으로 기록하지 않는다. [사용자 출력 진단](api023-windows-initial-2026-11-21.json)
+2026-11-21 사용자 Windows 실행은 전체 테스트 완료 전에 중단됐다. `test_risk_api`의 11개를 포함해 51개가 `ok`로 표시됐지만, `test_missing_corrupt_and_feature_incompatible_models_fail_closed` 중 LightGBM Fatal 메시지가 나오고 PowerShell로 돌아왔다. `Ran 91 tests`·최종 `OK`가 없으므로 성공으로 기록하지 않는다. 초기 실패는 이 문서에 미완료 범위로 기록한다.
 
 ## 원인과 변경
 
@@ -22,6 +22,6 @@
 | 원본 모델 | SHA-256 `84d386281d22f4050cb6a8a02cc03d3bcf09e64194213f613e1069e915d68c88` 유지 |
 | 실제 Windows 수정 후 재실행 | 전체 91개 통과, 19.192초, 이후 실제 HTTP 점검 8개 통과 |
 
-[수정 후 실행·모의 검증 로그](api023-windows-fixture-fix-tests-2026-11-21.txt)에 결과를 보존한다. Linux에서 Windows 줄바꿈을 모의한 검사를 실제 Windows 성공으로 표시하지 않는다. 이후 사용자 PC에서 전체 테스트를 다시 실행해 `Ran 91 tests in 19.192s`와 `OK`를 확인했고, 실제 HTTP 점검 8개도 통과했다. [Windows 최종 확인](api023-windows-2026-11-21.md)에 두 출력의 근거를 별도로 남겼다.
+위 표에 수정 후 핵심 검증 결과를 요약했다. Linux에서 Windows 줄바꿈을 모의한 검사를 실제 Windows 성공으로 표시하지 않는다. 이후 사용자 PC에서 전체 테스트를 다시 실행해 `Ran 91 tests in 19.192s`와 `OK`를 확인했고, 실제 HTTP 점검 8개도 통과했다. [Windows 최종 확인](api023-windows-2026-11-21.md)에 두 출력의 근거를 별도로 남겼다.
 
 이번 변경은 API 계약·모델 점수·평가 결과를 바꾸지 않는다. Windows의 live HTTP 점검까지 확인했으며, 실제 Spring 연결과 업무 DB E2E는 여전히 별도 확인 대상이다.
