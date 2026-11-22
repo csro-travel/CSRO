@@ -1,4 +1,5 @@
 import type { CaseDetail, CaseList, CaseStatus } from "../_types/case";
+import type { CaseMessageList } from "../_types/message";
 
 async function read<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(path, {
@@ -27,4 +28,12 @@ export function getCaseDetail(
   signal: AbortSignal,
 ): Promise<CaseDetail> {
   return read(`/demo/cases/${encodeURIComponent(caseId)}`, signal);
+}
+
+/** API-011 사건별 상담 채팅 메시지 조회 (`GET /api/v1/cases/{caseId}/messages`). */
+export function getCaseMessages(
+  caseId: string,
+  signal: AbortSignal,
+): Promise<CaseMessageList> {
+  return read(`/demo/cases/${encodeURIComponent(caseId)}/messages`, signal);
 }

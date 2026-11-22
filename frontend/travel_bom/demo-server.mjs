@@ -9,6 +9,17 @@ if (process.env.CSRO_LOCAL_DEMO !== 'true' || !token) throw Error('Explicit loca
 const app = next({ dev: false, hostname: host, port })
 await app.prepare()
 const handle = app.getRequestHandler()
+
+function allowsMessageList(url) {
+  const match = /^\/demo\/cases\/C-[0-9]{3,}\/messages(?:\?([^#]*))?$/.exec(url)
+  if (!match) return false
+
+  // Spring API-011 validates values and returns its documented errors.
+  const keys = [...new URLSearchParams(match[1]).keys()]
+  return keys.length === new Set(keys).size &&
+    keys.every(key => key === 'limit' || key === 'beforeMessageId')
+}
+
 http.createServer(async (req, res) => {
   if (req.socket.remoteAddress !== host || req.headers.host !== host + ':' + port ||
       Object.keys(req.headers).some(key => key === 'forwarded' || key.startsWith('x-forwarded-'))) {
@@ -21,7 +32,7 @@ http.createServer(async (req, res) => {
   const allowedPage = listPage !== null && Number(listPage[1]) <= 2147483647
   if (req.method !== 'GET' || req.headers['x-demo-read'] !== '1' ||
       req.headers['sec-fetch-site'] !== 'same-origin' ||
-      !(allowedPage || /^\/demo\/cases(?:\/C-[0-9]{3,})?$/.test(req.url))) {
+      !(allowedPage || /^\/demo\/cases(?:\/C-[0-9]{3,})?$/.test(req.url) || allowsMessageList(req.url))) {
     res.writeHead(403).end()
     return
   }

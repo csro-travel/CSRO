@@ -50,6 +50,14 @@ public class CaseController {
         return ok(queries.detail(principal(request), caseId));
     }
 
+    /** API-011 사건별 상담 채팅 메시지 목록 조회. */
+    @GetMapping("/{caseId}/messages")
+    public ResponseEntity<String> messages(HttpServletRequest request, @PathVariable String caseId,
+            @RequestParam(required = false) String limit,
+            @RequestParam(required = false) String beforeMessageId) {
+        return ok(queries.messages(principal(request), caseId, limit, beforeMessageId));
+    }
+
     private ResponseEntity<String> ok(String json) {
         return ResponseEntity.ok().header("Cache-Control","private, no-store").body(json);
     }
@@ -63,7 +71,9 @@ public class CaseController {
             code = ex.getReason();
         }
         var body = ProblemDetail.forStatus(status);
-        body.setDetail(body.getTitle());
+        body.setDetail("INVALID_MESSAGE_CURSOR".equals(code)
+                ? "이 사건에서 사용할 수 없는 이전 메시지 기준입니다."
+                : body.getTitle());
         body.setProperty("code",code);
         body.setProperty("traceId",UUID.randomUUID().toString());
         var response = ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON)

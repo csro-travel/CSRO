@@ -1,12 +1,13 @@
 package com.csro.backend.cases;
 
+import java.security.Principal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.security.Principal;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 @Repository
@@ -33,12 +34,21 @@ public class CaseQueries {
         """;
 
     private String authorize(Principal principal) {
-        if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"UNAUTHENTICATED");
-        String role = jdbc.sql("SELECT role FROM users WHERE is_active AND subject_key=:subject")
-                .param("subject",principal.getName()).query(String.class).optional()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,"UNAUTHENTICATED"));
-        if (!"COUNSELOR".equals(role)) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"FORBIDDEN_ROLE");
+        if (!"COUNSELOR".equals(activeUser(principal).role())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN_ROLE");
+        }
         return principal.getName();
+    }
+
+    private ActiveUser activeUser(Principal principal) {
+        if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED");
+        }
+        return jdbc.sql("SELECT id, role FROM users WHERE is_active AND subject_key = :subject")
+                .param("subject", principal.getName())
+                .query((rs, row) -> new ActiveUser(rs.getLong("id"), rs.getString("role")))
+                .optional()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED"));
     }
 
     public String list(Principal principal, List<String> status, String priority, String assignee, String pageValue, String sizeValue) {
@@ -112,4 +122,112 @@ public class CaseQueries {
             """ + FROM + " WHERE c.case_code=:code").param("code",caseId).query(String.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"CASE_NOT_FOUND"));
     }
+
+    /** API-011 사건별 대화 이력을 공개 메시지 번호로 페이지 조회한다. */
+    public String messages(Principal principal, String caseId, String limitValue, String beforeMessageId) {
+        ActiveUser user = activeUser(principal);
+        boolean counselor = "COUNSELOR".equals(user.role());
+        if (!counselor && !"CUSTOMER".equals(user.role())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN_ROLE");
+        }
+        if (!caseId.matches("C-[0-9]{3,38}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_CASE_ID");
+        }
+        int limit = messageLimit(limitValue);
+        long caseKey = jdbc.sql("""
+                SELECT c.id FROM cases c JOIN bookings b ON b.id = c.booking_id
+                WHERE c.case_code = :caseId AND (:counselor OR b.customer_id = :userId)
+                """)
+                .param("caseId", caseId)
+                .param("counselor", counselor)
+                .param("userId", user.id())
+                .query(Long.class).optional()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CASE_NOT_FOUND"));
+
+        MessageCursor cursor = beforeMessageId == null ? null : findCursor(caseKey, beforeMessageId);
+        String cursorPredicate = cursor == null ? "" : "AND (m.sent_at, m.id) < (:cursorTime, :cursorId)";
+        var statement = jdbc.sql(MESSAGE_PAGE_SQL.formatted(cursorPredicate))
+                .param("caseId", caseId)
+                .param("caseKey", caseKey)
+                .param("limit", limit)
+                .param("lookaheadLimit", limit + 1);
+        if (cursor != null) {
+            statement.param("cursorTime", cursor.sentAt()).param("cursorId", cursor.id());
+        }
+        return statement.query(String.class).single();
+    }
+
+    private static int messageLimit(String value) {
+        if (value == null) return 30;
+        try {
+            int limit = Integer.parseInt(value);
+            if (limit >= 1 && limit <= 50) return limit;
+        } catch (NumberFormatException invalidLimit) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_PAGE_SIZE");
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_PAGE_SIZE");
+    }
+
+    private MessageCursor findCursor(long caseKey, String messageId) {
+        if (messageId.isBlank() || messageId.indexOf(0) >= 0 || messageId.codePointCount(0, messageId.length()) > 40) {
+            throw invalidMessageCursor();
+        }
+        return jdbc.sql("""
+                SELECT id, sent_at FROM chat_messages
+                WHERE case_id = :caseKey AND message_code = :messageId
+                """)
+                .param("caseKey", caseKey)
+                .param("messageId", messageId)
+                .query((rs, row) -> new MessageCursor(rs.getLong("id"), rs.getObject("sent_at", OffsetDateTime.class)))
+                .optional().orElseThrow(CaseQueries::invalidMessageCursor);
+    }
+
+    private static ResponseStatusException invalidMessageCursor() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE_CURSOR");
+    }
+
+    // 발송 당시 비교 기준액을 복원하는 계약은 API-013에서 정한다. V1의 현재 예약 금액은 사용하지 않는다.
+    private static final String MESSAGE_PAGE_SQL = """
+            WITH candidates AS (
+                SELECT m.id, m.case_id, m.message_code, m.sender_type, m.message_type, m.body, m.sent_at, m.offer_id
+                FROM chat_messages m
+                WHERE m.case_id = :caseKey %s
+                ORDER BY m.sent_at DESC, m.id DESC LIMIT :lookaheadLimit
+            ), page AS (
+                SELECT * FROM candidates ORDER BY sent_at DESC, id DESC LIMIT :limit
+            ), bounds AS (
+                SELECT count(*) > :limit AS has_more FROM candidates
+            )
+            SELECT jsonb_build_object(
+                'caseId', CAST(:caseId AS text),
+                'items', coalesce((
+                    SELECT jsonb_agg(jsonb_build_object(
+                        'messageId', m.message_code, 'senderType', m.sender_type,
+                        'messageType', m.message_type, 'body', m.body, 'sentAt', m.sent_at,
+                        'offer', (
+                            SELECT jsonb_build_object('offerId', o.offer_code, 'status', o.status, 'items', coalesce((
+                                SELECT jsonb_agg(jsonb_build_object(
+                                    'quoteId', q.quote_code, 'displayOrder', i.display_order,
+                                    'propertyName', q.property_name, 'distanceMeters', q.distance_meters,
+                                    'checkInDate', q.check_in_date, 'checkOutDate', q.check_out_date,
+                                    'adults', q.adults, 'rooms', q.rooms, 'totalAmount', q.total_amount,
+                                    'currency', q.currency, 'priceDifference', NULL::bigint,
+                                    'checkedAt', q.checked_at, 'expiresAt', q.expires_at
+                                ) ORDER BY i.display_order)
+                                FROM offer_items i JOIN alternative_quotes q ON q.id = i.quote_id AND q.case_id = i.case_id
+                                WHERE i.offer_id = o.id AND i.case_id = o.case_id
+                            ), '[]'::jsonb))
+                            FROM offers o WHERE o.id = m.offer_id AND o.case_id = m.case_id
+                        )
+                    ) ORDER BY m.sent_at, m.id) FROM page m
+                ), '[]'::jsonb),
+                'pagination', jsonb_build_object('hasMoreBefore', has_more, 'nextBeforeMessageId', CASE WHEN has_more THEN (
+                    SELECT message_code FROM page ORDER BY sent_at, id LIMIT 1
+                ) END)
+            )::text FROM bounds
+            """;
+
+    private record ActiveUser(long id, String role) {}
+
+    private record MessageCursor(long id, OffsetDateTime sentAt) {}
 }

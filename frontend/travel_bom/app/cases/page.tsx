@@ -149,7 +149,7 @@ export default function Cases() {
               </p>
             ))}
           </article>
-          <CaseChatPanel />
+          <CaseChatPanel key={detail.caseId} caseId={detail.caseId} />
         </div>
       )}
     </main>

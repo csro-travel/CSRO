@@ -14,6 +14,18 @@ function caseRow(page, caseId) {
   return page.getByRole('row').filter({hasText: caseId})
 }
 
+async function holdChatHistory(page, caseId, items) {
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  await page.route(`**/demo/cases/${caseId}/messages`, async route => {
+    await pending
+    return route.fulfill({json: {
+      caseId, items, pagination: {hasMoreBefore: false, nextBeforeMessageId: null},
+    }})
+  })
+  return release
+}
+
 async function checkDashboard() {
   const browser = await chromium.launch({ channel: 'chrome' })
   try {
@@ -123,14 +135,73 @@ async function checkDashboard() {
       page.getByRole('button', {name: '전체 보기', exact:true}).click(),
     ])
     await first.waitFor()
-    await page.route('**/demo/cases/C-101', route => route.fulfill({json: {
-      caseId: 'C-101', status: 'OPEN',
+    await page.route(/\/demo\/cases\/C-10[123]$/, route => route.fulfill({json: {
+      caseId: new URL(route.request().url()).pathname.split('/').at(-1), status: 'OPEN',
       booking: {bookingId: 'YB-test', hotel: {name: '테스트 호텔'}, supplierStatus: 'CONFIRMED'},
       nights: [], nextAction: null, evidence: [], customerReports: [],
     }}))
-    await first.getByRole('button', {name: 'C-101 사건 열기'}).click()
-    await page.getByRole('heading', {name: 'C-101 · 테스트 호텔', exact:true}).waitFor()
+
+    const firstChat = [
+      {messageId: 'MSG-Z', body: '첫 사건 대화 1', sentAt: deadline, senderType: 'CUSTOMER', messageType: 'TEXT', offer: null},
+      {messageId: 'MSG-A', body: '첫 사건 대화 2', sentAt: deadline, senderType: 'COUNSELOR', messageType: 'TEXT', offer: null},
+      {messageId: 'MSG-B', body: '첫 사건 대화 3', sentAt: '2026-11-10T01:01:00.000Z', senderType: 'SYSTEM', messageType: 'SYSTEM', offer: null},
+      {
+        messageId: 'MSG-OFFER', body: null, sentAt: '2026-11-10T01:02:00.000Z',
+        senderType: 'COUNSELOR', messageType: 'OFFER', offer: {
+          offerId: 'OFFER-1', status: 'SUPERSEDED',
+          items: ['A', 'B', 'C'].map((suffix, index) => ({
+            quoteId: `QUOTE-${suffix}`, displayOrder: index + 1, propertyName: `테스트 제안 ${suffix}`,
+            distanceMeters: 800, checkInDate: '2026-11-10', checkOutDate: '2026-11-13', adults: 2, rooms: 1,
+            totalAmount: 480000 + index * 10000, currency: 'KRW', priceDifference: null,
+            checkedAt: deadline, expiresAt: '2026-11-10T02:00:00.000Z',
+          })),
+        },
+      },
+    ]
+    const chatPanel = page.getByRole('region', {name: '고객과의 대화', exact:true})
+    const history = chatPanel.getByRole('region', {name: '대화 내역', exact:true})
+    const firstMessages = history.getByText(/^첫 사건 대화 [123]$/)
+    const releaseFirstChat = await holdChatHistory(page, 'C-101', firstChat)
+    try {
+      const [request] = await Promise.all([
+        page.waitForRequest('**/demo/cases/C-101/messages'),
+        first.getByRole('button', {name: 'C-101 사건 열기'}).click(),
+      ])
+      assert.equal(request.method(), 'GET')
+      assert.equal(request.headers()['x-demo-read'], '1')
+      await page.getByRole('heading', {name: 'C-101 · 테스트 호텔', exact:true}).waitFor()
+      await history.getByText('대화 내역을 불러오는 중…', {exact:true}).waitFor()
+      assert.equal(await firstMessages.count(), 0)
+    } finally {
+      releaseFirstChat()
+    }
     console.log('PASS case rows, pagination, retry, filter reset and detail with intercepted responses')
+
+    await firstMessages.last().waitFor()
+    assert.deepEqual(await firstMessages.allTextContents(), firstChat.flatMap(message => message.body ?? []))
+    await history.getByText('이전 대체 숙소 제안', {exact:true}).waitFor()
+    assert.deepEqual(await history.getByText(/^테스트 제안 [ABC]$/).allTextContents(), ['테스트 제안 A', '테스트 제안 B', '테스트 제안 C'])
+    await history.getByText('480,000원', {exact:true}).waitFor()
+    assert.equal(await chatPanel.getByRole('button', {name: '전송', exact:true}).isDisabled(), true)
+
+    const releaseEmptyChat = await holdChatHistory(page, 'C-102', [])
+    try {
+      await page.getByRole('button', {name: /사건 목록/}).click()
+      await caseRow(page, 'C-102').getByRole('button', {name: 'C-102 사건 열기'}).click()
+      await history.getByText('대화 내역을 불러오는 중…', {exact:true}).waitFor()
+      assert.equal(await firstMessages.count(), 0)
+    } finally {
+      releaseEmptyChat()
+    }
+    await history.getByText('표시할 대화가 없습니다.', {exact:true}).waitFor()
+
+    await page.route('**/demo/cases/C-103/messages', route => route.fulfill({status: 502, body: ''}))
+    await page.getByRole('button', {name: /사건 목록/}).click()
+    await caseRow(page, 'C-103').getByRole('button', {name: 'C-103 사건 열기'}).click()
+    await history.getByRole('alert').filter({hasText: '대화 내역을 불러오지 못했습니다.'}).waitFor()
+    assert.equal(await firstMessages.count(), 0)
+    assert.equal(await history.getByText('표시할 대화가 없습니다.', {exact:true}).count(), 0)
+    console.log('PASS case chat loading, server order, case isolation, empty history and request failure')
   } finally {
     await browser.close()
   }
