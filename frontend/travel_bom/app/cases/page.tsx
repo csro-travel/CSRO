@@ -6,6 +6,7 @@ import { Brand } from '@/components/console/sidebar'
 
 type Task = { taskId: string; type: string; status: string; dueAt: string | null }
 type Item = { caseId: string; bookingId: string; hotelName: string; priority: string; summary: string }
+type CaseList = { items: Item[]; pagination: { page: number; size: number; totalElements: number; hasNext: boolean } }
 type Detail = {
   caseId: string; status: string; booking: { bookingId: string; hotel: {name: string}; supplierStatus: string }
   nights: {stayDate: string; fulfillmentStatus: string; factStatus: string}[]
@@ -22,21 +23,29 @@ async function read<T>(path: string, signal: AbortSignal): Promise<T> {
 }
 
 export default function Cases() {
-  const [items, setItems] = useState<Item[]>()
+  const [list, setList] = useState<CaseList>()
+  const [page, setPage] = useState(0)
+  const [attempt, setAttempt] = useState(0)
+  const pagination = list?.pagination
+  function navigate(target: number) {
+    setList(undefined)
+    fail('')
+    setPage(target)
+  }
   const [selected, select] = useState<string>()
   const [detail, show] = useState<Detail>()
   const [error, fail] = useState('')
   useEffect(() => {
     const request = new AbortController()
-    const path = selected ? '/demo/cases/' + encodeURIComponent(selected) : '/demo/cases'
+    const path = selected ? '/demo/cases/' + encodeURIComponent(selected) : '/demo/cases?page=' + page
     const load = async () => {
       try {
         if (selected) {
           const data = await read<Detail>(path, request.signal)
           if (!request.signal.aborted) show(data)
         } else {
-          const data = await read<{items: Item[]}>(path, request.signal)
-          if (!request.signal.aborted) setItems(data.items)
+          const data = await read<CaseList>(path, request.signal)
+          if (!request.signal.aborted) setList(data)
         }
       } catch (cause) {
         if (!request.signal.aborted) fail(cause instanceof Error ? cause.message : '조회 실패')
@@ -44,19 +53,25 @@ export default function Cases() {
     }
     void load()
     return () => request.abort()
-  }, [selected])
+  }, [selected, page, attempt])
 
   return <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
     <Brand />
     <header className="flex items-center justify-between"><h1 className="text-3xl font-bold">상담 사건</h1><Link href="/">대체 숙소 탐색 시연</Link></header>
     {error && <p role="alert">{error}</p>}
-    {!selected && <section className="space-y-3">{items?.map(item =>
+    {!selected && error && <button onClick={() => { fail(''); setAttempt(value => value + 1) }}>다시 시도</button>}
+    {!selected && !error && <section className="space-y-3">{list?.items.map(item =>
       <button key={item.caseId} onClick={() => { fail(''); show(undefined); select(item.caseId) }}
         className="block w-full rounded-xl border p-4 text-left hover:bg-muted">
         <strong>{item.caseId} · {item.hotelName}</strong><p>{item.bookingId} · {item.priority} · {item.summary}</p>
-      </button>)}{items?.length === 0 && <p>활성 상담 사건이 없습니다.</p>}</section>}
-    {selected && <button onClick={() => { select(undefined); setItems(undefined); show(undefined); fail('') }}>← 사건 목록</button>}
-    {!error && ((!selected && !items) || (selected && !detail)) && <p role="status">사건 조회 중…</p>}
+      </button>)}{list?.items.length === 0 && <p>이 페이지에 상담 사건이 없습니다.</p>}
+      {pagination && <nav aria-label="사건 목록 페이지" className="flex items-center gap-4">
+        <button disabled={pagination.page === 0} onClick={() => navigate(pagination.page - 1)}>이전</button>
+        <span>{pagination.page + 1} / {Math.max(1, Math.ceil(pagination.totalElements / pagination.size))} 페이지 · 전체 {pagination.totalElements}건</span>
+        <button disabled={!pagination.hasNext} onClick={() => navigate(pagination.page + 1)}>다음</button>
+      </nav>}</section>}
+    {selected && <button onClick={() => { select(undefined); setList(undefined); show(undefined); fail('') }}>← 사건 목록</button>}
+    {!error && ((!selected && !list) || (selected && !detail)) && <p role="status">사건 조회 중…</p>}
     {selected && detail && !error && <article className="space-y-5 rounded-xl border p-6">
       <h2 className="text-2xl font-bold">{detail.caseId} · {detail.booking.hotel.name}</h2>
       <p>{detail.booking.bookingId} · 사건 {detail.status} · 공급사 계약 {detail.booking.supplierStatus}</p>
