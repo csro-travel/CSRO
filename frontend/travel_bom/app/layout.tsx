@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
+import { ConsoleHeader, Sidebar } from '@/components/console/sidebar'
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({
@@ -36,7 +37,13 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`light ${notoSansKr.variable}`}>
       <body className="font-sans antialiased">
-        {children}
+        <div className="flex min-h-dvh bg-background">
+          <Sidebar />
+          <div className="min-w-0 flex-1 bg-muted/40">
+            <ConsoleHeader />
+            {children}
+          </div>
+        </div>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

@@ -1,8 +1,6 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Brand } from '@/components/console/sidebar'
 
 type Task = { taskId: string; type: string; status: string; dueAt: string | null }
 type Item = { caseId: string; bookingId: string; hotelName: string; priority: string; summary: string }
@@ -56,8 +54,7 @@ export default function Cases() {
   }, [selected, page, attempt])
 
   return <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-    <Brand />
-    <header className="flex items-center justify-between"><h1 className="text-3xl font-bold">상담 사건</h1><Link href="/">대체 숙소 탐색 시연</Link></header>
+    <h1 className="text-3xl font-bold">상담 사건</h1>
     {error && <p role="alert">{error}</p>}
     {!selected && error && <button onClick={() => { fail(''); setAttempt(value => value + 1) }}>다시 시도</button>}
     {!selected && !error && <section className="space-y-3">{list?.items.map(item =>
