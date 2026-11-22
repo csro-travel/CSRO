@@ -1,0 +1,271 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "검증 범위"
+        type: choice
+        default: auto
+        options: [auto, all, backend, postgres, frontend, ml, agent, mock]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      postgres: ${{ steps.scope.outputs.postgres }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+      ml: ${{ steps.scope.outputs.ml }}
+      agent: ${{ steps.scope.outputs.agent }}
+      mock: ${{ steps.scope.outputs.mock }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: 변경 범위 판단
+        id: scope
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          DISPATCH_SCOPE: ${{ inputs.scope || 'auto' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            base="$PR_BASE"
+            head="$PR_HEAD"
+          else
+            git fetch --no-tags origin main
+            base="$(git merge-base HEAD origin/main)"
+            head="$(git rev-parse HEAD)"
+          fi
+          git diff --name-only "$base...$head" > "$RUNNER_TEMP/changed-paths.txt"
+          for section in backend postgres frontend ml agent mock; do
+            enabled=false
+            if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$DISPATCH_SCOPE" != auto ]]; then
+              if [[ "$DISPATCH_SCOPE" == all || "$DISPATCH_SCOPE" == "$section" ||
+                    ( "$DISPATCH_SCOPE" == mock && "$section" == postgres ) ]]; then
+                enabled=true
+              fi
+            else
+              backend_build='^backend/(gradle/|gradlew(\.bat)?$|[^/]+\.gradle(\.kts)?$|gradle\.properties$)'
+              mock_contract='^mock-server/(app/|requirements\.txt$|docs/openapi\.json$)'
+              case "$section" in
+                backend) pattern="^backend/src/|$backend_build" ;;
+                postgres) pattern="$backend_build|$mock_contract|^backend/src/main/(java/com/csro/backend/(booking/|cases/|reconfirmation/|BackendApplication\.java$)|resources/(db/|application.*\.(properties|ya?ml)$))|^backend/src/test/.*IntegrationTests?\.java$" ;;
+                frontend) pattern='^frontend/travel_bom/' ;;
+                ml) pattern='^ml/' ;;
+                agent) pattern='^llm/agent/' ;;
+                mock) pattern="$mock_contract|^mock-server/(tests/|scripts/)" ;;
+              esac
+              if grep -Eq "$pattern" "$RUNNER_TEMP/changed-paths.txt"; then enabled=true; fi
+            fi
+            echo "$section=$enabled" >> "$GITHUB_OUTPUT"
+          done
+      - name: 공통 설정·구조 변경 안전 검사
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base="${PR_BASE:-$(git rev-parse HEAD)}"
+          python3 tools/ci/check_shared_contracts.py "$base" HEAD
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.postgres == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: ${{ needs.changes.outputs.postgres == 'true' && 'postgres:18.7' || '' }}
+        env:
+          POSTGRES_USER: yb
+          POSTGRES_DB: yeohaengbom_reconfirmation_test
+          POSTGRES_PASSWORD: ci-isolated-db-only
+        ports:
+          - 127.0.0.1:25433:5432
+        options: >-
+          --health-cmd "pg_isready -U yb -d yeohaengbom_reconfirmation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: backend/**/*.gradle*
+      - uses: actions/setup-python@v5
+        if: needs.changes.outputs.postgres == 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: mock-server/requirements.txt
+      - name: 격리 DB 연결 검증 및 Mock 준비
+        if: needs.changes.outputs.postgres == 'true'
+        env:
+          PGPASSWORD: ci-isolated-db-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          database="$(psql -XAt --host=127.0.0.1 --port=25433 --username=yb \
+            --dbname=yeohaengbom_reconfirmation_test --no-password --set=ON_ERROR_STOP=1 \
+            --command="SELECT current_database() || ':' || current_user")"
+          [[ "$database" == 'yeohaengbom_reconfirmation_test:yb' ]]
+          # PostgreSQL sequences advance even when the API test's fixtures roll back.
+          psql -X --host=127.0.0.1 --port=25433 --username=yb \
+            --dbname=yeohaengbom_reconfirmation_test --no-password --set=ON_ERROR_STOP=1 \
+            --command="CREATE DATABASE yeohaengbom_api_contract_test"
+          database="$(psql -XAt --host=127.0.0.1 --port=25433 --username=yb \
+            --dbname=yeohaengbom_api_contract_test --no-password --set=ON_ERROR_STOP=1 \
+            --command="SELECT current_database() || ':' || current_user")"
+          [[ "$database" == 'yeohaengbom_api_contract_test:yb' ]]
+
+          cd mock-server
+          python -m pip install -r requirements.txt
+          MOCK_SERVICE_TOKEN=ci-local-mock-token python -m uvicorn app.main:app \
+            --host 127.0.0.1 --port 8001 > "$RUNNER_TEMP/mock.log" 2>&1 &
+          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 \
+            http://127.0.0.1:8001/healthz > /dev/null
+      - name: Spring 컴파일 및 선택한 테스트
+        working-directory: backend
+        shell: bash
+        env:
+          RUN_UNIT: ${{ needs.changes.outputs.backend }}
+          RUN_POSTGRES: ${{ needs.changes.outputs.postgres }}
+        run: |
+          set -euo pipefail
+          tasks=()
+          if [[ "$RUN_UNIT" == true ]]; then tasks+=(ciUnitTest); fi
+          if [[ "$RUN_POSTGRES" == true ]]; then
+            export BOOKING_RECONFIRMATION_EVIDENCE_TEST=true
+            export BOOKING_RECONFIRMATION_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test
+            export BOOKING_RECONFIRMATION_TEST_DB_PASSWORD=ci-isolated-db-only
+            export BOOKING_API_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_api_contract_test
+            export BOOKING_RECONFIRMATION_MOCK_BASEURL=http://127.0.0.1:8001
+            export BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN=ci-local-mock-token
+            tasks+=(ciPostgresTest --rerun)
+          fi
+          bash ./gradlew --no-daemon --console=plain "${tasks[@]}"
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: frontend/travel_bom
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --global pnpm@12.3.4
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm build
+          pnpm exec tsc --noEmit
+
+  ml:
+    needs: changes
+    if: needs.changes.outputs.ml == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ml/requirements-api.txt
+      - run: |
+          python -m pip install -r requirements-api.txt
+          python -m unittest discover -s tests -p 'test_risk*.py'
+
+  agent:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: llm/agent
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: llm/agent/requirements.txt
+      - run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p 'test_extractions.py'
+
+  mock:
+    needs: changes
+    if: needs.changes.outputs.mock == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: mock-server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: mock-server/requirements.txt
+      - run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p 'test_*.py'
+
+  ci-gate:
+    if: always()
+    needs: [changes, backend, frontend, ml, agent, mock]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 필수 테스트 결과 확인
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          jobs = json.loads(os.environ['JOB_RESULTS'])
+          if jobs['changes']['result'] != 'success':
+              sys.exit('변경 영역 판단 실패')
+          outputs = jobs['changes']['outputs']
+          for name in ('backend', 'frontend', 'ml', 'agent', 'mock'):
+              selected = outputs.get(name) == 'true' or (name == 'backend' and outputs.get('postgres') == 'true')
+              if selected and jobs[name]['result'] != 'success':
+                  sys.exit(f'{name}: {jobs[name]["result"]}')
+          print('변경 영역 CI 통과')
+          PY

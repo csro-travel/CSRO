@@ -30,3 +30,42 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// CI finds ordinary unit tests while the standard test task retains its local behavior.
+tasks.register('ciUnitTest', Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform()
+	exclude '**/*IntegrationTest*.class', '**/*LiveTest*.class', '**/BackendApplicationTests.class'
+}
+
+tasks.register('ciPostgresTest', Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform()
+	filter {
+		includeTestsMatching 'com.csro.backend.booking.BookingApiIntegrationTest'
+		includeTestsMatching 'com.csro.backend.reconfirmation.BookingReconfirmationEvidenceIntegrationTest'
+	}
+	doFirst {
+		def url = providers.environmentVariable('BOOKING_RECONFIRMATION_TEST_DB_URL').orNull
+		def apiUrl = providers.environmentVariable('BOOKING_API_TEST_DB_URL').orNull
+		def password = providers.environmentVariable('BOOKING_RECONFIRMATION_TEST_DB_PASSWORD').orNull
+		if (url != 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test'
+				|| apiUrl != 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom_api_contract_test'
+				|| !password || providers.environmentVariable('BOOKING_RECONFIRMATION_EVIDENCE_TEST').orNull != 'true') {
+			throw new GradleException('CI PostgreSQL tests require the dedicated loopback test database.')
+		}
+
+		// The evidence test loader selects its own database before Spring starts.
+		systemProperties([
+			'spring.config.on-not-found': 'ignore',
+			'spring.datasource.url': apiUrl,
+			'spring.datasource.username': 'yb',
+			'spring.datasource.password': password,
+			'spring.flyway.url': apiUrl,
+			'spring.flyway.user': 'yb',
+			'spring.flyway.password': password
+		])
+	}
+}
