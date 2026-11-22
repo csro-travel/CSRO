@@ -124,7 +124,8 @@ class RiskApiTests(unittest.TestCase):
     def test_bad_envelope_field_types_dates_and_extra_fields_are_400(self):
         cases = []
         for field, value in [('hotelId', 123), ('features', []), ('targetCheckInDate', '2025-13-01'),
-                             ('asOf', '2025-10-31T09:00:00')]:
+                             ('asOf', '2025-10-31T09:00:00'),
+                             ('asOf', '2025-10-31T09:00:00+08:60')]:
             payload = deepcopy(self.payload); payload[field] = value; cases.append(payload)
         extra = deepcopy(self.payload); extra['riskLevel'] = 'HIGH'; cases.append(extra)
         cases.append({'request': self.payload})
