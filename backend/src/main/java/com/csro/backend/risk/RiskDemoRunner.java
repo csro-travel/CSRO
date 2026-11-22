@@ -43,14 +43,17 @@ public final class RiskDemoRunner implements ApplicationRunner {
     private final RiskRecheckService service;
     private final ConfigurableApplicationContext context;
     private final String requestFile;
+    private final String projectionFile;
     private final String policy;
 
     public RiskDemoRunner(RiskRecheckService service, ConfigurableApplicationContext context,
                           @Value("${risk.demo.request-file:}") String requestFile,
+                          @Value("${risk.demo.projection-file:}") String projectionFile,
                           @Value("${risk.demo.policy:F1_BASELINE}") String policy) {
         this.service = service;
         this.context = context;
         this.requestFile = requestFile;
+        this.projectionFile = projectionFile;
         this.policy = policy;
     }
 
@@ -61,10 +64,21 @@ public final class RiskDemoRunner implements ApplicationRunner {
                     .getProperty("spring.main.web-application-type", ""))) {
                 throw new IllegalArgumentException("Risk demo requires spring.main.web-application-type=none");
             }
-            if (requestFile.isBlank()) {
-                throw new IllegalArgumentException("Risk demo requires risk.demo.request-file");
+            if (context.getEnvironment().getProperty("risk.jobs.demo.enabled", Boolean.class, false)) {
+                throw new IllegalArgumentException("Risk assessment and job drain must run separately");
+            }
+            if (requestFile.isBlank() == projectionFile.isBlank()) {
+                throw new IllegalArgumentException("Risk demo requires exactly one request-file or projection-file");
             }
             RiskSelectionPolicy selectedPolicy = RiskSelectionPolicy.valueOf(policy);
+            if (!projectionFile.isBlank()) {
+                var projection = RiskEventProjection.read(Path.of(projectionFile));
+                var outcome = service.assessAndReconfirm(
+                        projection.request(), selectedPolicy, projection.cohortBookingCodes());
+                System.out.println("RISK_STAGE1_RESULT " + JSON.writeValueAsString(outcome));
+                System.out.println("RISK_PROJECTION_PROVENANCE " + JSON.writeValueAsString(projection.provenance()));
+                return;
+            }
             byte[] bytes;
             try (var input = Files.newInputStream(Path.of(requestFile))) {
                 bytes = input.readNBytes(MAX_REQUEST_BYTES + 1);
