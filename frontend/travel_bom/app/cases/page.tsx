@@ -1,13 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getCaseDetail, getCases } from './_api/cases'
 import type { CaseDetail, CaseList } from './_types/case'
-
-async function read<T>(path: string, signal: AbortSignal): Promise<T> {
-  const response = await fetch(path, {headers: {'X-Demo-Read': '1'}, cache: 'no-store', signal})
-  if (!response.ok) throw Error('조회 실패 (HTTP ' + response.status + ')')
-  return response.json()
-}
 
 export default function Cases() {
   const [list, setList] = useState<CaseList>()
@@ -24,14 +19,13 @@ export default function Cases() {
   const [error, fail] = useState('')
   useEffect(() => {
     const request = new AbortController()
-    const path = selected ? '/demo/cases/' + encodeURIComponent(selected) : '/demo/cases?page=' + page
     const load = async () => {
       try {
         if (selected) {
-          const data = await read<CaseDetail>(path, request.signal)
+          const data = await getCaseDetail(selected, request.signal)
           if (!request.signal.aborted) show(data)
         } else {
-          const data = await read<CaseList>(path, request.signal)
+          const data = await getCases(page, request.signal)
           if (!request.signal.aborted) setList(data)
         }
       } catch (cause) {
