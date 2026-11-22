@@ -14,8 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class CaseQueries {
     private final JdbcClient jdbc;
+    private final CaseAccess access;
 
-    CaseQueries(JdbcClient jdbc) { this.jdbc = jdbc; }
+    CaseQueries(JdbcClient jdbc, CaseAccess access) {
+        this.jdbc = jdbc;
+        this.access = access;
+    }
 
     private static final String FROM = """
         FROM cases c JOIN bookings b ON b.id=c.booking_id JOIN hotels h ON h.id=b.hotel_id
@@ -34,21 +38,10 @@ public class CaseQueries {
         """;
 
     private String authorize(Principal principal) {
-        if (!"COUNSELOR".equals(activeUser(principal).role())) {
+        if (!access.activeUser(principal).isCounselor()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN_ROLE");
         }
         return principal.getName();
-    }
-
-    private ActiveUser activeUser(Principal principal) {
-        if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED");
-        }
-        return jdbc.sql("SELECT id, role FROM users WHERE is_active AND subject_key = :subject")
-                .param("subject", principal.getName())
-                .query((rs, row) -> new ActiveUser(rs.getLong("id"), rs.getString("role")))
-                .optional()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED"));
     }
 
     public String list(Principal principal, List<String> status, String priority, String assignee, String pageValue, String sizeValue) {
@@ -125,24 +118,9 @@ public class CaseQueries {
 
     /** API-011 사건별 대화 이력을 공개 메시지 번호로 페이지 조회한다. */
     public String messages(Principal principal, String caseId, String limitValue, String beforeMessageId) {
-        ActiveUser user = activeUser(principal);
-        boolean counselor = "COUNSELOR".equals(user.role());
-        if (!counselor && !"CUSTOMER".equals(user.role())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN_ROLE");
-        }
-        if (!caseId.matches("C-[0-9]{3,38}")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_CASE_ID");
-        }
+        CaseAccess.ActiveUser user = access.chatUser(principal, caseId);
         int limit = messageLimit(limitValue);
-        long caseKey = jdbc.sql("""
-                SELECT c.id FROM cases c JOIN bookings b ON b.id = c.booking_id
-                WHERE c.case_code = :caseId AND (:counselor OR b.customer_id = :userId)
-                """)
-                .param("caseId", caseId)
-                .param("counselor", counselor)
-                .param("userId", user.id())
-                .query(Long.class).optional()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CASE_NOT_FOUND"));
+        long caseKey = access.chatCase(user, caseId, false).id();
 
         MessageCursor cursor = beforeMessageId == null ? null : findCursor(caseKey, beforeMessageId);
         String cursorPredicate = cursor == null ? "" : "AND (m.sent_at, m.id) < (:cursorTime, :cursorId)";
@@ -226,8 +204,6 @@ public class CaseQueries {
                 ) END)
             )::text FROM bounds
             """;
-
-    private record ActiveUser(long id, String role) {}
 
     private record MessageCursor(long id, OffsetDateTime sentAt) {}
 }

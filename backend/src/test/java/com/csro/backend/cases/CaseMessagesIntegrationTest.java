@@ -1,14 +1,18 @@
 package com.csro.backend.cases;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -31,7 +35,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 @EnabledIfEnvironmentVariable(named = "CHATTING_API_INTEGRATION_TEST", matches = "true")
 @SpringBootTest
@@ -42,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 class CaseMessagesIntegrationTest {
 
     private static final String MESSAGES = "/api/v1/cases/{caseId}/messages";
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final OffsetDateTime FIRST = OffsetDateTime.parse("2026-11-09T10:15:00+09:00");
     private static final OffsetDateTime TIE = FIRST.plusMinutes(1);
 
@@ -168,6 +175,92 @@ class CaseMessagesIntegrationTest {
                 .andExpect(jsonPath("$.caseId").value(openCase.code()));
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void commitsOriginalTextFromBothRolesInEveryActiveState() throws Exception {
+        String customerBody = "  체크인 시간을 확인해 주세요.\n늦게 도착할 예정입니다.  ";
+        String counselorBody = "호텔에 확인하고 안내하겠습니다.";
+
+        String customerMessageId = sendText(owner, "CUSTOMER", customerBody);
+        setCaseStatus("IN_PROGRESS");
+        String counselorMessageId = sendText(counselor, "COUNSELOR", counselorBody);
+        setCaseStatus("WAITING");
+        String repeatedMessageId = sendText(owner, "CUSTOMER", customerBody);
+
+        assertNotEquals(customerMessageId, repeatedMessageId);
+        assertEquals(ownerId, storedSenderId(customerMessageId));
+        assertEquals(counselorId, storedSenderId(counselorMessageId));
+        assertEquals(ownerId, storedSenderId(repeatedMessageId));
+        mvc.perform(get(MESSAGES, openCase.code()).principal(() -> owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.caseId").value(openCase.code()))
+                .andExpect(jsonPath("$.items[*].messageId",
+                        containsInAnyOrder(customerMessageId, counselorMessageId, repeatedMessageId)))
+                .andExpect(jsonPath("$.items[?(@.messageId == '%s')].body", customerMessageId).value(contains(customerBody)))
+                .andExpect(jsonPath("$.items[?(@.messageId == '%s')].body", counselorMessageId).value(contains(counselorBody)))
+                .andExpect(jsonPath("$.items[?(@.messageId == '%s')].body", repeatedMessageId).value(contains(customerBody)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void rejectsUnauthorizedClosedAndInvalidSendsWithoutWritingMessages() throws Exception {
+        String validBody = "{\"body\":\"전송할 메시지\"}";
+
+        expectProblem(mvc.perform(post(MESSAGES, openCase.code()).contentType(MediaType.APPLICATION_JSON)
+                .content(validBody)), 401, "UNAUTHENTICATED")
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+        expectProblem(postMessage(openCase.code(), otherCustomer, validBody), 404, "CASE_NOT_FOUND");
+        expectProblem(postMessage(closedCase.code(), otherCustomer, validBody), 404, "CASE_NOT_FOUND");
+        expectProblem(postMessage(newCaseCode(), owner, validBody), 404, "CASE_NOT_FOUND");
+        jdbc.sql("UPDATE users SET is_active = false WHERE subject_key = :subject")
+                .param("subject", otherCustomer).update();
+        expectProblem(postMessage(openCase.code(), otherCustomer, validBody), 401, "UNAUTHENTICATED");
+        expectProblem(postMessage(closedCase.code(), counselor, validBody), 403, "CASE_CLOSED");
+
+        expectProblem(postMessage("C-" + "1".repeat(39), owner, validBody), 400, "INVALID_CASE_ID");
+        for (String invalidBody : new String[]{"{}", "{\"body\":123}", "{\"body\":\"  \"}",
+                "{\"body\":\"널 문자 \\u0000\"}", "{\"body\":\"위조 요청\",\"senderType\":\"COUNSELOR\"}",
+                "{\"body\":\"첫 값\",\"body\":\"둘째 값\"}", validBody + "{}", "{\"body\":"}) {
+            expectProblem(postMessage(openCase.code(), owner, invalidBody), 400, "INVALID_MESSAGE_BODY");
+        }
+        expectProblem(mvc.perform(post(MESSAGES, openCase.code()).principal(() -> owner)
+                .contentType(MediaType.TEXT_PLAIN).content("텍스트 요청")), 415, "UNSUPPORTED_MEDIA_TYPE");
+
+        long messageCount = jdbc.sql("SELECT count(*) FROM chat_messages WHERE case_id IN (:openId, :closedId)")
+                .param("openId", openCase.id()).param("closedId", closedCase.id()).query(Long.class).single();
+        assertEquals(0L, messageCount);
+    }
+
+    private String sendText(String subject, String senderType, String body) throws Exception {
+        var response = postMessage(openCase.code(), subject, JSON.writeValueAsString(Map.of("body", body)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"))
+                .andExpect(jsonPath("$.messageId").isNotEmpty())
+                .andExpect(jsonPath("$.senderType").value(senderType))
+                .andExpect(jsonPath("$.messageType").value("TEXT"))
+                .andExpect(jsonPath("$.body").value(body))
+                .andExpect(jsonPath("$.sentAt").isNotEmpty())
+                .andExpect(jsonPath("$.offer").value(nullValue()))
+                .andReturn().getResponse();
+        return JsonPath.read(response.getContentAsString(), "$.messageId");
+    }
+
+    private ResultActions postMessage(String caseCode, String subject, String requestBody) throws Exception {
+        return mvc.perform(post(MESSAGES, caseCode).principal(() -> subject)
+                .contentType(MediaType.APPLICATION_JSON).content(requestBody));
+    }
+
+    private long storedSenderId(String messageId) {
+        return jdbc.sql("SELECT sender_user_id FROM chat_messages WHERE case_id = :caseId AND message_code = :messageId")
+                .param("caseId", openCase.id()).param("messageId", messageId).query(Long.class).single();
+    }
+
+    private void setCaseStatus(String status) {
+        jdbc.sql("UPDATE cases SET status = :status WHERE id = :caseId")
+                .param("status", status).param("caseId", openCase.id()).update();
+    }
+
     private void insertOffer() {
         long jobId = jdbc.sql("""
                 INSERT INTO jobs (job_code, booking_id, case_id, kind, trigger_type, parameters)
@@ -254,6 +347,7 @@ class CaseMessagesIntegrationTest {
     private ResultActions expectProblem(ResultActions action, int statusCode, String code) throws Exception {
         return action.andExpect(status().is(statusCode))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"))
                 .andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
@@ -270,7 +364,7 @@ class CaseMessagesIntegrationTest {
             String url = System.getenv("CHATTING_API_TEST_DB_URL");
             String password = System.getenv("CHATTING_API_TEST_DB_PASSWORD");
             if (!URL.equals(url) || password == null || password.isBlank()) {
-                throw new IllegalStateException("API-011 test requires CHATTING_API_TEST_DB_URL=" + URL
+                throw new IllegalStateException("Chat API tests require CHATTING_API_TEST_DB_URL=" + URL
                         + " and CHATTING_API_TEST_DB_PASSWORD");
             }
             var dataSource = new DriverManagerDataSource(url, USER, password);
@@ -295,10 +389,10 @@ class CaseMessagesIntegrationTest {
                  var statement = connection.createStatement();
                  var result = statement.executeQuery("SELECT current_database(), current_user")) {
                 if (!result.next() || !DATABASE.equals(result.getString(1)) || !USER.equals(result.getString(2))) {
-                    throw new IllegalStateException("API-011 test database identity did not match");
+                    throw new IllegalStateException("Chat API test database identity did not match");
                 }
             } catch (SQLException exception) {
-                throw new IllegalStateException("Unable to verify the API-011 test database before Spring starts");
+                throw new IllegalStateException("Unable to verify the chat API test database before Spring starts");
             }
         }
     }
