@@ -81,7 +81,7 @@ def check_shared_config():
 
 def review_paths(changed):
     patterns = (
-        r"^\.github/", r"^\.git(ignore|attributes)$", r"^AGENTS(\.override)?\.md$",
+        r"^\.github/", r"^tools/ci/", r"^\.git(ignore|attributes)$", r"^AGENTS(\.override)?\.md$",
         r"^docs/(api|db|business|local-development)\.md$",
         r"^compose\.ya?ml$", r"^\.env\.example$", r"^backend/(build\.gradle|settings\.gradle|gradlew(\.bat)?)$",
         r"^backend/src/main/resources/application[^/]*\.(properties|ya?ml)$",
