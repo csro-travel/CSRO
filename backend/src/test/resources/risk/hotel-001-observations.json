@@ -1,0 +1,123 @@
+{
+  "hotel": {
+    "hotel_id": "HOTEL-001"
+  },
+  "events": [
+    {
+      "event_id": "E1",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "H-1",
+      "event_type": "BOOKING_STATUS",
+      "occurred_at": "2026-10-08T08:00:00+09:00",
+      "available_at": "2026-10-08T08:00:00+09:00",
+      "payload": {
+        "status": "CONFIRMED",
+        "channel": "PLATFORM",
+        "check_in_date": "2026-10-15",
+        "check_out_date": "2026-10-16"
+      }
+    },
+    {
+      "event_id": "E2",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "YB-001",
+      "event_type": "BOOKING_STATUS",
+      "occurred_at": "2026-11-06T08:00:00+09:00",
+      "available_at": "2026-11-06T08:00:00+09:00",
+      "payload": {
+        "status": "CONFIRMED",
+        "channel": "PLATFORM",
+        "check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-13"
+      }
+    },
+    {
+      "event_id": "E3",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "LATE",
+      "event_type": "BOOKING_STATUS",
+      "occurred_at": "2026-11-08T08:00:00+09:00",
+      "available_at": "2026-11-09T09:01:00+09:00",
+      "payload": {
+        "status": "CONFIRMED",
+        "channel": "PLATFORM",
+        "check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-11"
+      }
+    },
+    {
+      "event_id": "E8",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "FUTURE",
+      "event_type": "BOOKING_STATUS",
+      "occurred_at": "2026-11-09T09:01:00+09:00",
+      "available_at": "2026-11-09T09:01:00+09:00",
+      "payload": {
+        "status": "CONFIRMED",
+        "channel": "PLATFORM",
+        "check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-11"
+      }
+    },
+    {
+      "event_id": "E4",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "H-1",
+      "event_type": "OBSERVED_OUTCOME",
+      "occurred_at": "2026-10-16T10:00:00+09:00",
+      "available_at": "2026-10-16T10:00:00+09:00",
+      "payload": {
+        "check_in_date": "2026-10-15",
+        "label": 1
+      }
+    },
+    {
+      "event_id": "E5",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "YB-001",
+      "event_type": "RECONFIRMATION_REQUEST",
+      "occurred_at": "2026-11-07T09:00:00+09:00",
+      "available_at": "2026-11-07T09:00:00+09:00",
+      "payload": {
+        "request_id": "R1",
+        "due_at": "2026-11-07T11:00:00+09:00"
+      }
+    },
+    {
+      "event_id": "E6",
+      "hotel_id": "HOTEL-001",
+      "booking_id": null,
+      "event_type": "INVENTORY_PROBE",
+      "occurred_at": "2026-11-08T09:00:00+09:00",
+      "available_at": "2026-11-08T09:00:00+09:00",
+      "payload": {
+        "target_check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-11",
+        "room_type": "STANDARD",
+        "adults": 2,
+        "rooms": 1,
+        "currency": "KRW",
+        "available_rooms": 0,
+        "http_status": 200
+      }
+    },
+    {
+      "event_id": "E7",
+      "hotel_id": "HOTEL-001",
+      "booking_id": null,
+      "event_type": "INVENTORY_PROBE",
+      "occurred_at": "2026-11-08T09:00:00+09:00",
+      "available_at": "2026-11-08T09:00:00+09:00",
+      "payload": {
+        "target_check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-11",
+        "room_type": "STANDARD",
+        "adults": 2,
+        "rooms": 1,
+        "currency": "KRW",
+        "available_rooms": 2,
+        "http_status": 200
+      }
+    }
+  ]
+}
