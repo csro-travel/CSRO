@@ -32,7 +32,8 @@ _MODEL_FILES = frozenset((
 _DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _AWARE_ISO = re.compile(
     r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
-    r"(?::[0-9]{2}(?:\.[0-9]{1,6})?)?(?:Z|[+-][0-9]{2}:[0-9]{2})\Z"
+    r"(?::[0-9]{2}(?:\.[0-9]{1,6})?)?"
+    r"(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])\Z"
 )
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _UNAVAILABLE_DETAIL = "The risk model is unavailable."
