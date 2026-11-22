@@ -23,7 +23,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: '홈', icon: House, href: '#' },
   { label: '예약 관리', icon: CalendarCheck, href: '#' },
-  { label: 'CS 상담 관리', icon: Headset, href: '#' },
+  { label: 'CS 상담 관리', icon: Headset, href: '/cases' },
   {
     label: '사전 위험 관리',
     icon: ShieldAlert,
