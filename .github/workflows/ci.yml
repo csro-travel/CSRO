@@ -73,6 +73,14 @@ jobs:
             fi
             echo "$section=$enabled" >> "$GITHUB_OUTPUT"
           done
+      - name: 공통 설정·구조 변경 안전 검사
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base="${PR_BASE:-$(git rev-parse HEAD)}"
+          python3 tools/ci/check_shared_contracts.py "$base" HEAD
 
   backend:
     needs: changes
