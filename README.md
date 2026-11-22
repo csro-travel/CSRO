@@ -1,115 +1,142 @@
-# CSRO · 여행봄
+<div align="center">
 
-여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](backend/docs/api/README.md)
+# 여행봄 (CSRO)
+### 숙박 예약의 위험을 먼저 발견하고, 확인부터 고객 구제까지 연결하는 상담 지원 서비스
 
-독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. Spring의 특징값 집계·호출·업무 DB 저장·재확인 연결은 별도 작업이다.
+** 멀티 AI Agent 기반 지능형 고객상담 프로젝트 · 2026.10 ~ 2026.12(8주)
 
-## 로컬 환경
+<!-- TODO: 서비스 대표 이미지 또는 실제 화면 GIF -->
+<!-- TODO: 서비스 배포 주소 · 데모 영상 · 최종 발표 자료 링크 -->
 
-아래는 Windows PowerShell 기준 절차입니다. 상태와 응답은 예상 결과입니다.
+</div>
 
-### 1. 도구 준비와 저장소 내려받기
+---
 
-Git, JDK 21, Docker Desktop과 `docker compose` 명령이 필요합니다. 저장소의 Gradle Wrapper가 9.9.1을 사용하므로 Gradle을 따로 설치할 필요는 없습니다. 프로젝트 설정은 Spring Boot 4.0.9와 PostgreSQL 18.7을 사용합니다. [Gradle 설정](backend/build.gradle) · [Wrapper 버전](backend/gradle/wrapper/gradle-wrapper.properties) · [Compose 설정](compose.yaml)
+## 1. 프로젝트 소개
 
-```powershell
-git clone https://github.com/csro-travel/CSRO.git
-Set-Location .\CSRO
-java -version
-docker compose version
-```
+숙소를 예약했다는 사실만으로 **체크인 당일 객실 이용까지 보장되는 것은 아닙니다.** 공급사의 예약 계약은 확정되어 있어도 호텔의 객실 제공 상태가 다르거나, 일부 숙박일에 문제가 발생할 수 있습니다.
 
-이미 내려받았다면 기존 `CSRO` 저장소 루트에서 아래 단계를 시작합니다.
+**여행봄**은 이런 숙박 예약 위험을 선제적으로 살펴보고, 공급사·호텔 재확인으로 근거를 수집하며, 이상이 확인되면 상담 사건과 대체 숙소 대응으로 이어지도록 설계한 **여행 예약 고객상담 지원 서비스**입니다.
 
-### 2. 저장소 루트에서 로컬 DB 설정
+상담업무 AI 지원 과제를 **숙박 예약 장애의 사전 탐지와 고객 구제**라는 구체적인 상황으로 확장했습니다. AI가 장애를 확정하거나 고객 대신 예약을 임의로 처리하는 것이 아니라, **위험 신호·상대방의 주장·검증된 사실·상담사의 결정**을 구분하는 것이 핵심입니다.
 
-```powershell
-if (-not (Test-Path -LiteralPath .env)) {
-    Copy-Item -LiteralPath .env.example -Destination .env
-}
-notepad .env
-```
+## 2. 어떤 문제를 해결하나요?
 
-새로 복사했다면 `POSTGRES_PASSWORD`의 자리표시자를 로컬 DB용 비밀번호로 바꿉니다. 기존 DB 볼륨을 재사용한다면 현재 DB 계정에 설정된 비밀번호를 사용합니다. `.env`는 Git에서 무시되며, 실제 값은 로그·문서·커밋에 남기지 않습니다.
-
-- Compose는 루트 `.env`를 보간해 PostgreSQL 컨테이너의 `POSTGRES_PASSWORD`로 전달합니다. Spring은 같은 파일을 Java properties로 읽어 `yb` 계정의 접속 비밀번호로 사용합니다.
-- 두 파서에서 같은 값이 되도록 `POSTGRES_PASSWORD=값` 한 줄로 작성합니다. 로컬에서 새로 정할 때는 충분히 길고 무작위인 영문·숫자·`_`·`-` 조합을 사용합니다. 따옴표, 공백, 인라인 주석, `$` 보간, 역슬래시 이스케이프는 두 파서에서 다르게 해석될 수 있습니다.
-- 셸에 `POSTGRES_PASSWORD`가 설정돼 있으면 Compose에서 `.env`보다 우선하고, Spring도 실행 환경변수를 파일 값보다 우선합니다. `.env`를 사용할 때는 아래 확인 결과가 `False`인 터미널에서 실행하고 IDE 실행 구성의 환경변수도 확인합니다.
-
-```powershell
-Test-Path Env:POSTGRES_PASSWORD
-docker compose config --quiet
-netstat -ano -p tcp | Select-String ':5432\s+.*LISTENING'
-```
-
-구성 검사 성공 시 출력 없이 종료합니다. 포트 조회에 리스너가 나오면 PID와 `docker compose ps`를 확인해 이 프로젝트의 기존 컨테이너인지 구분합니다. 다른 서비스가 포트를 사용 중이면 해당 포트를 해제할 수 있는지 확인한 뒤 계속합니다. 현재 설정은 호스트의 `127.0.0.1:5432`에만 바인딩합니다.
-
-### 3. 저장소 루트에서 PostgreSQL 시작
-
-```powershell
-docker compose up -d
-docker compose ps
-docker compose port postgres 5432
-```
-
-예상 상태는 `postgres`의 `healthy`, 예상 포트는 `127.0.0.1:5432`입니다. 같은 Compose 프로젝트의 `postgres_data` 볼륨을 다시 사용하면 기존 데이터가 유지됩니다. 빈 볼륨에서는 이미지가 `yeohaengbom` DB와 `yb` 사용자를 초기화합니다. 기존 볼륨에서는 이전 DB와 사용자를 그대로 열며, `.env`를 편집해도 DB에 저장된 비밀번호가 자동 변경되지 않습니다. `healthy`는 `pg_isready`로 접속을 받을 준비가 됐는지 확인한 상태입니다. Spring의 실제 JDBC 인증과 Flyway 성공은 다음 단계에서 확인합니다.
-
-### 4. `backend`에서 Spring Boot 실행
-
-저장소 루트에서 시작합니다. IDE에서 실행할 때도 작업 디렉터리를 `<저장소 루트>/backend`, 활성 프로필을 `local`로 지정합니다. [Spring local 설정](backend/src/main/resources/application-local.properties)
-
-```powershell
-Set-Location .\backend
-.\gradlew.bat bootRun --args="--spring.profiles.active=local"
-```
-
-`file:../.env[.properties]`의 `..`는 Spring 프로세스의 작업 디렉터리 기준입니다. `backend`에서 실행하면 루트 `.env`를 읽고, DataSource는 `127.0.0.1:5432/yeohaengbom`에 연결합니다. 시작 시 Flyway는 공통 [V1](backend/src/main/resources/db/migration/V1__initial_business_schema.sql)을 적용하고, `local` 프로필에서는 [YB-001 시드](backend/src/main/resources/db/local/R__seed_yb001.sql)도 적용합니다. 기존 DB에서는 적용된 V1을 검증하고 반복 시드는 미적용이거나 내용이 달라졌을 때 적용합니다. 예상 결과는 Flyway 적용·검증과 Spring 부팅 성공입니다.
-
-Spring을 실행한 채 별도 PowerShell에서 확인합니다.
-
-```powershell
-Invoke-RestMethod http://localhost:8080/hello
-```
-
-예상 응답은 `Hello, CSRO!`입니다.
-
-### 5. `backend`에서 기존 테스트 실행
-
-테스트용 로컬 DB는 켜 둡니다. 별도 PowerShell을 저장소 루트에서 열어 실행합니다.
-
-```powershell
-Set-Location .\backend
-.\gradlew.bat test
-```
-
-예상 결과는 `BUILD SUCCESSFUL`이며 상세 결과는 `backend/build/reports/tests/test/index.html`에서 확인합니다. 통합 테스트는 `local` 프로필의 PostgreSQL을 사용합니다.
-
-### 6. 볼륨을 유지하며 종료
-
-Spring을 실행한 터미널에서 `Ctrl+C`로 종료한 뒤, 저장소 루트 터미널에서 실행합니다.
-
-```powershell
-docker compose down
-```
-
-이 명령은 이름 있는 볼륨을 보존합니다. 같은 저장소 루트에서 `docker compose up -d`로 다시 실행합니다. 종료에 `-v` 옵션을 붙이면 볼륨이 삭제되므로 데이터 보존이 필요한 경우 사용하지 않습니다.
-
-### 흔한 오류
-
-| 증상 | 확인할 사항 |
+| 문제 | 여행봄의 해결 방향 |
 | --- | --- |
-| Compose가 비밀번호 필수 오류를 반환함 | 저장소 루트인지, `.env`에 값이 채워졌는지, 셸의 동명 변수가 의도치 않게 설정돼 있는지 확인합니다. |
-| Spring이 `../.env`를 찾지 못함 | PowerShell·IDE의 작업 디렉터리를 `backend`로 맞추고 `local` 프로필을 확인합니다. |
-| 5432 바인딩 실패 | 포트 조회로 점유 PID와 기존 Compose 컨테이너를 확인합니다. 다른 서비스와 충돌하면 팀 설정을 임의로 바꾸기 전에 충돌 원인을 확인합니다. |
-| PostgreSQL은 `healthy`인데 Spring 인증 실패 | 셸·IDE 환경변수 우선순위와 기존 볼륨의 DB 계정 비밀번호를 대조합니다. |
-| Flyway 검증 실패 | 오류가 가리키는 버전과 로컬 마이그레이션을 확인합니다. 적용된 V1은 수정하거나 이름을 바꾸지 않으며 `repair`나 볼륨 초기화 전에 오류를 공유합니다. |
+| 예약 확정과 실제 객실 제공 여부가 다를 수 있음 | 공급사 계약 상태와 호텔의 **숙박일별 제공 상태를 분리**해 재확인 |
+| 문제가 체크인 직전에야 드러날 수 있음 | ML로 **호텔·체크인 날짜 단위의 위험 신호**를 우선순위화 |
+| 호텔의 모호한 회신을 사실로 오인할 수 있음 | 회신 원문·Agent 해석·검증된 사실을 구분하고 미확인은 미확인으로 유지 |
+| 상담사가 근거와 후속 업무를 흩어져 관리함 | 동일 예약의 사건·근거·다음 조치를 하나의 상담 흐름에서 조회 |
+| 기존 숙소 이용이 어렵다면 대체안 마련이 필요함 | 전체 숙박기간 보장을 우선하는 **대체 숙소 탐색 및 대응 흐름** 설계 |
 
-## Codex 문서 확인
+## 3. 핵심 서비스 흐름
 
-저장소 루트를 작업 디렉터리로 새 Codex 세션을 연다. Codex는 세션 시작 시 사용자 전역 지침과 저장소 루트부터 작업 디렉터리까지의 지침을 탐색한다. 이 저장소의 기본 지침은 루트 [AGENTS.md](AGENTS.md)이며 ML 하위 작업에는 [ml/AGENTS.md](ml/AGENTS.md)도 적용한다. 같은 디렉터리에 `AGENTS.override.md`가 있으면 우선한다. [Codex 공식 탐색 규칙](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+```text
+숙박 예약 / 체크인 예정
+          │
+          ▼
+[ML] 호텔·날짜별 위험 신호 분석
+          │
+          ▼
+[재확인] 공급사 계약 + 호텔 숙박일별 회신
+          │
+          ▼
+[Agent 보조] 회신 내용에서 주장·원문 근거 추출
+          │
+          ▼
+[Spring] 출처·예약·숙박일 검증, 사실 상태 기록
+          │
+          ├── 이상 없음 / 미확인 → 상태 유지·추가 확인
+          │
+          └── 장애 확인 → 상담 사건·후속 업무
+                              │
+                              ▼
+                       상담사 검토·고객 안내
+                              │
+                              ▼
+                   대체 숙소 탐색·후속 처리
+```
 
-[업무](docs/business.md)·[API](docs/api.md)·[DB](docs/db.md) 문서는 일반 Markdown이다. Codex는 작업에 해당하는 문서와 원본을 `AGENTS.md`의 표에 따라 명시적으로 읽는다.
+> **설계 흐름과 구현 현황은 구분합니다.** 위는 서비스가 지향하는 전체 업무 흐름이며, ML → Spring → 재확인 → Agent → 상담 → 대체 예약까지 운영 환경에서 완전히 연결되었다는 뜻은 아닙니다.
 
-새 세션에서 아래를 입력하고, 루트 `AGENTS.md`가 적용 지침으로 표시되는지와 API 문서가 작업별 읽기 대상으로 선택되는지 확인한다.
+## 4. 주요 기능과 현재 구현 범위
 
-> 파일 수정 없이 적용된 지침 파일의 경로를 알려줘. API-001의 DTO 응답 필드 변경 요청을 받았다고 가정하고, 수정 전에 읽을 파일과 원본, 승인 필요 여부를 알려줘.
+| 기능 | 사용자 관점에서 하는 일 | 저장소에서 확인한 범위 |
+| --- | --- | --- |
+| 숙박 예약 상세 조회 | 고객 예약과 숙박 정보를 확인 | Spring API-001 조회·오류 처리 코드. 실제 Bearer 인증 연결 등은 후속 작업 |
+| 숙박 위험 탐지 | 문제 가능성이 높은 호텔·날짜를 먼저 확인 | 합성 데이터 기반 LightGBM 학습·평가·독립 HTTP 추론 API-023. Spring 업무 연결은 별도 |
+| 예약·객실 재확인 | 공급사 계약과 호텔 회신을 비교 | 가상 공급사·호텔 API-026/027 및 Spring 재확인·근거 저장 시연 코드 |
+| 호텔 회신 해석 | 어떤 숙박일이 가능·불가·미확인인지 구분 | 호텔 회신 추출 Agent API-024. 최종 사실 검증·저장은 Spring 책임 |
+| 상담 사건 관리 | 사건 현황, 검증 근거, 다음 업무를 파악 | 상담 사건 조회 API 코드 및 로컬 시연용 상담사 화면 |
+| 대체 숙소 비교 | 문제가 생긴 예약의 대체 숙소 후보를 검토 | 프론트엔드 **시연 데이터 기반** 탐색·비교 화면. 실제 공급사 예약 실행은 미구현 |
+
+### 서비스 화면
+
+<!-- TODO: ① 사건 목록·상세 화면 캡처 또는 GIF — 실제 화면으로 교체 -->
+<!-- TODO: ② 재확인 근거·숙박일별 상태 화면 캡처 또는 GIF -->
+<!-- TODO: ③ 대체 숙소 후보 비교 화면 캡처 또는 GIF -->
+<!-- TODO: 사용 시나리오를 3~5컷으로 연결하고, 시연 데이터 여부를 각 캡션에 명시 -->
+
+## 5. 누구에게 어떤 가치를 제공하나요?
+
+**여행 고객**에게는 체크인 시점의 예약 문제를 줄이고, 장애가 확인되었을 때 일관된 안내와 대체 숙소 선택지를 제공하는 것을 목표로 합니다.
+
+**고객센터 상담사**에게는 예약 계약, 날짜별 객실 상태, 호텔의 회신 근거, 다음 할 일을 한곳에서 확인하도록 지원해 반복적인 확인 업무를 줄이는 방향을 제안합니다.
+
+**여행사·예약 플랫폼 및 고객센터 운영 조직**에는 사후 민원 대응에서 **위험 우선순위 기반 사전 점검**으로 전환할 수 있는 운영 모델을 제시합니다.
+
+> 위 내용은 **기대 가치**이며 실제 상담 처리시간 단축, 고객 피해 감소, 운영비 절감 등은 아직 실사용 데이터로 입증된 성과로 표시하지 않습니다.
+
+## 6. 기술 구성
+
+| 영역 | 확인된 기술·역할 |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript — 상담 사건 조회 및 대체 숙소 비교 시연 UI |
+| Backend | Java 21, Spring Boot 4, Spring Data JPA — 예약·근거·사건 업무 로직 |
+| Database | PostgreSQL, Flyway — 공통 업무 데이터와 스키마 관리 |
+| ML | Python, LightGBM — 합성 데이터 기반 위험 모델 및 추론 HTTP API |
+| Agent | Python, FastAPI — 호텔 회신의 숙박일별 주장·근거 추출 |
+| 시연 외부 시스템 | FastAPI Mock 공급사·호텔 — 재확인 시나리오와 예외 응답 재현 |
+
+<!-- TODO: 실제 아키텍처 이미지 — 프론트/백엔드/ML/Agent/Mock/DB 소유권과 호출 방향 표시 -->
+<!-- TODO: 개발·시연 구성과 실제 배포 구성을 구분해 표시 -->
+
+### 설계에서 중요하게 본 점
+
+- **위험 점수 ≠ 장애 확정:** ML 점수는 검토 우선순위를 정하는 신호이지, 예약 취소나 고객 피해가 확정되었다는 증거가 아닙니다.
+- **예약 확정 ≠ 모든 숙박일 제공:** 공급사 계약과 호텔의 실제 제공 여부를 별도 상태로 관리합니다.
+- **호텔의 주장 ≠ 검증된 사실:** 출처·예약·숙박일이 확인된 근거만 사실 상태에 반영하고, 모호한 회신은 사람의 검토를 요구합니다.
+- **업무 상태 변경은 Spring에서:** Python ML/Agent는 분석 결과를 반환하고, 사건·예약 상태 변경은 Spring 업무 로직이 담당합니다.
+
+## 7. 검증과 남은 과제
+
+**확인된 검증:** 가상 호텔 100곳의 과정 기반 합성 데이터로 LightGBM 위험 모델을 평가했습니다. 확인 라벨이 있는 테스트 5,204행에서 **AP 0.4550, ROC-AUC 0.9282**를 기록했습니다. 이는 **합성 시뮬레이션 내부의 모델 성능**이며 실제 예약 장애 예측 정확도나 고객상담 개선효과를 의미하지 않습니다. [실험 결과와 한계](ml/docs/RESULTS.md)
+
+현재 개발·시연 범위에서 검토할 후속 과제는 **Spring과 ML/Agent의 전체 연결, 실서비스 인증·권한 검증, 실제 공급사 연동, 대체 예약 실행, 운영 환경 검증**입니다.
+
+<!-- TODO: 실제 사용자 테스트 결과(측정 방법, 표본 수, 처리시간/품질 수치, 비교 기준) -->
+<!-- TODO: 데모 실행 영상 및 상담사 사용성 피드백 -->
+<!-- TODO: 시연 외 실서비스 적용 범위·보안·운영 계획 -->
+
+## 8. 팀 소개
+
+<!-- TODO: 실제 팀원 이름·담당 범위·GitHub 프로필 입력 -->
+
+| 담당 | 주요 역할 | 팀원 |
+| --- | --- | --- |
+| ML·재확인 | 위험 모델, 공급사·호텔 재확인, 근거·사건 흐름 | 작성 예정 |
+| Agent·상담 | 호텔 회신 해석, 상담 지원, 대체 숙소 대응 | 작성 예정 |
+| Frontend·공통 | 상담사 화면, 서비스 연동·검증 | 작성 예정 |
+
+## 9. 프로젝트 자료
+
+- [업무 규칙과 판단 기준](docs/business.md)
+- [API 계약과 책임 경계](docs/api.md)
+- [API 구현 현황](backend/docs/api/README.md)
+- [ML 모델과 실험](ml/README.md)
+- [호텔 회신 추출 Agent](llm/agent/README.md)
+- [가상 공급사·호텔 시연](mock-server/README.md)
+- [로컬 실행·테스트·문제 해결 가이드](docs/local-development.md)
+
+<!-- TODO: Figma · 화면 설계 · 시연 영상 · 최종 발표 자료 · 팀 회고 링크 -->
