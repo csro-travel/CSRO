@@ -17,7 +17,7 @@ http.createServer(async (req, res) => {
   }
   res.setHeader('Content-Security-Policy', "frame-ancestors 'none'")
   if (!req.url.startsWith('/demo/cases')) return handle(req, res)
-  const listPage = /^\/demo\/cases\?page=(0|[1-9][0-9]{0,9})$/.exec(req.url)
+  const listPage = /^\/demo\/cases\?page=(0|[1-9][0-9]{0,9})(?:&status=(?:OPEN|IN_PROGRESS|WAITING))?$/.exec(req.url)
   const allowedPage = listPage !== null && Number(listPage[1]) <= 2147483647
   if (req.method !== 'GET' || req.headers['x-demo-read'] !== '1' ||
       req.headers['sec-fetch-site'] !== 'same-origin' ||

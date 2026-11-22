@@ -2,21 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { getCaseDetail, getCases } from "./_api/cases";
-import type { CaseDetail, CaseList } from "./_types/case";
+import { CaseListView } from "./_components/case-list";
+import type { CaseDetail, CaseList, CaseStatus } from "./_types/case";
 
 export default function Cases() {
   const [list, setList] = useState<CaseList>();
   const [page, setPage] = useState(0);
+  const [status, setStatus] = useState<CaseStatus>();
   const [attempt, setAttempt] = useState(0);
-  const pagination = list?.pagination;
+  const [selected, select] = useState<string>();
+  const [detail, show] = useState<CaseDetail>();
+  const [error, fail] = useState("");
+
   function navigate(target: number) {
     setList(undefined);
     fail("");
     setPage(target);
   }
-  const [selected, select] = useState<string>();
-  const [detail, show] = useState<CaseDetail>();
-  const [error, fail] = useState("");
+
+  function filterByStatus(nextStatus: CaseStatus | undefined) {
+    if (status === nextStatus) return;
+    navigate(0);
+    setStatus(nextStatus);
+  }
+
+  function openCase(caseId: string) {
+    fail("");
+    show(undefined);
+    select(caseId);
+  }
+
   useEffect(() => {
     const request = new AbortController();
     const load = async () => {
@@ -25,7 +40,7 @@ export default function Cases() {
           const data = await getCaseDetail(selected, request.signal);
           if (!request.signal.aborted) show(data);
         } else {
-          const data = await getCases(page, request.signal);
+          const data = await getCases(page, status, request.signal);
           if (!request.signal.aborted) setList(data);
         }
       } catch (cause) {
@@ -35,72 +50,33 @@ export default function Cases() {
     };
     void load();
     return () => request.abort();
-  }, [selected, page, attempt]);
+  }, [selected, page, status, attempt]);
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-      <h1 className="text-3xl font-bold">상담 사건</h1>
-      {error && <p role="alert">{error}</p>}
-      {!selected && error && (
-        <button
-          onClick={() => {
+    <main className={`mx-auto space-y-6 px-6 py-10 ${selected ? "max-w-5xl" : "max-w-6xl"}`}>
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 className="text-3xl font-bold">상담 사건</h1>
+        {!selected && !error && list && (
+          <span className="text-2xl font-medium text-muted-foreground tabular-nums">
+            {list.pagination.totalElements.toLocaleString("ko-KR")}건
+          </span>
+        )}
+      </header>
+      {!selected && (
+        <CaseListView
+          list={list}
+          status={status}
+          error={error}
+          onStatusChange={filterByStatus}
+          onPageChange={navigate}
+          onOpen={openCase}
+          onRetry={() => {
             fail("");
             setAttempt((value) => value + 1);
           }}
-        >
-          다시 시도
-        </button>
+        />
       )}
-      {!selected && !error && (
-        <section className="space-y-3">
-          {list?.items.map((item) => (
-            <button
-              key={item.caseId}
-              onClick={() => {
-                fail("");
-                show(undefined);
-                select(item.caseId);
-              }}
-              className="block w-full rounded-xl border p-4 text-left hover:bg-muted"
-            >
-              <strong>
-                {item.caseId} · {item.hotelName}
-              </strong>
-              <p>
-                {item.bookingId} · {item.priority} · {item.summary}
-              </p>
-            </button>
-          ))}
-          {list?.items.length === 0 && <p>이 페이지에 상담 사건이 없습니다.</p>}
-          {pagination && (
-            <nav
-              aria-label="사건 목록 페이지"
-              className="flex items-center gap-4"
-            >
-              <button
-                disabled={pagination.page === 0}
-                onClick={() => navigate(pagination.page - 1)}
-              >
-                이전
-              </button>
-              <span>
-                {pagination.page + 1} /{" "}
-                {Math.max(
-                  1,
-                  Math.ceil(pagination.totalElements / pagination.size),
-                )}{" "}
-                페이지 · 전체 {pagination.totalElements}건
-              </span>
-              <button
-                disabled={!pagination.hasNext}
-                onClick={() => navigate(pagination.page + 1)}
-              >
-                다음
-              </button>
-            </nav>
-          )}
-        </section>
-      )}
+      {selected && error && <p role="alert">{error}</p>}
       {selected && (
         <button
           onClick={() => {
@@ -113,7 +89,7 @@ export default function Cases() {
           ← 사건 목록
         </button>
       )}
-      {!error && ((!selected && !list) || (selected && !detail)) && (
+      {selected && !detail && !error && (
         <p role="status">사건 조회 중…</p>
       )}
       {selected && detail && !error && (

@@ -5,12 +5,16 @@ type CaseTask = {
   dueAt: string | null;
 };
 
+export type CaseStatus = "OPEN" | "IN_PROGRESS" | "WAITING";
+
 type CaseListItem = {
   caseId: string;
   bookingId: string;
   hotelName: string;
-  priority: string;
+  priority: "URGENT" | "NORMAL";
+  status: CaseStatus;
   summary: string;
+  nextAction: CaseTask | null;
 };
 
 export type CaseList = {

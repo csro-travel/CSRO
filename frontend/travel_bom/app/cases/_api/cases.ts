@@ -1,4 +1,4 @@
-import type { CaseDetail, CaseList } from "../_types/case";
+import type { CaseDetail, CaseList, CaseStatus } from "../_types/case";
 
 async function read<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(path, {
@@ -11,8 +11,14 @@ async function read<T>(path: string, signal: AbortSignal): Promise<T> {
 }
 
 /** API-003 상담사 사건 목록 조회 (`GET /api/v1/cases`). */
-export function getCases(page: number, signal: AbortSignal): Promise<CaseList> {
-  return read(`/demo/cases?page=${page}`, signal);
+export function getCases(
+  page: number,
+  status: CaseStatus | undefined,
+  signal: AbortSignal,
+): Promise<CaseList> {
+  const query = new URLSearchParams({ page: String(page) });
+  if (status) query.set("status", status);
+  return read(`/demo/cases?${query}`, signal);
 }
 
 /** API-004 상담사 사건 상세 조회 (`GET /api/v1/cases/{caseId}`). */
