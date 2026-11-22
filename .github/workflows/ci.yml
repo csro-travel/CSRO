@@ -1,0 +1,232 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "검증 범위"
+        type: choice
+        default: auto
+        options: [auto, all, backend, frontend, ml, agent, mock]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+      ml: ${{ steps.scope.outputs.ml }}
+      agent: ${{ steps.scope.outputs.agent }}
+      mock: ${{ steps.scope.outputs.mock }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: 변경 범위 판단
+        id: scope
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          DISPATCH_SCOPE: ${{ inputs.scope || 'auto' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            base="$PR_BASE"
+            head="$PR_HEAD"
+          else
+            git fetch --no-tags origin main
+            base="$(git merge-base HEAD origin/main)"
+            head="$(git rev-parse HEAD)"
+          fi
+          git diff --name-only "$base" "$head" > "$RUNNER_TEMP/changed-paths.txt"
+          for section in backend frontend ml agent mock; do
+            enabled=false
+            if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$DISPATCH_SCOPE" == all ]]; then
+              enabled=true
+            elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$DISPATCH_SCOPE" == "$section" ]]; then
+              enabled=true
+            else
+              case "$section" in
+                backend) pattern='^backend/|^\.github/workflows/ci\.yml$' ;;
+                frontend) pattern='^frontend/travel_bom/|^\.github/workflows/ci\.yml$' ;;
+                ml) pattern='^ml/' ;;
+                agent) pattern='^llm/agent/' ;;
+                mock) pattern='^mock-server/' ;;
+              esac
+              if grep -Eq "$pattern" "$RUNNER_TEMP/changed-paths.txt"; then enabled=true; fi
+            fi
+            echo "$section=$enabled" >> "$GITHUB_OUTPUT"
+          done
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: yb
+          POSTGRES_DB: yeohaengbom_reconfirmation_test
+          POSTGRES_PASSWORD: ci-isolated-db-only
+        ports:
+          - 25433:5432
+        options: >-
+          --health-cmd "pg_isready -U yb -d yeohaengbom_reconfirmation_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      BOOKING_RECONFIRMATION_EVIDENCE_TEST: 'true'
+      BOOKING_RECONFIRMATION_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test
+      BOOKING_RECONFIRMATION_TEST_DB_PASSWORD: ci-isolated-db-only
+      BOOKING_RECONFIRMATION_MOCK_BASEURL: http://127.0.0.1:8001
+      BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN: ci-local-mock-token
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: backend/**/*.gradle*
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Mock 설치
+        run: python -m pip install -r mock-server/requirements.txt
+      - name: 격리 DB 및 핵심 Spring 테스트
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BOOKING_RECONFIRMATION_TEST_DB_URL" == 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test' ]]
+          (cd mock-server && MOCK_SERVICE_TOKEN=ci-local-mock-token python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 > "$RUNNER_TEMP/mock.log" 2>&1) &
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8001/healthz > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8001/healthz > /dev/null
+          cd backend
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --console=plain --rerun-tasks test \
+            --tests '*BookingReconfirmationServiceTest' \
+            --tests '*BookingErrorResponseTest' \
+            --tests '*BookingReconfirmationEvidenceIntegrationTest'
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: frontend/travel_bom
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --global pnpm@12.3.4
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec tsc --noEmit
+          pnpm build
+
+  ml:
+    needs: changes
+    if: needs.changes.outputs.ml == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ml/requirements-api.txt
+      - run: |
+          python -m pip install -r requirements-api.txt
+          python -m unittest discover -s tests -p 'test_risk*.py'
+
+  agent:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: llm/agent
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: llm/agent/requirements.txt
+      - run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p 'test_extractions.py'
+
+  mock:
+    needs: changes
+    if: needs.changes.outputs.mock == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: mock-server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: mock-server/requirements.txt
+      - run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p 'test_*.py'
+
+  ci-gate:
+    if: always()
+    needs: [changes, backend, frontend, ml, agent, mock]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 필수 테스트 결과 확인
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          jobs = json.loads(os.environ['JOB_RESULTS'])
+          if jobs['changes']['result'] != 'success':
+              sys.exit('변경 영역 판단 실패')
+          for name in ('backend', 'frontend', 'ml', 'agent', 'mock'):
+              if jobs['changes']['outputs'].get(name) == 'true' and jobs[name]['result'] != 'success':
+                  sys.exit(f'{name}: {jobs[name]["result"]}')
+          print('변경 영역 CI 통과')
+          PY
