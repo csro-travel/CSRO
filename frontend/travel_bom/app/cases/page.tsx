@@ -1,18 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-type Task = { taskId: string; type: string; status: string; dueAt: string | null }
-type Item = { caseId: string; bookingId: string; hotelName: string; priority: string; summary: string }
-type CaseList = { items: Item[]; pagination: { page: number; size: number; totalElements: number; hasNext: boolean } }
-type Detail = {
-  caseId: string; status: string; booking: { bookingId: string; hotel: {name: string}; supplierStatus: string }
-  nights: {stayDate: string; fulfillmentStatus: string; factStatus: string}[]
-  evidence: {evidenceId: string; sourceType: string; sourceAuthenticated: boolean; originalContent: string;
-    assertions: {stayDate: string; reportedProvisionStatus: string; reviewStatus: string}[]}[]
-  nextAction: Task | null
-  customerReports: {reportId: string; issueType: string; atHotel: boolean; receivedAt: string}[]
-}
+import type { CaseDetail, CaseList } from './_types/case'
 
 async function read<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(path, {headers: {'X-Demo-Read': '1'}, cache: 'no-store', signal})
@@ -31,7 +20,7 @@ export default function Cases() {
     setPage(target)
   }
   const [selected, select] = useState<string>()
-  const [detail, show] = useState<Detail>()
+  const [detail, show] = useState<CaseDetail>()
   const [error, fail] = useState('')
   useEffect(() => {
     const request = new AbortController()
@@ -39,7 +28,7 @@ export default function Cases() {
     const load = async () => {
       try {
         if (selected) {
-          const data = await read<Detail>(path, request.signal)
+          const data = await read<CaseDetail>(path, request.signal)
           if (!request.signal.aborted) show(data)
         } else {
           const data = await read<CaseList>(path, request.signal)
