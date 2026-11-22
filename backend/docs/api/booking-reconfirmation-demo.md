@@ -128,7 +128,7 @@ $snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)
 $env:BOOKING_RECONFIRMATION_TEST_DB_URL = $env:SPRING_DATASOURCE_URL
 $env:BOOKING_RECONFIRMATION_TEST_DB_PASSWORD = $env:POSTGRES_PASSWORD
 $env:BOOKING_RECONFIRMATION_EVIDENCE_TEST = 'true'
-./gradlew.bat --no-daemon test --tests '*BookingReconfirmationEvidenceIntegrationTest'
+./gradlew.bat --no-daemon test --rerun --tests '*BookingReconfirmationEvidenceIntegrationTest'
 if ($LASTEXITCODE -ne 0) { throw '재확인 통합 시연 실패' }
 $env:BOOKING_RECONFIRMATION_EVIDENCE_TEST = 'false'
 $snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)' -U yb -d yeohaengbom_reconfirmation_test
@@ -136,7 +136,7 @@ $snapshotSql | docker exec -i $demoId psql -X -v ON_ERROR_STOP=1 -P 'null=(null)
 
 쓰기 통합 테스트에는 플래그와 전용 URL·비밀번호가 모두 필요하다. 테스트는 Spring 시작 전에 전용 DB 주소를 확인하고, JDBC와 Flyway를 그 주소에만 연결한다. 누락된 값이나 기본 개발 DB 주소는 즉시 거부된다. 전용 포트와 DB 이름을 가진 새 임시 컨테이너에서 실행한다.
 
-기존 [통합 테스트](../../src/test/java/com/csro/backend/reconfirmation/BookingReconfirmationEvidenceIntegrationTest.java)가 Spring 컨텍스트에서 `BookingReconfirmationEvidenceService.reconfirmAndApply("YB-001", "RECHECK-001")`를 호출한다. 같은 요청을 한 번 더 실행해 근거 ID와 활성 Case를 재사용하는지 검증한다. 이 Java 메서드는 내부 실행 진입점이다. 공개 HTTP 엔드포인트가 없으므로 브라우저에서 사건 생성이나 상담사 목록 조회를 호출할 수 없다. Mock의 Swagger는 외부 회신을 확인하는 별도 화면이다.
+기존 [통합 테스트](../../src/test/java/com/csro/backend/reconfirmation/BookingReconfirmationEvidenceIntegrationTest.java)가 Spring 컨텍스트에서 `BookingReconfirmationEvidenceService.reconfirmAndApply("YB-001", "RECHECK-001")`를 호출한다. 같은 요청을 한 번 더 실행해 근거 ID와 활성 Case를 재사용하는지 검증한다. 이 Java 메서드는 내부 실행 진입점이다. 사건 생성은 이 내부 메서드로 실행하고, 생성된 사건은 아래 상담사 조회 화면에서 연다. Mock의 Swagger는 외부 회신을 확인하는 별도 화면이다.
 
 | 확인 대상 | 시연 결과 |
 | --- | --- |
@@ -181,15 +181,50 @@ API-003 `GET /api/v1/cases`는 활성 사건 목록, API-004 `GET /api/v1/cases/
 | --- | --- |
 | `caseId`, `status`, `priority`, `updatedAt`, `version` | `cases.case_code/status/priority/updated_at/version`. `cases.booking_id → bookings.id`. 생성 시 V1의 version 기본값은 0 |
 | `bookingId`, 호텔, 기간·인원, `booking.supplierStatus` | `bookings.booking_code/check_in_date/check_out_date/adults/supplier_status`, `bookings.hotel_id → hotels.id`, `hotels.hotel_code/name` |
-| `assigneeId` | `cases.assignee_id` 또는 `case_tasks.assignee_id → users.id`. 미배정은 NULL. 외부 식별자 매핑은 상담사 인증 계약과 함께 확인 |
+| `assigneeId` | `cases.assignee_id` 또는 `case_tasks.assignee_id → users.id`. 미배정은 NULL. 배정된 사용자는 `users.subject_key`를 반환 |
 | `nights[]`와 날짜별 목록 요약 | `booking_nights.stay_date/fulfillment_status/fact_status`. `VERIFIED + UNAVAILABLE`은 `unavailableStayDates`, `CONFLICT`는 `conflictStayDates`, `UNKNOWN + UNCONFIRMED`는 `unknownStayDates` |
 | `nights[].evidenceId` | `(accepted_assertion_id, booking_nights.id) → (evidence_nights.id, evidence_nights.booking_night_id) → evidence_records.id`. 채택 주장이 없으면 NULL. 충돌 시 기존 채택 링크가 남을 수 있으므로 `factStatus`를 함께 표시 |
-| `evidence[]` | `evidence_records.booking_id`로 원문을 연결하고 `source_type/source_authenticated/raw_text/occurred_at/received_at`를 참조. `evidence_nights.review_status`는 날짜별 판정이며 근거 한 건의 상태로 압축할 규칙은 계약 확인 필요. `HOTEL_API` 같은 DB 출처 값과 API 표시 값 `HOTEL`은 DTO에서 매핑 |
+| `evidence[]` | `evidence_records.booking_id`로 원문을 연결하고 `source_type/source_authenticated/raw_text/occurred_at/received_at`를 참조. `assertions[]`는 날짜별 주장과 검토 상태를 반환하고 `sourceType`은 `HOTEL_API` 등 DB 출처 코드를 유지 |
 | `tasks[]`, `nextAction` | `(case_tasks.case_id, case_tasks.booking_id) → (cases.id, cases.booking_id)`. `task_type/status/due_at`을 읽고 `nextAction`은 미완료 업무 한 건에서 계산 |
 | `customerReports[]` | 별도 신고 테이블 `incident_reports`의 `(case_id, booking_id)`로 연결. 이번 시연에서는 신고 없음 |
 
-**다음 업무 선택.** 미완료는 `TODO`, `IN_PROGRESS`다. 기한 오름차순, NULL 마지막으로 조회한다. 테스트용 SQL의 동률 해소 기준은 `created_at`, `id` 오름차순이며 공개 계약은 Agent팀과 확인한다. 기한 미정 업무도 선택될 수 있어 `nextAction.dueAt`은 NULL로 전달할 수 있다. 미완료 업무 자체가 없으면 `nextAction=null`이다. API-003 사건 정렬의 명세는 긴급 우선 → 다음 업무 기한 오름차순(NULL 마지막) → 사건 갱신 시각 내림차순 → `caseId` 오름차순이다.
+**다음 업무 선택.** 미완료는 `TODO`, `IN_PROGRESS`다. 기한 오름차순, NULL 마지막으로 조회한다. 동률이면 두 API 모두 `created_at`, `id` 오름차순으로 선택한다. 기한 미정 업무도 선택될 수 있어 `nextAction.dueAt`은 NULL로 전달할 수 있다. 미완료 업무 자체가 없으면 `nextAction=null`이다. API-003 사건 정렬의 명세는 긴급 우선 → 다음 업무 기한 오름차순(NULL 마지막) → 사건 갱신 시각 내림차순 → `caseId` 오름차순이다.
 
-**공개 ID와 표시.** `case_code`는 실제 공개 사건 코드다. 현재 V1에는 `task_code`·`evidence_code`가 없어서 샘플 `TASK-*`, `EV-*`의 안정적인 매핑은 미확정이다. 상담사 DTO에 내부 BIGINT PK를 노출하거나 예시 ID를 하드코딩하기 전에 팀 계약을 확정한다. Mock에서 `sourceAuthenticated=false`를 그대로 전달한다. 발신 Bearer는 Spring 호출자 인증이며, 격리 Mock에서 원문 내용 검증을 통과해 `VERIFIED`인 숙박일과 별개다. 상담사 권한 범위에서만 원문을 조회하고, 목록 요약은 검증된 사실을 사용한다.
+**공개 ID와 표시.** `case_code`는 실제 공개 사건 코드다. 업무와 근거는 각각 `TASK-{case_tasks.id}`, `EV-{evidence_records.id}`이며 앞에 0을 채우지 않는다. Mock에서 `sourceAuthenticated=false`를 그대로 전달한다. 발신 Bearer는 Spring 호출자 인증이며, 격리 Mock에서 원문 내용 검증을 통과해 `VERIFIED`인 숙박일과 별개다. 상담사 권한 범위에서만 원문을 조회하고, 목록 요약은 검증된 사실을 사용한다.
 
-조회 구현 시 한 건의 조회에 대해 테스트 전후 `cases`, `case_tasks`, `booking_nights`, `evidence_records`의 행과 업무 값이 동일한지 확인한다. 상담사 역할·접근 범위, 공개 ID 매핑, 날짜별 검토 상태 표시, NULL 기한 표시, API-003/004 및 Next.js 통합 검증은 Agent팀 작업이다.
+### 상담사 대시보드 실행
+
+4단계에서 C-001을 생성한 뒤 격리 DB를 종료하기 전에 실행한다. 같은 PowerShell의 DB 접속 정보와 임의 생성한 시연 토큰을 Spring·Next.js 서버 프로세스에만 전달한다. 아래 명령은 저장소 루트에서 실행하며, `Start-Process`로 시작한 Spring 프로세스는 시연 후 종료한다.
+
+```powershell
+Remove-Item Env:SPRING_CONFIG_LOCATION -ErrorAction SilentlyContinue
+$env:SPRING_PROFILES_ACTIVE = 'local-demo'
+$env:SPRING_FLYWAY_ENABLED = 'false'
+$env:SERVER_PORT = '18080'
+$env:CSRO_DEMO_SPRING_PORT = '18080'
+$env:CSRO_DEMO_SUBJECT = 'demo-counselor-001'
+$env:CSRO_DEMO_TOKEN = [guid]::NewGuid().ToString('N')
+$env:CSRO_LOCAL_DEMO = 'true'
+if ($env:SPRING_DATASOURCE_URL -ne 'jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test') { throw '격리 DB 주소 확인 필요' }
+Push-Location backend
+./gradlew.bat bootJar
+if ($LASTEXITCODE) { throw 'Spring 빌드 실패' }
+$jar = (Get-ChildItem build/libs/*.jar | Where-Object Name -NotLike '*-plain.jar' | Select-Object -First 1).FullName
+$spring = Start-Process java -ArgumentList @('-jar', ('"' + $jar + '"')) -WindowStyle Hidden -PassThru
+Pop-Location
+Push-Location frontend/travel_bom
+try {
+    pnpm install --frozen-lockfile
+    if ($LASTEXITCODE) { throw '패키지 설치 실패' }
+    pnpm build
+    if ($LASTEXITCODE) { throw '화면 빌드 실패' }
+    node demo-server.mjs
+} finally {
+    Pop-Location
+    if (!$spring.HasExited) { $spring.Kill() }
+}
+```
+
+같은 PC에서 `http://127.0.0.1:3000/cases`를 열어 C-001을 선택한다. 이 화면은 실제 Spring 조회 결과를 표시한다. 대체 숙소 탐색은 별도 시연 화면이다. 토큰은 서버 환경에만 설정한다. 운영용 Bearer 인증 연결은 별도 작업이다.
+
+격리 시연 서버가 실행된 상태에서 같은 환경변수로 `python backend/tests/counselor_demo.py`를 실행하면 API 응답을 확인한다. Chrome과 `playwright-core`가 준비된 테스트 환경에서 `node frontend/travel_bom/tests/counselor-demo.cjs`로 목록·상세 전환과 조회 실패 표시를 확인한다.
