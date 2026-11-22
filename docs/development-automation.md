@@ -15,6 +15,6 @@ PR을 열거나 커밋을 추가하면 GitHub Actions가 변경 범위의 CI를 
 
 일반 백엔드 단위 테스트는 `ciUnitTest`가 자동으로 찾는다. DB나 외부 서비스가 필요한 테스트 클래스는 `*IntegrationTest`, `*IntegrationTests`, `*LiveTest` 이름으로 분류한다. CI의 PostgreSQL 작업에는 격리 DB 설정이 확인된 핵심 통합 테스트를 지정한다.
 
-PostgreSQL은 해당 범위에서만 시작한다. Actions가 `127.0.0.1:25433/yeohaengbom_reconfirmation_test` 접속과 DB·사용자를 확인한 후 Gradle을 실행한다. Gradle은 유효 범위를 다시 확인하고 Spring DataSource와 Flyway에 동일한 격리 주소를 전달한다. 재확인 통합 테스트는 기존 Loader의 시작 전 검증도 수행한다.
+PostgreSQL은 해당 범위에서만 시작한다. Actions는 `127.0.0.1:25433`에서 재확인용 `yeohaengbom_reconfirmation_test`와 API 계약용 `yeohaengbom_api_contract_test`의 접속과 DB·사용자를 검증한 뒤 Gradle을 실행한다. 두 테스트에 별도 DB를 배정해 롤백 이후에도 전진하는 PostgreSQL 시퀀스의 영향을 막는다. Gradle은 두 주소를 다시 검사하며, 재확인 테스트의 기존 Loader와 API 테스트의 CI 설정이 각 DB를 Spring DataSource와 Flyway에 지정한다.
 
 `CI / ci-gate`는 실행 대상으로 선택된 작업을 모아 판정한다. 필요할 때 Actions에서 `workflow_dispatch`로 한 범위 또는 `all`을 명시할 수 있다. `main`의 필수 검사로 강제하려면 첫 성공 후 브랜치 규칙에서 `CI / ci-gate`를 지정한다.

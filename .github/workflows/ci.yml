@@ -120,6 +120,14 @@ jobs:
             --dbname=yeohaengbom_reconfirmation_test --no-password --set=ON_ERROR_STOP=1 \
             --command="SELECT current_database() || ':' || current_user")"
           [[ "$database" == 'yeohaengbom_reconfirmation_test:yb' ]]
+          # PostgreSQL sequences advance even when the API test's fixtures roll back.
+          psql -X --host=127.0.0.1 --port=25433 --username=yb \
+            --dbname=yeohaengbom_reconfirmation_test --no-password --set=ON_ERROR_STOP=1 \
+            --command="CREATE DATABASE yeohaengbom_api_contract_test"
+          database="$(psql -XAt --host=127.0.0.1 --port=25433 --username=yb \
+            --dbname=yeohaengbom_api_contract_test --no-password --set=ON_ERROR_STOP=1 \
+            --command="SELECT current_database() || ':' || current_user")"
+          [[ "$database" == 'yeohaengbom_api_contract_test:yb' ]]
 
           cd mock-server
           python -m pip install -r requirements.txt
@@ -141,6 +149,7 @@ jobs:
             export BOOKING_RECONFIRMATION_EVIDENCE_TEST=true
             export BOOKING_RECONFIRMATION_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_reconfirmation_test
             export BOOKING_RECONFIRMATION_TEST_DB_PASSWORD=ci-isolated-db-only
+            export BOOKING_API_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_api_contract_test
             export BOOKING_RECONFIRMATION_MOCK_BASEURL=http://127.0.0.1:8001
             export BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN=ci-local-mock-token
             tasks+=(ciPostgresTest --rerun)
