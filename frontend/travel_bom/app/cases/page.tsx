@@ -149,7 +149,7 @@ export default function Cases() {
               </p>
             ))}
           </article>
-          <CaseChatPanel key={detail.caseId} caseId={detail.caseId} />
+          <CaseChatPanel key={detail.caseId} caseId={detail.caseId} closed={detail.status === "CLOSED"} />
         </div>
       )}
     </main>

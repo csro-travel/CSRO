@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { formatWon } from "@/lib/alternative-stays";
-import { getCaseMessages } from "../_api/cases";
+import { CaseMessageSendError, getCaseMessages, sendCaseMessage } from "../_api/cases";
 import type { CaseChatMessage } from "../_types/message";
 
 const senderLabels = {
@@ -71,8 +71,15 @@ type HistoryResult = {
   caseId: string;
 } & ({ items: CaseChatMessage[] } | { failed: true });
 
-export function CaseChatPanel({ caseId }: { caseId: string }) {
+export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: boolean }) {
   const [result, setResult] = useState<HistoryResult | null>(null);
+  const [historyAttempt, setHistoryAttempt] = useState(0);
+  const [sentMessages, setSentMessages] = useState<CaseChatMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const sendingRequest = useRef(false);
+  const transcript = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const request = new AbortController();
@@ -90,11 +97,44 @@ export function CaseChatPanel({ caseId }: { caseId: string }) {
       },
     );
     return () => request.abort();
-  }, [caseId]);
+  }, [caseId, historyAttempt]);
 
   const history = result?.caseId === caseId ? result : null;
   const failed = history !== null && "failed" in history;
-  const messages = history && "items" in history ? history.items : [];
+  const historyItems = history && "items" in history ? history.items : [];
+  const messages = [...new Map(
+    [...historyItems, ...sentMessages].map((message) => [message.messageId, message]),
+  ).values()].sort((first, second) => Date.parse(first.sentAt) - Date.parse(second.sentAt));
+  const lastSentId = sentMessages.at(-1)?.messageId;
+  const canSend = !closed && !sending && draft.trim().length > 0;
+
+  useEffect(() => {
+    if (lastSentId && transcript.current) {
+      transcript.current.scrollTop = transcript.current.scrollHeight;
+    }
+  }, [lastSentId]);
+
+  async function submitMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSend || sendingRequest.current) return;
+
+    sendingRequest.current = true;
+    setSending(true);
+    setSendError("");
+    try {
+      const sent = await sendCaseMessage(caseId, draft);
+      setSentMessages((messages) => [...messages, sent]);
+      setDraft("");
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "메시지를 전송하지 못했습니다.");
+      if (error instanceof CaseMessageSendError && error.outcomeUnknown) {
+        setHistoryAttempt((attempt) => attempt + 1);
+      }
+    } finally {
+      sendingRequest.current = false;
+      setSending(false);
+    }
+  }
 
   return (
     <section
@@ -108,18 +148,20 @@ export function CaseChatPanel({ caseId }: { caseId: string }) {
       </header>
 
       <div
+        ref={transcript}
         role="region"
         aria-label="대화 내역"
         aria-busy={history === null}
         className="flex max-h-[28rem] min-h-40 flex-1 flex-col overflow-y-auto bg-muted/50 px-5 py-4"
       >
-        {messages.length > 0 ? (
+        {messages.length > 0 && (
           <ol className="space-y-3">
             {messages.map((message) => (
               <MessageItem key={message.messageId} message={message} />
             ))}
           </ol>
-        ) : (
+        )}
+        {(failed || messages.length === 0) && (
           <p
             role={failed ? "alert" : "status"}
             className={`m-auto text-center text-sm ${failed ? "text-destructive" : "text-muted-foreground"}`}
@@ -133,21 +175,27 @@ export function CaseChatPanel({ caseId }: { caseId: string }) {
         )}
       </div>
 
-      <div className="space-y-3 border-t px-5 py-4">
+      <form onSubmit={submitMessage} className="space-y-3 border-t px-5 py-4">
         <label className="block space-y-2 text-sm font-medium">
           <span className="block">메시지</span>
           <textarea
             rows={3}
             placeholder="메시지를 입력하세요"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            readOnly={sending}
+            disabled={closed}
             className="block w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
           />
         </label>
+        {closed && <p className="text-sm text-muted-foreground">종료된 사건에는 메시지를 보낼 수 없습니다.</p>}
+        {sendError && <p role="alert" className="text-sm text-destructive">{sendError}</p>}
         <div className="flex justify-end">
-          <Button type="button" size="lg" disabled>
-            전송
+          <Button type="submit" size="lg" disabled={!canSend}>
+            {sending ? "전송 중…" : "전송"}
           </Button>
         </div>
-      </div>
+      </form>
     </section>
   );
 }
