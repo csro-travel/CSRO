@@ -4,9 +4,9 @@
 
 # CSRO · 여행봄
 
-여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](backend/docs/api/README.md)
+여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](../backend/docs/api/README.md)
 
-독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. Spring의 특징값 집계·호출·업무 DB 저장·재확인 연결은 별도 작업이다.
+독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](../ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](../ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. Spring의 특징값 집계·호출·업무 DB 저장·재확인 연결은 별도 작업이다.
 
 ## 로컬 환경
 
@@ -14,7 +14,7 @@
 
 ### 1. 도구 준비와 저장소 내려받기
 
-Git, JDK 21, Docker Desktop과 `docker compose` 명령이 필요합니다. 저장소의 Gradle Wrapper가 9.9.1을 사용하므로 Gradle을 따로 설치할 필요는 없습니다. 프로젝트 설정은 Spring Boot 4.0.9와 PostgreSQL 18.7을 사용합니다. [Gradle 설정](backend/build.gradle) · [Wrapper 버전](backend/gradle/wrapper/gradle-wrapper.properties) · [Compose 설정](compose.yaml)
+Git, JDK 21, Docker Desktop과 `docker compose` 명령이 필요합니다. 저장소의 Gradle Wrapper가 9.9.1을 사용하므로 Gradle을 따로 설치할 필요는 없습니다. 프로젝트 설정은 Spring Boot 4.0.9와 PostgreSQL 18.7을 사용합니다. [Gradle 설정](../backend/build.gradle) · [Wrapper 버전](../backend/gradle/wrapper/gradle-wrapper.properties) · [Compose 설정](../compose.yaml)
 
 ```powershell
 git clone https://github.com/csro-travel/CSRO.git
@@ -60,14 +60,14 @@ docker compose port postgres 5432
 
 ### 4. `backend`에서 Spring Boot 실행
 
-저장소 루트에서 시작합니다. IDE에서 실행할 때도 작업 디렉터리를 `<저장소 루트>/backend`, 활성 프로필을 `local`로 지정합니다. [Spring local 설정](backend/src/main/resources/application-local.properties)
+저장소 루트에서 시작합니다. IDE에서 실행할 때도 작업 디렉터리를 `<저장소 루트>/backend`, 활성 프로필을 `local`로 지정합니다. [Spring local 설정](../backend/src/main/resources/application-local.properties)
 
 ```powershell
 Set-Location .\backend
 .\gradlew.bat bootRun --args="--spring.profiles.active=local"
 ```
 
-`file:../.env[.properties]`의 `..`는 Spring 프로세스의 작업 디렉터리 기준입니다. `backend`에서 실행하면 루트 `.env`를 읽고, DataSource는 `127.0.0.1:5432/yeohaengbom`에 연결합니다. 시작 시 Flyway는 공통 [V1](backend/src/main/resources/db/migration/V1__initial_business_schema.sql)을 적용하고, `local` 프로필에서는 [YB-001 시드](backend/src/main/resources/db/local/R__seed_yb001.sql)도 적용합니다. 기존 DB에서는 적용된 V1을 검증하고 반복 시드는 미적용이거나 내용이 달라졌을 때 적용합니다. 예상 결과는 Flyway 적용·검증과 Spring 부팅 성공입니다.
+`file:../.env[.properties]`의 `..`는 Spring 프로세스의 작업 디렉터리 기준입니다. `backend`에서 실행하면 루트 `.env`를 읽고, DataSource는 `127.0.0.1:5432/yeohaengbom`에 연결합니다. 시작 시 Flyway는 공통 [V1](../backend/src/main/resources/db/migration/V1__initial_business_schema.sql)을 적용하고, `local` 프로필에서는 [YB-001 시드](../backend/src/main/resources/db/local/R__seed_yb001.sql)도 적용합니다. 기존 DB에서는 적용된 V1을 검증하고 반복 시드는 미적용이거나 내용이 달라졌을 때 적용합니다. 예상 결과는 Flyway 적용·검증과 Spring 부팅 성공입니다.
 
 Spring을 실행한 채 별도 PowerShell에서 확인합니다.
 
@@ -110,9 +110,9 @@ docker compose down
 
 ## Codex 문서 확인
 
-저장소 루트를 작업 디렉터리로 새 Codex 세션을 연다. Codex는 세션 시작 시 사용자 전역 지침과 저장소 루트부터 작업 디렉터리까지의 지침을 탐색한다. 이 저장소의 기본 지침은 루트 [AGENTS.md](AGENTS.md)이며 ML 하위 작업에는 [ml/AGENTS.md](ml/AGENTS.md)도 적용한다. 같은 디렉터리에 `AGENTS.override.md`가 있으면 우선한다. [Codex 공식 탐색 규칙](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+저장소 루트를 작업 디렉터리로 새 Codex 세션을 연다. Codex는 세션 시작 시 사용자 전역 지침과 저장소 루트부터 작업 디렉터리까지의 지침을 탐색한다. 이 저장소의 기본 지침은 루트 [AGENTS.md](../AGENTS.md)이며 ML 하위 작업에는 [ml/AGENTS.md](../ml/AGENTS.md)도 적용한다. 같은 디렉터리에 `AGENTS.override.md`가 있으면 우선한다. [Codex 공식 탐색 규칙](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 
-[업무](docs/business.md)·[API](docs/api.md)·[DB](docs/db.md) 문서는 일반 Markdown이다. Codex는 작업에 해당하는 문서와 원본을 `AGENTS.md`의 표에 따라 명시적으로 읽는다.
+[업무](../docs/business.md)·[API](../docs/api.md)·[DB](../docs/db.md) 문서는 일반 Markdown이다. Codex는 작업에 해당하는 문서와 원본을 `AGENTS.md`의 표에 따라 명시적으로 읽는다.
 
 새 세션에서 아래를 입력하고, 루트 `AGENTS.md`가 적용 지침으로 표시되는지와 API 문서가 작업별 읽기 대상으로 선택되는지 확인한다.
 
