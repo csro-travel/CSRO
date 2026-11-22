@@ -3,9 +3,11 @@ package com.csro.backend.risk;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -14,8 +16,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.csro.backend.reconfirmation.BookingReconfirmationEvidenceService;
-import com.csro.backend.reconfirmation.BookingReconfirmationException;
-import com.csro.backend.reconfirmation.BookingReconfirmationResult.HotelPending;
 import com.csro.backend.risk.RiskMlClient.Assessment;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -24,7 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Internal, explicitly invoked bridge from model score to local Mock reconfirmation.
  * The cohort is a current simulated fixture with a creation-time cutoff, not a
  * reconstructed historical event snapshot. This service is not a scheduler or a
- * durable queue, and repeating an assessment creates a new assessment row.
+ * historical-state reconstruction, and repeating an assessment creates a new
+ * assessment row. Selected reconfirmations use the durable, manually drained jobs.
  */
 @Service
 public class RiskRecheckService {
@@ -42,15 +43,21 @@ public class RiskRecheckService {
             """;
 
     private final RiskMlClient ml;
-    private final BookingReconfirmationEvidenceService reconfirmation;
+    private final RiskRecheckJobs jobs;
     private final JdbcClient jdbc;
     private final TransactionTemplate read;
     private final TransactionTemplate write;
 
     public RiskRecheckService(RiskMlClient ml, BookingReconfirmationEvidenceService reconfirmation,
                              JdbcClient jdbc, PlatformTransactionManager manager) {
+        this(ml, reconfirmation, jdbc, manager, new RiskRecheckJobs(reconfirmation, jdbc, manager));
+    }
+
+    @Autowired
+    public RiskRecheckService(RiskMlClient ml, BookingReconfirmationEvidenceService reconfirmation,
+                             JdbcClient jdbc, PlatformTransactionManager manager, RiskRecheckJobs jobs) {
         this.ml = ml;
-        this.reconfirmation = reconfirmation;
+        this.jobs = jobs;
         this.jdbc = jdbc;
         this.read = new TransactionTemplate(manager);
         this.read.setReadOnly(true);
@@ -66,6 +73,12 @@ public class RiskRecheckService {
      * stages. Only accepted reconfirmation evidence can cause a case or night fact.
      */
     public Outcome assessAndReconfirm(RiskRequest request, RiskSelectionPolicy policy) {
+        return assessAndReconfirm(request, policy, null);
+    }
+
+    /** A local event projection can additionally bind the exact prediction-time booking codes. */
+    public Outcome assessAndReconfirm(RiskRequest request, RiskSelectionPolicy policy,
+                                     List<String> expectedCohortBookingCodes) {
         // Do not wrap this method in @Transactional(NEVER): Spring may create
         // an empty synchronization scope even without a real transaction.
         // This guard also covers direct calls that do not pass through a proxy.
@@ -74,8 +87,18 @@ public class RiskRecheckService {
             throw new IllegalArgumentException("Risk request and an explicit selection policy are required");
         }
         request.validate();
+        if (expectedCohortBookingCodes != null && (expectedCohortBookingCodes.isEmpty()
+                || expectedCohortBookingCodes.stream().anyMatch(code -> code == null || code.isBlank())
+                || new HashSet<>(expectedCohortBookingCodes).size() != expectedCohortBookingCodes.size()
+                || expectedCohortBookingCodes.size() != request.features().targetConfirmedBookingCount())) {
+            throw new IllegalArgumentException("Invalid prediction-time booking cohort");
+        }
         List<CohortBooking> cohort = Objects.requireNonNull(
                 read.execute(status -> loadCohort(request, false)), "Risk cohort read returned no result");
+        if (expectedCohortBookingCodes != null && !new HashSet<>(expectedCohortBookingCodes).equals(
+                new HashSet<>(cohort.stream().map(CohortBooking::bookingCode).toList()))) {
+            throw new IllegalArgumentException("Prediction-time booking codes do not match the current fixture cohort");
+        }
 
         // No database transaction or booking lock is held during the ML call.
         requireNoCallerTransaction();
@@ -86,13 +109,13 @@ public class RiskRecheckService {
         // Store just the six request features. Policy/demonstration metadata is
         // returned separately and never smuggled into the model input snapshot.
         String features = JSON.writeValueAsString(request.features());
-        long assessmentId = Objects.requireNonNull(write.execute(status -> {
+        SavedAssessment saved = Objects.requireNonNull(write.execute(status -> {
             lockSimulatedHotel(request);
             List<CohortBooking> current = loadCohort(request, true);
             if (!cohort.equals(current)) {
                 throw new IllegalStateException("Risk cohort changed during model assessment");
             }
-            return jdbc.sql("""
+            long id = jdbc.sql("""
                     INSERT INTO risk_assessments (hotel_id, target_check_in_date, as_of, risk_score,
                         model_version, feature_set_version, feature_snapshot)
                     VALUES (:hotelId, :targetDate, :asOf, :score, :modelVersion, :featureSetVersion,
@@ -104,29 +127,31 @@ public class RiskRecheckService {
                     .param("modelVersion", assessment.modelVersion())
                     .param("featureSetVersion", assessment.featureSetVersion())
                     .param("features", features).query(Long.class).single();
+            List<RiskRecheckJobs.JobRef> selectedJobs = selected
+                    ? jobs.enqueueSelected(id, request, policy, assessment.riskScore(),
+                            cohort.stream().map(booking -> new RiskRecheckJobs.Scope(
+                                    booking.id(), booking.bookingCode(), request.hotelId(), booking.supplierCode(),
+                                    booking.supplierBookingId(), request.targetCheckInDate(), booking.checkOutDate(),
+                                    booking.adults(), booking.rooms())).toList())
+                    : List.of();
+            return new SavedAssessment(id, selectedJobs);
         }), "Risk assessment write returned no ID");
 
-        // The risk row is committed before any supplier/hotel call. A known
-        // reconfirmation failure leaves that record intact and does not create
-        // or infer missing evidence. There is no automatic retry here.
+        // The assessment and selected jobs commit together before HTTP. A crash
+        // or retryable failure leaves a discoverable job with the same request ID.
         List<RecheckOutcome> rechecks = new ArrayList<>();
-        if (selected) {
-            for (CohortBooking booking : cohort) {
-                requireNoCallerTransaction();
-                String requestId = "RISK-" + assessmentId + "-" + booking.id();
-                try {
-                    var result = reconfirmation.reconfirmAndApply(booking.bookingCode(), requestId);
-                    RecheckStatus status = result.result().hotel() instanceof HotelPending
-                            ? RecheckStatus.PENDING : RecheckStatus.COMPLETED;
-                    rechecks.add(new RecheckOutcome(booking.bookingCode(), requestId, status,
-                            null, result.activeCaseCode()));
-                } catch (BookingReconfirmationException ex) {
-                    rechecks.add(new RecheckOutcome(booking.bookingCode(), requestId, RecheckStatus.FAILED,
-                            ex.kind().name(), null));
-                }
-            }
+        for (var job : saved.jobs()) {
+            requireNoCallerTransaction();
+            var execution = jobs.execute(job.jobCode());
+            RecheckStatus status = switch (execution.state()) {
+                case COMPLETED -> RecheckStatus.COMPLETED;
+                case FAILED -> RecheckStatus.FAILED;
+                case PENDING, RUNNING, WAITING -> RecheckStatus.PENDING;
+            };
+            rechecks.add(new RecheckOutcome(execution.bookingCode(), execution.requestId(), status,
+                    execution.errorCode(), execution.caseCode()));
         }
-        return new Outcome(assessmentId, assessment.riskScore(), policy, policy.threshold(), selected,
+        return new Outcome(saved.id(), assessment.riskScore(), policy, policy.threshold(), selected,
                 assessment.modelVersion(), assessment.featureSetVersion(), rechecks);
     }
 
@@ -193,4 +218,6 @@ public class RiskRecheckService {
     private record CohortBooking(long id, long hotelId, String bookingCode, String supplierCode,
                                  String supplierBookingId, LocalDate checkOutDate, int adults, int rooms,
                                  String dataSource, boolean hasConflict) {}
+
+    private record SavedAssessment(long id, List<RiskRecheckJobs.JobRef> jobs) {}
 }

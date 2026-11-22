@@ -10,6 +10,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.startsWith;
@@ -53,6 +54,7 @@ import org.springframework.web.client.RestClient;
 import com.csro.backend.reconfirmation.BookingReconfirmationEvidenceService;
 import com.csro.backend.reconfirmation.BookingReconfirmationResult;
 import com.csro.backend.reconfirmation.BookingReconfirmationResult.HotelPending;
+import com.csro.backend.reconfirmation.ReconfirmationScope;
 import com.csro.backend.risk.RiskRecheckService.RecheckStatus;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -199,6 +201,7 @@ class RiskRecheckIntegrationTest {
     @Order(3)
     void actualHttpModelUnavailableDoesNotSaveZeroOrCallReconfirmation() throws Exception {
         long before = count("risk_assessments");
+        long jobsBefore = count("jobs");
         HttpServer unavailable = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         unavailable.createContext("/internal/v1/risk-assessments", exchange -> {
             exchange.getRequestBody().readAllBytes();
@@ -221,6 +224,7 @@ class RiskRecheckIntegrationTest {
                     () -> direct.assessAndReconfirm(request("001", high()), RiskSelectionPolicy.F1_BASELINE));
             assertEquals(503, failure.httpStatus());
             assertEquals(before, count("risk_assessments"));
+            assertEquals(jobsBefore, count("jobs"));
             verifyNoInteractions(evidence);
         } finally {
             unavailable.stop(0);
@@ -241,7 +245,9 @@ class RiskRecheckIntegrationTest {
         assertEquals("YB-001", checked.bookingCode());
         assertTrue(checked.requestId().startsWith("RISK-" + result.assessmentId() + "-"));
         assertNotNull(checked.caseCode());
-        verify(evidence).reconfirmAndApply(checked.bookingCode(), checked.requestId());
+        long jobId = jobId(checked.requestId());
+        verify(evidence).reconfirmAndApply(eq(checked.bookingCode()), eq(checked.requestId()),
+                any(ReconfirmationScope.class), eq(jobId));
         assertEquals(List.of("UNAVAILABLE/VERIFIED", "UNKNOWN/UNCONFIRMED", "UNKNOWN/UNCONFIRMED"),
                 nightStates("YB-001"));
         assertEquals(1L, perBooking("cases", "YB-001"));
@@ -253,7 +259,10 @@ class RiskRecheckIntegrationTest {
                 SELECT t.task_type || '/' || t.status FROM case_tasks t
                 JOIN bookings b ON b.id=t.booking_id WHERE b.booking_code='YB-001'
                 """).query(String.class).list());
-        assertEquals(0L, count("jobs"));
+        assertEquals(1L, count("jobs"));
+        assertEquals("COMPLETED", jobState(checked.requestId()));
+        assertEquals(2L, jdbc.sql("SELECT count(*) FROM evidence_records WHERE job_id = :job")
+                .param("job", jobId).query(Long.class).single());
     }
 
     @Test
@@ -268,6 +277,7 @@ class RiskRecheckIntegrationTest {
         assertEquals(0L, perBooking("cases", "YB-002"));
         assertEquals(0L, perBooking("case_tasks", "YB-002"));
         assertEquals(2L, perBooking("evidence_records", "YB-002"));
+        assertEquals("COMPLETED", jobState(result.rechecks().getFirst().requestId()));
     }
 
     @Test
@@ -286,8 +296,13 @@ class RiskRecheckIntegrationTest {
         assertEquals(RecheckStatus.FAILED, missing.rechecks().getFirst().status());
         assertEquals("NOT_FOUND", missing.rechecks().getFirst().errorCode());
         assertEquals(RecheckStatus.PENDING, pending.rechecks().getFirst().status());
-        assertEquals(RecheckStatus.FAILED, outage.rechecks().getFirst().status());
+        assertEquals(RecheckStatus.PENDING, outage.rechecks().getFirst().status());
         assertEquals("UNAVAILABLE", outage.rechecks().getFirst().errorCode());
+        assertEquals("FAILED", jobState(missing.rechecks().getFirst().requestId()));
+        assertEquals("WAITING", jobState(pending.rechecks().getFirst().requestId()));
+        assertEquals("WAITING", jobState(outage.rechecks().getFirst().requestId()));
+        assertTrue(jdbc.sql("SELECT (result_payload ->> 'manualRequired')::boolean FROM jobs WHERE job_code = :code")
+                .param("code", missing.rechecks().getFirst().requestId()).query(Boolean.class).single());
         assertEquals(before + 3, count("risk_assessments"));
         for (String code : List.of("YB-003", "YB-004", "YB-005")) {
             assertEquals(List.of("UNKNOWN/UNCONFIRMED", "UNKNOWN/UNCONFIRMED", "UNKNOWN/UNCONFIRMED"),
@@ -313,11 +328,18 @@ class RiskRecheckIntegrationTest {
             return new RiskMlClient.Assessment(input.hotelId(), input.targetCheckInDate(), input.asOf(),
                     rawScores[prediction.getAndIncrement()], MODEL, FEATURES);
         });
-        when(pendingEvidence.reconfirmAndApply(anyString(), anyString())).thenAnswer(call -> {
+        when(pendingEvidence.reconfirmAndApply(anyString(), anyString(),
+                any(ReconfirmationScope.class), any(Long.class))).thenAnswer(call -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             assertFalse(TransactionSynchronizationManager.isSynchronizationActive());
             String booking = call.getArgument(0);
             String requestId = call.getArgument(1);
+            Long jobId = call.getArgument(3);
+            assertEquals("RUNNING", jdbc.sql("SELECT status FROM jobs WHERE id = :id")
+                    .param("id", jobId).query(String.class).single());
+            assertEquals(1L, jdbc.sql("SELECT count(*) FROM risk_assessments r JOIN jobs j "
+                    + "ON j.risk_assessment_id = r.id WHERE j.id = :id")
+                    .param("id", jobId).query(Long.class).single());
             return new BookingReconfirmationEvidenceService.Outcome(new BookingReconfirmationResult(
                     booking, null, new HotelPending(requestId, "BOUNDARY-TEST", "PENDING", AS_OF), null, null),
                     null, null, null, false);
@@ -335,7 +357,9 @@ class RiskRecheckIntegrationTest {
         assertStored(above.assessmentId(), input, "0.2234");
         var attempt = above.rechecks().getFirst();
         assertEquals(RecheckStatus.PENDING, attempt.status());
-        verify(pendingEvidence).reconfirmAndApply("YB-002", attempt.requestId());
+        verify(pendingEvidence).reconfirmAndApply(eq("YB-002"), eq(attempt.requestId()),
+                any(ReconfirmationScope.class), eq(jobId(attempt.requestId())));
+        assertEquals("WAITING", jobState(attempt.requestId()));
         assertEquals(0L, perBooking("cases", "YB-002"));
     }
 
@@ -389,6 +413,7 @@ class RiskRecheckIntegrationTest {
     @Order(9)
     void riskInsertFailureDoesNotDispatchEvenWhenTheRawScoreIsSelected() {
         long before = count("risk_assessments");
+        long jobsBefore = count("jobs");
         var selectedMl = mock(RiskMlClient.class);
         var noReconfirmation = mock(BookingReconfirmationEvidenceService.class);
         var failingJdbc = spy(jdbc);
@@ -404,6 +429,7 @@ class RiskRecheckIntegrationTest {
         assertThrows(DataIntegrityViolationException.class,
                 () -> failingService.assessAndReconfirm(request("001", high()), RiskSelectionPolicy.F1_BASELINE));
         assertEquals(before, count("risk_assessments"));
+        assertEquals(jobsBefore, count("jobs"));
         verifyNoInteractions(noReconfirmation);
     }
 
@@ -460,6 +486,16 @@ class RiskRecheckIntegrationTest {
 
     private long count(String table) {
         return jdbc.sql("SELECT count(*) FROM " + table).query(Long.class).single();
+    }
+
+    private long jobId(String code) {
+        return jdbc.sql("SELECT id FROM jobs WHERE job_code = :code")
+                .param("code", code).query(Long.class).single();
+    }
+
+    private String jobState(String code) {
+        return jdbc.sql("SELECT status FROM jobs WHERE job_code = :code")
+                .param("code", code).query(String.class).single();
     }
 
     private long perBooking(String table, String code) {
