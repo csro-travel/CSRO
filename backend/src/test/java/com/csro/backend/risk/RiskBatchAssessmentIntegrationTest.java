@@ -93,11 +93,36 @@ class RiskBatchAssessmentIntegrationTest {
                 new RiskRecheckJobs.RetryPolicy(3, 30, 60, 900));
         service = new RiskRecheckService(ml, evidence, jdbc, manager, jobs);
         stubScore(.16);
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
                 .thenAnswer(call -> {
                     assertOutsideTransaction();
-                    return completed(call.getArgument(1));
+                    return completeClaim(call);
                 });
+    }
+
+    @Test
+    void observedCanonicalBatchUsesTheSharedProjectionPredictionAndStore() {
+        var json = tools.jackson.databind.json.JsonMapper.builder().build();
+        RiskObservations observations = (code, cutoff) -> java.util.Optional.of(List.of(
+                new RiskObservations.Event("observed-" + booking, hotel, booking, "BOOKING_STATUS", AS_OF, AS_OF,
+                    json.valueToTree(java.util.Map.of("status", "CONFIRMED", "channel", "PLATFORM",
+                            "check_in_date", TARGET.toString(), "check_out_date", TARGET.plusDays(3).toString())))));
+        var store = new RiskAssessmentStore(jdbc, json);
+        var common = new RiskAssessmentService(java.util.Optional.of(observations), store, ml,
+                RiskMlClient.MODEL_VERSION);
+        var observed = new RiskRecheckService(common, store, jdbc, manager, jobs);
+        var first = observed.assessBatchAndReconfirm(hotel, TARGET, RiskSelectionPolicy.RECALL_50_F1,
+                request(), List.of(booking));
+        var second = observed.assessBatchAndReconfirm(hotel, TARGET, RiskSelectionPolicy.RECALL_50_F1,
+                request(), List.of(booking));
+        assertFalse(first.reusedAssessment());
+        assertTrue(second.reusedAssessment());
+        assertEquals(first.outcome().assessmentId(), second.outcome().assessmentId());
+        assertEquals(RiskRecheckService.RecheckStatus.COMPLETED, second.outcome().rechecks().getFirst().status());
+        assertEquals(1L, assessments());
+        assertEquals(1L, jobCount());
+        verify(ml, times(2)).assess(any());
+        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
     }
 
     @Test
@@ -114,22 +139,22 @@ class RiskBatchAssessmentIntegrationTest {
         assertEquals(1L, assessments());
         assertEquals(1L, jobCount());
         verify(ml, times(2)).assess(any()); // Existing rounded DB score is not used as raw model output.
-        verify(evidence, times(1)).reconfirmAndApply(eq(booking), anyString(), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(eq(booking), anyString(), any(), anyLong(), any());
     }
 
     @Test
     void waitingBatchReusesTheSameJobAndHonorsItsRetryTime() {
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
-                .thenAnswer(call -> new BookingReconfirmationEvidenceService.Outcome(
+        doAnswer(call -> new BookingReconfirmationEvidenceService.Outcome(
                         new BookingReconfirmationResult(booking, null,
                                 new HotelPending(call.getArgument(1), "SYNTHETIC-PENDING", "PENDING", AS_OF),
                                 null, null), null, null, null, false))
-                .thenAnswer(call -> completed(call.getArgument(1)));
+                .doAnswer(this::completeClaim).when(evidence)
+                .reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
         var first = batch(request(), RiskSelectionPolicy.RECALL_50_F1);
         var early = batch(request(), RiskSelectionPolicy.RECALL_50_F1);
         assertTrue(early.reusedAssessment());
         assertEquals(RiskRecheckService.RecheckStatus.PENDING, early.outcome().rechecks().getFirst().status());
-        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
         clock.advance(31);
         var retried = batch(request(), RiskSelectionPolicy.RECALL_50_F1);
         assertEquals(first.outcome().assessmentId(), retried.outcome().assessmentId());
@@ -162,15 +187,15 @@ class RiskBatchAssessmentIntegrationTest {
     }
 
     @Test
-    void manualCallsKeepNewRowsAndBatchCanAdoptAnIdenticalExistingAssessment() {
+    void manualAndBatchCallsShareTheSameCanonicalAssessmentReuse() {
         stubScore(.02);
         var first = service.assessAndReconfirm(request(), RiskSelectionPolicy.F1_BASELINE);
         var second = service.assessAndReconfirm(request(), RiskSelectionPolicy.F1_BASELINE);
-        assertNotEquals(first.assessmentId(), second.assessmentId());
+        assertEquals(first.assessmentId(), second.assessmentId());
         var adopted = batch(request(), RiskSelectionPolicy.F1_BASELINE);
         assertTrue(adopted.reusedAssessment());
         assertEquals(first.assessmentId(), adopted.outcome().assessmentId());
-        assertEquals(2L, assessments());
+        assertEquals(1L, assessments());
         assertEquals(0L, jobCount());
         verifyNoInteractions(evidence);
     }
@@ -199,12 +224,12 @@ class RiskBatchAssessmentIntegrationTest {
             assertTrue(bothAtMl.await(10, TimeUnit.SECONDS));
             return assessment(call.getArgument(0), .16);
         }).when(ml).assess(any());
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong())).thenAnswer(call -> {
+        doAnswer(call -> {
             assertOutsideTransaction();
             firstAtEvidence.countDown();
             assertTrue(releaseEvidence.await(10, TimeUnit.SECONDS));
-            return completed(call.getArgument(1));
-        });
+            return completeClaim(call);
+        }).when(evidence).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
         try (var executor = Executors.newFixedThreadPool(2)) {
             var action = (java.util.concurrent.Callable<RiskRecheckService.BatchOutcome>) () -> {
                 var result = batch(request(), RiskSelectionPolicy.RECALL_50_F1);
@@ -227,7 +252,7 @@ class RiskBatchAssessmentIntegrationTest {
         }
         assertEquals(1L, assessments());
         assertEquals(1L, jobCount());
-        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
     }
 
     private RiskRecheckService.BatchOutcome batch(RiskRequest request, RiskSelectionPolicy policy) {
@@ -249,6 +274,15 @@ class RiskBatchAssessmentIntegrationTest {
     private RiskRequest request() {
         return new RiskRequest(hotel, TARGET, AS_OF, RiskRequest.FEATURE_SET_VERSION,
                 new RiskRequest.Features(.05, 1, 0, 0, 0, false));
+    }
+
+    private BookingReconfirmationEvidenceService.Outcome completeClaim(org.mockito.invocation.InvocationOnMock call) {
+        var outcome = completed(call.getArgument(1));
+        java.util.function.Consumer<BookingReconfirmationEvidenceService.Outcome> complete = call.getArgument(4);
+        return new org.springframework.transaction.support.TransactionTemplate(manager).execute(status -> {
+            complete.accept(outcome);
+            return outcome;
+        });
     }
 
     private BookingReconfirmationEvidenceService.Outcome completed(String requestId) {

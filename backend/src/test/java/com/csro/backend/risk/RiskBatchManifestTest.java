@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 
 class RiskBatchManifestTest {
     private static final String INPUT = """
-            {"format":"risk-automation-batch-1","targetCheckInDate":"2026-11-10",
-             "projections":["projection.json"]}
+            {"format":"risk-automation-batch-2","targetCheckInDate":"2026-11-10",
+             "projections":["projection.json"],"observations":[]}
             """;
 
     @Test
@@ -34,7 +34,22 @@ class RiskBatchManifestTest {
                 INPUT.replace("\"2026-11-10\"", "\"0001-01-01\""),
                 INPUT.replace("\"format\":", "\"format\":\"other\",\"format\":"),
                 INPUT.replace("\"format\":", "\"extra\":1,\"format\":"),
+                INPUT.replace("risk-automation-batch-2", "risk-automation-batch-1"),
+                INPUT.replace(",\"observations\":[]", ""),
                 INPUT + "{}")) {
+            assertThrows(IllegalArgumentException.class, () -> read(invalid));
+        }
+    }
+
+    @Test
+    void bindsEachHotelToOneSnapshotAndDigestWithoutAmbiguousSources() {
+        String source = "{\"hotelId\":\"HOTEL-001\",\"path\":\"observed.json\",\"sha256\":\"" + "a".repeat(64) + "\"}";
+        String valid = INPUT.replace("\"observations\":[]", "\"observations\":[" + source + "]");
+        var entry = read(valid).observations().getFirst();
+        assertEquals("HOTEL-001", entry.hotelId());
+        assertEquals(Path.of("handoff/observed.json").toAbsolutePath(), entry.path());
+        for (String invalid : List.of(valid.replace("\"observations\":[" + source + "]",
+                "\"observations\":[" + source + "," + source + "]"), valid.replace("a".repeat(64), "abc"))) {
             assertThrows(IllegalArgumentException.class, () -> read(invalid));
         }
     }

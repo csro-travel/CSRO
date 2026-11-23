@@ -73,9 +73,15 @@ public final class RiskBatchService {
                 results.add(new HotelResult(hotel, State.FAILED, null, "MISSING_PROJECTION"));
                 continue;
             }
+            if (manifest.observations().stream().noneMatch(source -> source.hotelId().equals(hotel))) {
+                results.add(new HotelResult(hotel, State.FAILED, null, "MISSING_OBSERVATIONS"));
+                continue;
+            }
             try {
-                var result = assessments.assessBatchAndReconfirm(projection.request(), policy,
-                        projection.cohortBookingCodes());
+                // Runtime observations and the shared Spring projection supply
+                // the input. Python's projection is a parity check before HTTP.
+                var result = assessments.assessBatchAndReconfirm(hotel, manifest.targetCheckInDate(), policy,
+                        projection.request(), projection.cohortBookingCodes());
                 results.add(new HotelResult(hotel, result.reusedAssessment() ? State.REUSED : State.ASSESSED,
                         result.outcome(), null));
             } catch (RiskMlException ex) {

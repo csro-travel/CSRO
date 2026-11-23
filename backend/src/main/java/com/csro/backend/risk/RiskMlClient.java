@@ -13,11 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -31,7 +28,6 @@ import tools.jackson.databind.json.JsonMapper;
 import com.csro.backend.risk.RiskMlException.Kind;
 
 /** API-023 HTTP client: one request, verified identity, no retries or fallback score. */
-@Component
 public class RiskMlClient {
 
     public static final String MODEL_VERSION = "process-synthetic-lightgbm-0.2-84d386281d22";
@@ -56,9 +52,7 @@ public class RiskMlClient {
     private final RestClient client;
     private final String token;
 
-    @Autowired
-    public RiskMlClient(@Value("${risk.ml.base-url:http://127.0.0.1:8002}") String baseUrl,
-                        @Value("${risk.ml.service-token:${ML_SERVICE_TOKEN:}}") String token) {
+    public RiskMlClient(String baseUrl, String token) {
         this(RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory()).build(), token);
     }
 

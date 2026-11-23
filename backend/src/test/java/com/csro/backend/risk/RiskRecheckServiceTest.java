@@ -6,6 +6,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -82,4 +86,59 @@ class RiskRecheckServiceTest {
 
         verifyNoInteractions(ml, reconfirmation, jdbc, transactions);
     }
+    @Test
+    void missingObservedHistoryCannotFallBackToCallerFeaturesOrCallMl() {
+        var store = mock(RiskAssessmentStore.class);
+        var jobs = mock(RiskRecheckJobs.class);
+        var common = new RiskAssessmentService(Optional.empty(), store, ml, RiskMlClient.MODEL_VERSION);
+        var observed = new RiskRecheckService(common, store, jdbc, transactions, jobs);
+
+        assertThrows(IllegalStateException.class, () -> observed.assessBatchAndReconfirm(
+                "HOTEL-001", request().targetCheckInDate(), RiskSelectionPolicy.F1_BASELINE,
+                request(), List.of("YB-001")));
+
+        verifyNoInteractions(ml, store, jobs, jdbc, transactions);
+    }
+
+    @Test
+    void computedFeaturesMustMatchThePythonReferenceBeforeHttpOrBusinessReads() {
+        var store = mock(RiskAssessmentStore.class);
+        var jobs = mock(RiskRecheckJobs.class);
+        var common = new RiskAssessmentService(Optional.of(coldStartHistory()), store, ml,
+                RiskMlClient.MODEL_VERSION);
+        var observed = new RiskRecheckService(common, store, jdbc, transactions, jobs);
+
+        // Actual history computes growth/overdue/inventory zero, unlike this caller projection.
+        assertThrows(IllegalArgumentException.class, () -> observed.assessBatchAndReconfirm(
+                "HOTEL-001", request().targetCheckInDate(), RiskSelectionPolicy.F1_BASELINE,
+                request(), List.of("YB-001")));
+
+        verifyNoInteractions(ml, store, jobs, jdbc, transactions);
+    }
+
+    @Test
+    void computedCohortMustMatchReferenceEvenWhenAllSixFeaturesMatch() {
+        var store = mock(RiskAssessmentStore.class);
+        var jobs = mock(RiskRecheckJobs.class);
+        var common = new RiskAssessmentService(Optional.of(coldStartHistory()), store, ml,
+                RiskMlClient.MODEL_VERSION);
+        var observed = new RiskRecheckService(common, store, jdbc, transactions, jobs);
+        var expected = new RiskRequest("HOTEL-001", request().targetCheckInDate(), request().asOf(),
+                RiskRequest.FEATURE_SET_VERSION, new RiskRequest.Features(.05, 1, 0, 0, 0, false));
+
+        assertThrows(IllegalArgumentException.class, () -> observed.assessBatchAndReconfirm(
+                "HOTEL-001", expected.targetCheckInDate(), RiskSelectionPolicy.F1_BASELINE,
+                expected, List.of("OTHER-BOOKING")));
+
+        verifyNoInteractions(ml, store, jobs, jdbc, transactions);
+    }
+
+    private static RiskObservations coldStartHistory() {
+        var json = JsonMapper.builder().build();
+        return (hotel, cutoff) -> Optional.of(List.of(new RiskObservations.Event("observed-confirmation",
+                "HOTEL-001", "YB-001", "BOOKING_STATUS", request().asOf(), request().asOf(),
+                json.valueToTree(Map.of("status", "CONFIRMED", "channel", "PLATFORM",
+                        "check_in_date", "2026-11-10", "check_out_date", "2026-11-13")))));
+    }
+
 }

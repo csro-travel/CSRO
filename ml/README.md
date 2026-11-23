@@ -10,7 +10,7 @@
 
 XGBoost 후속 비교도 별도 명령으로 제공합니다. 같은 CSV·특성·라벨·기간을 사용한 [비교 기준과 결과](docs/XGBOOST_COMPARISON.md), 기존 폴더에서 실행하는 [Windows 절차](docs/XGBOOST_WINDOWS.md)를 참고하세요. 추가 설치는 `requirements-xgboost.txt`로 하며 기존 LightGBM 기준 모델을 교체하지 않습니다. 수치 경계 호환성 보완 후 클라우드와 사용자 Windows에서 전체 73개 테스트와 비교 실행을 확인했습니다. [Windows XGBoost 성공 기록](docs/verification/xgboost-windows-2026-11-20.md)에 범위와 결과를 남겼습니다.
 
-**API-023 HTTP 추론 서버**를 추가했습니다. 저장한 LightGBM 기준 모델을 시작 시 한 번 읽고 서비스 Bearer 인증·v0.2 입력 검증·추론·Problem 오류 응답을 제공합니다. [HTTP 계약](docs/api/API-023.md), [Windows 실행·Spring 인계](docs/api/API-023_HANDOFF.md), [클라우드 검증 범위](docs/verification/api023-cloud-2026-11-20.md)를 참고하세요. 추가 설치는 `requirements-api.txt`입니다. 사용자 Windows에서 전체 91개 테스트(19.192초)와 실제 HTTP 점검 8개를 확인했습니다. [Windows 최종 기록](docs/verification/api023-windows-2026-11-21.md)에 근거를 남겼으며 Spring 업무 연결은 별도 작업입니다.
+**API-023 HTTP 추론 서버**를 추가했습니다. 저장한 LightGBM 기준 모델을 시작 시 한 번 읽고 서비스 Bearer 인증·v0.2 입력 검증·추론·Problem 오류 응답을 제공합니다. [HTTP 계약](docs/api/API-023.md), [Windows 실행·Spring 인계](docs/api/API-023_HANDOFF.md), [클라우드 검증 범위](docs/verification/api023-cloud-2026-11-20.md)를 참고하세요. 추가 설치는 `requirements-api.txt`입니다. 사용자 Windows에서 전체 91개 테스트(19.192초)와 실제 HTTP 점검 8개를 확인했습니다. [Windows 최종 기록](docs/verification/api023-windows-2026-11-21.md)에 근거를 남겼습니다. 현재 Spring 연결은 [공통 위험 점검 경로](../backend/docs/api/ML-RISK-COMMON-PATH.md)를 참고하세요.
 
 **합성 관측 이벤트 → API-023 입력 변환**은 [오프라인 실행 절차](docs/RISK_EVENT_PROJECTION.md)를 제공합니다. 기존 여섯 특성 계산기를 그대로 사용해 요청·대상 예약 코드·추적 해시를 로컬 파일에 저장합니다. HTTP 계약을 추가하지 않으며, Spring의 자동 DB 이벤트 수집이나 과거 상태 복원까지 구현한 기능은 아닙니다. YB-001 예제는 이력 없는 기본값을 보존하므로 기본 F1 정책에서 선별되지 않습니다.
 
@@ -43,7 +43,7 @@ C:\Users\cy102\Downloads\CSRO\
 
 파일을 직접 복사해야 Windows PC에 생깁니다. 기존 `mock-server`, Spring 코드, DB, Flyway, 프로젝트 루트 `.env`를 덮어쓸 필요는 없습니다.
 
-이 폴더는 **오프라인 데이터 생성·모델 학습·CLI 추론과 API-023 Python HTTP 추론**을 포함합니다. Spring의 특징값 집계·호출·위험 평가 저장·후속 업무, Agent 업무 처리와 공통 서버 배포는 별도 작업입니다. 실행에 PostgreSQL이나 Docker는 필요하지 않습니다. `mock-server`의 API-026·027 고정 응답과 2026년 YB-001은 별개로 유지합니다.
+이 폴더는 **오프라인 데이터 생성·모델 학습·CLI 추론과 API-023 Python HTTP 추론**을 포함합니다. Spring의 합성 관측 집계·추론·평가 저장·재확인 자동 배치는 [공통 경로](../backend/docs/api/ML-RISK-COMMON-PATH.md)에 연결합니다. 운영 관측 수집·Agent 후속 업무·공통 서버 배포와 구분합니다. 독립 ML 생성·학습·추론에는 PostgreSQL이나 Docker가 필요 없으며, 업무 상태를 쓰는 Spring 배치에는 기존 업무 DB가 필요합니다. `mock-server`의 API-026·027 고정 응답과 2026년 YB-001은 별개로 유지합니다.
 
 기존 `tools/data_generator`의 1,080건 생성기나 CSV는 이번 과정 기반 v0.2 산출물이 아닙니다. 폴더나 버전 이름만 바꾸어 재사용하지 않습니다.
 
@@ -120,7 +120,7 @@ py -3.13 -m venv .venv
 
 추론 점수는 검증된 객실 미제공 사실이 아닙니다. 위험 점수만으로 예약 취소·사건 확정·숙박일 제공 불가를 저장하지 않습니다.
 
-이 명령은 JSON 파일을 읽는 **로컬 CLI 추론 예제**입니다. HTTP 서버는 [별도 실행 절차](docs/api/API-023_HANDOFF.md)로 시작합니다. Spring의 자동 호출은 연결 전입니다. 요청 예시의 숫자는 계약 형태를 확인하기 위한 값이며 실제 호텔의 관측값이 아닙니다.
+이 명령은 JSON 파일을 읽는 **로컬 CLI 추론 예제**입니다. HTTP 서버는 [별도 실행 절차](docs/api/API-023_HANDOFF.md)로 시작합니다. Spring의 합성 관측 자동 호출은 [공통 배치 경로](../backend/docs/api/ML-RISK-COMMON-PATH.md)를 사용합니다. 요청 예시의 숫자는 계약 형태를 확인하기 위한 값이며 실제 호텔의 관측값이 아닙니다.
 
 기존 `risk-features-0.1` 입력과 이번 `risk-features-0.2`를 혼용하지 않습니다. 모델·메타데이터·입력의 특성 이름·순서·자료형·버전이 일치해야 합니다.
 
@@ -201,3 +201,5 @@ ML은 `feature/ml-v02` 같은 별도 작업 브랜치로 구분하는 것을 권
 이 모델은 `artifacts/model_v02`와 경로를 구분하므로 내 PC의 새 학습 출력을 덮어쓰지 않습니다. 모델 디렉터리 내부에는 별도 README나 로그를 추가하지 마세요. 무결성 검사는 선언한 파일 집합을 정확히 확인합니다. `audit_slices.json`은 모델/CSV/원천 manifest가 같은 실험인지 확인한 뒤에만 결합한 사후 진단이며 학습 입력이 아닙니다.
 
 `SOURCE_MANIFEST.json`은 마지막 기록 당시 전달본의 소스·문서 해시입니다. 이번 오프라인 이벤트 변환기는 Git 변경과 전용 테스트로 추적하며, 해당 전달본 manifest를 새로 기록하지 않습니다. 실행 시 생성 산출물·모델을 확인하는 `verify`는 각 출력 폴더의 별도 manifest를 사용합니다. 11월 18일 최초 전달본과 11월 20일 LightGBM 기준 커밋의 manifest는 `docs/provenance/`에 보존합니다. 규칙·특성·기존 생성/LightGBM 학습 코드·기준 모델은 그대로 유지하며, `travel_ml/xgboost_compare.py`에 후속 비교를 추가합니다. 새 XGBoost 결과는 별도 출력으로 관리하고 데이터·기준 모델을 덮어쓰지 않습니다.
+
+자동 점검 배치는 [Spring 공통 경로](../backend/docs/api/ML-RISK-COMMON-PATH.md)에 연결한다. Python은 공개 관측 사본과 기존 산식의 비교 기준을 준비하고, Spring은 관측을 다시 집계해 대조한 뒤 공통 추론·저장·재확인을 실행한다. 기존 독립 ML 실행 설명과 운영 미구현 범위를 구분한다.

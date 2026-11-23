@@ -20,3 +20,9 @@
 ## API-023 구현
 
 [Notion API-023](https://app.notion.com/p/417e04d22bed8136935fc2504f94525f)의 URI·응답·인증·오류·책임 경계에 따라 Python 내부 추론 서버를 구현한다. 원문의 가상 v0.1 특성 대신 기존 ML 모델의 명시적인 `risk-features-0.2` 여섯 특성만 받는다. v0.1은 422로 거부하며 특성 산식의 팀 전체 승인이나 Spring 연동 완료를 뜻하지 않는다. [구현 계약](../ml/docs/api/API-023.md) · [실행·인계](../ml/docs/api/API-023_HANDOFF.md)
+
+## 공통 위험 평가와 로컬 자동화
+
+`RiskAssessmentService`의 관측 준비·추론과 `RiskAssessmentStore`의 저장을 공통 경로로 사용한다. API-023 HTTP는 엄격한 `RiskMlClient` 한 구현을 거친다. `RiskRecheckService`는 선별된 예약의 평가·RECHECK 등록을 같은 트랜잭션에서 처리하고 HTTP는 잠금 밖에서 실행한다. PR #14(`2f26f6b`)의 성공 근거·사건·Job 완료 원자성과 실행권 검증을 유지한다.
+
+자동 배치에는 명시적으로 켠 합성 파일용 `RiskFileObservations`를 사용한다. Spring이 계산한 여섯 값과 대상 예약을 기존 Python 계산과 대조하며 실제 운영 관측 공급자를 구현한 것은 아니다. 고객 API·ML/Mock HTTP 계약·Flyway·기준 모델은 변경하지 않는다. [실행과 한계](../backend/docs/api/ML-RISK-COMMON-PATH.md)

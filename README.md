@@ -1,8 +1,8 @@
 # CSRO · 여행봄
 
-여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. 실제 Bearer 인증은 연결 전이며 `frontend/`와 `llm/`은 초기 디렉터리다. [API 구현 인덱스](backend/docs/api/README.md)
+여행봄은 숙박 예약 위험 탐지, 객실 재확인, 상담 사건, 대체 숙소 처리를 지원한다. 프로젝트에는 Spring 업무 DB의 로컬 구성과 API-001 예약 상세 조회 코드가 있다. API-001의 실제 Bearer 인증은 연결 전이다. 상담 조회 시연은 [상담 화면 실행 절차](backend/docs/api/booking-reconfirmation-demo.md)를 참고한다. [API 구현 인덱스](backend/docs/api/README.md)
 
-독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. Spring의 특징값 집계·호출·업무 DB 저장·재확인 연결은 별도 작업이다.
+독립 ML 모듈의 과정 기반 더미 데이터 생성·LightGBM 학습·저장 모델 예측은 [ml/README.md](ml/README.md)를 참고한다. [API-023 HTTP 추론 서버](ml/docs/api/API-023_HANDOFF.md)는 저장한 LightGBM 모델로 `risk-features-0.2` 요청을 처리한다. 합성 관측 파일을 사용한 Spring 공통 집계·평가 저장·재확인 자동 배치는 [공통 위험 점검 경로](backend/docs/api/ML-RISK-COMMON-PATH.md)를 참고한다. 운영 관측 수집·상시 서비스와 배포는 후속 범위다.
 
 ## 로컬 환경
 

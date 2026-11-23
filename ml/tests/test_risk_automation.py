@@ -2,6 +2,7 @@
 from copy import deepcopy
 from contextlib import redirect_stderr, redirect_stdout
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -89,7 +90,8 @@ class RiskAutomationTests(unittest.TestCase):
         first, failures = automation.prepare_cycle(sources, TARGET, self.work / "generated")
         self.assertEqual(failures, [])
         first_manifest = json.loads(first.read_text())
-        self.assertEqual(set(first_manifest), {"format", "targetCheckInDate", "projections"})
+        self.assertEqual(set(first_manifest), {"format", "targetCheckInDate", "projections", "observations"})
+        self.assertEqual(first_manifest["format"], "risk-automation-batch-2")
         before = json.loads(Path(first_manifest["projections"][0]).read_text())
         self.assertEqual(before["request"]["features"]["pastFailureRate90d"], .05)
         self.assertEqual(before["cohortBookingCodes"], ["YB-001"])
@@ -108,6 +110,41 @@ class RiskAutomationTests(unittest.TestCase):
         self.assertNotEqual(before["provenance"]["sourceSha256"], after["provenance"]["sourceSha256"])
         # Earlier output remains an immutable record, not overwritten by the loop.
         self.assertEqual(json.loads(Path(first_manifest["projections"][0]).read_text()), before)
+        captured = first_manifest["observations"][0]
+        self.assertEqual(captured["hotelId"], "HOTEL-001")
+        history_bytes = Path(captured["path"]).read_bytes()
+        self.assertEqual(captured["sha256"], hashlib.sha256(history_bytes).hexdigest())
+        self.assertEqual(json.loads(history_bytes)["events"], self.source["events"][:1])
+
+    def test_snapshot_retains_public_history_and_strips_private_source_fields(self):
+        self.source["truth"] = {"YB-001": "private-truth-must-not-escape"}
+        self.source["bookings"] = [{"private_final_status": "FAILED"}]
+        self.source["hotel"]["latent_profile"] = "private-fragile-profile"
+        self.source["events"][0]["private_drop_flag"] = True
+        self.source["events"][0]["payload"]["private_truth"] = "private-truth-must-not-escape"
+        self.source["events"].append({"event_type": "PRIVATE_ROOM_ALLOCATION", "truth": "private"})
+        reply = deepcopy(self.source["events"][0])
+        reply.update(event_id="SYNTHETIC-REPLY", event_type="HOTEL_REPLY",
+                     occurred_at="2026-11-09T10:00:00+09:00", available_at="2026-11-09T10:00:00+09:00")
+        reply["payload"] = {"request_id": "RECONFIRM-1", "http_status": 200,
+                            "schema_valid": True, "raw_secret": "must-not-escape",
+                            "nights": [{"stay_date": "2026-11-10", "status": "AVAILABLE",
+                                        "private_room_id": "must-not-escape"}]}
+        self.source["events"].append(reply)
+        self.source_path.write_text(json.dumps(self.source))
+        manifest, failures = automation.prepare_cycle(automation.load_sources(self.catalog), TARGET,
+                                                       self.work / "generated")
+        self.assertEqual(failures, [])
+        record = json.loads(manifest.read_text())["observations"][0]
+        raw = Path(record["path"]).read_text()
+        self.assertNotIn("private", raw)
+        self.assertNotIn("must-not-escape", raw)
+        snapshot = json.loads(raw)
+        self.assertEqual(snapshot["hotel"], {"hotel_id": "HOTEL-001"})
+        self.assertEqual(len(snapshot["events"]), 2)
+        self.assertEqual(snapshot["events"][1]["available_at"], "2026-11-09T10:00:00+09:00")
+        self.assertEqual(snapshot["events"][1]["payload"]["nights"],
+                         [{"stay_date": "2026-11-10", "status": "AVAILABLE"}])
 
     def test_one_bad_source_is_reported_without_dropping_the_valid_projection(self):
         self.write_catalog([{"hotelId": "HOTEL-001", "path": "observations.json"},
@@ -129,6 +166,7 @@ class RiskAutomationTests(unittest.TestCase):
 
     def test_auth_is_checked_before_spring_and_values_never_enter_command(self):
         for environment in ({}, {"ML_SERVICE_TOKEN": "configured"},
+                            {**AUTH, "ML_RISK_SERVICE_TOKEN": "different"},
                             {**AUTH, "BOOKING_RECONFIRMATION_MOCK_SERVICE_TOKEN": "different"}):
             with self.subTest(environment=list(environment)), patch.dict(os.environ, environment, clear=True), \
                     patch.object(automation, "run_spring") as run, redirect_stderr(io.StringIO()) as errors:
@@ -142,18 +180,36 @@ class RiskAutomationTests(unittest.TestCase):
         for value in AUTH.values():
             self.assertNotIn(value, " ".join(command))
 
+    def test_common_ml_settings_are_normalized_only_in_the_child_environment(self):
+        original = {**AUTH, "RISK_ML_BASEURL": "http://127.0.0.1:18002", "KEEP_ME": "unchanged"}
+        before = dict(original)
+        normalized = automation.spring_environment(original)
+        self.assertEqual(original, before)
+        self.assertEqual(normalized["ML_RISK_SERVICE_TOKEN"], AUTH["ML_SERVICE_TOKEN"])
+        self.assertEqual(normalized["ML_RISK_BASE_URL"], "http://127.0.0.1:18002")
+        self.assertEqual(normalized["KEEP_ME"], "unchanged")
+        canonical_only = {"ML_RISK_SERVICE_TOKEN": "caller-value", "ML_RISK_BASE_URL": "http://127.0.0.1:28002",
+                          "BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN": "mock-value"}
+        self.assertEqual(automation.spring_environment(canonical_only), canonical_only)
+        for override, code in [({"ML_RISK_SERVICE_TOKEN": "other-private-value"}, "ML_AUTH_AMBIGUOUS"),
+                               ({"ML_RISK_BASE_URL": "http://127.0.0.1:28002"}, "ML_BASE_URL_AMBIGUOUS")]:
+            with self.subTest(code=code), self.assertRaisesRegex(automation.AutomationError, "^" + code + "$"):
+                automation.spring_environment({**original, **override})
+
     def test_child_output_is_allowlisted_and_no_startup_or_extra_payload_is_echoed(self):
         raw = b"unrelated startup secret must-not-escape\n" + automation.RESULT_PREFIX.encode() \
             + json.dumps(batch_result()).encode() + b"\n"
         processes = []
+        environment = automation.spring_environment(AUTH)
         def spawn(command, **kwargs):
             self.assertFalse(kwargs["shell"])
             self.assertEqual(kwargs["cwd"], automation.REPOSITORY / "backend")
+            self.assertEqual(kwargs["env"], environment)
             child = FakeProcess(kwargs["stdout"], raw)
             processes.append(child)
             return child
         with patch.object(automation.subprocess, "Popen", side_effect=spawn):
-            summary = automation.run_spring(["java", "-jar", str(self.jar)], 5)
+            summary = automation.run_spring(["java", "-jar", str(self.jar)], 5, environment)
         self.assertTrue(summary["successful"])
         self.assertEqual(summary["resumedJobStates"], {"WAITING": 1})
         self.assertEqual(summary["hotels"][0]["assessmentId"], 7)
@@ -207,6 +263,7 @@ class RiskAutomationTests(unittest.TestCase):
                 patch.object(automation.time, "sleep") as sleep, redirect_stdout(io.StringIO()) as output:
             self.assertEqual(automation.main(self.options("--cycles", "2", "--interval-seconds", "1")), 0)
         self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_args.args[2]["ML_RISK_SERVICE_TOKEN"], AUTH["ML_SERVICE_TOKEN"])
         sleep.assert_called_once_with(1)
         reports = [json.loads(line.split(" ", 1)[1]) for line in output.getvalue().splitlines()]
         self.assertEqual([r["successful"] for r in reports], [False, True])
@@ -238,6 +295,7 @@ class RiskAutomationTests(unittest.TestCase):
                                  if arg.startswith("--risk.batch.manifest-file="))
         manifest = json.loads(Path(manifest_argument.split("=", 1)[1]).read_text())
         self.assertEqual(manifest["projections"], [])
+        self.assertEqual(manifest["observations"], [])
         report = json.loads(output.getvalue().split(" ", 1)[1])
         self.assertEqual(report["preparationFailures"], [])
         self.assertEqual(report["batch"]["eligibleHotels"], 0)

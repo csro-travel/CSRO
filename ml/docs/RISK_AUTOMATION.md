@@ -2,11 +2,15 @@
 
 `travel_ml.risk_automation`은 **명시적으로 실행하는 개발용 launcher**다. 기존 합성 관측 파일에서 특징값을 준비하고 Spring batch JAR를 한 번씩 실행한다. Python HTTP 서비스·업무 DB 소유권·기존 API-023 계약을 바꾸지 않는다. OS 작업 스케줄러나 운영 서비스를 설치하지 않는다.
 
-호출 순서는 `관측 catalog → 기존 prepare_projection → 로컬 batch manifest → Spring RiskBatchService → 기존 API-023·선별·jobs`다. Python은 DB에 접속하지 않고 HTTP·학습·모델 로딩도 수행하지 않는다. main의 별도 `RiskAssessmentService.assess()`를 먼저 호출하지 않는다. Spring 실행·저장·재시도의 상세 경계는 [백엔드 자동화 문서](../../backend/docs/api/ML-RISK-AUTOMATION.md)를 따른다.
+호출 순서는 `관측 catalog → Python 비교 기준·공개 관측 사본 → Spring 공통 RiskProjection 계산·대조 → 공통 ML 호출·평가 저장·선별·jobs`다. Python은 DB에 접속하지 않고 HTTP·학습·모델 로딩도 수행하지 않는다. `RiskAssessmentService.assess()`를 별도로 먼저 호출하지 않는다. Spring 실행·저장·재시도의 상세 경계는 [백엔드 자동화 문서](../../backend/docs/api/ML-RISK-AUTOMATION.md), PR #14와의 연결은 [공통 경로](../../backend/docs/api/ML-RISK-COMMON-PATH.md)를 따른다.
 
 ## 데이터와 시각
 
 기존 `features.py`, v0.2 설정·스키마·고정 모델을 유지한다. 각 cycle마다 원천 이벤트 파일을 다시 읽고 기존 `risk_projection.prepare_projection`으로 정확한 여섯 특성·예측 시점 예약 집합을 계산한다. 미래 사건·늦게 알려진 관측·private truth를 특성에 넣지 않는다. 실시간 수집 어댑터를 구현한 것은 아니다.
+
+Python 계산은 Spring 계산의 비교 기준이다. 원천의 최종 예약 목록·숨은 truth·호텔 내부 속성·비공개 이벤트를 제외한 공개 관측 사본을 별도로 만든다. 미래의 공개 관측은 파일에 남을 수 있지만 Spring은 `occurred_at`과 `available_at`이 모두 cutoff 이하인 것만 사용한다. Spring 계산이나 대상 예약이 기준과 다르면 ML HTTP 전에 해당 호텔을 실패 처리한다.
+
+한 회차의 `batch.json` 형식은 `risk-automation-batch-2`다. `format`, `targetCheckInDate`, `projections`, `observations`만 포함하며 관측 항목은 `{hotelId, path, sha256}`다. 해시는 회차별 관측 파일의 실제 UTF-8 바이트를 묶는다. 공급사 서명이나 현실 관측의 완전성을 증명하지 않는다. 이전 v1 manifest를 재사용하지 말고 현재 launcher로 새 회차를 준비한다. catalog v1과 API-023 HTTP 계약은 그대로다.
 
 `--target-check-in-date`는 필수다. 현재 예제는 **2026-11-10 시연 날짜**이며 특징값 cutoff는 2026-11-09 09:00 KST다. PC 시계를 바꾸거나 2025년 학습용 이벤트를 날짜·ID 수정 없이 이 예약에 섞지 않는다. 작업의 retry·deadline 시계는 Spring의 실제 처리 시계다. 반복 간격은 운영 SLA나 매일 D-1 실행 시각으로 합의된 규칙이 아니다.
 
@@ -39,7 +43,7 @@ $env:BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN = Read-Host 'Mock 서버와 같은
 .\.venv\Scripts\python.exe -m travel_ml.risk_automation --sources config\risk_automation_sources_v1.json --target-check-in-date 2026-11-10 --policy F1_BASELINE
 ```
 
-토큰을 파일·Git·로그·공유 메시지에 쓰지 않는다. launcher는 `ML_SERVICE_TOKEN`과 Mock 호출 토큰이 비어 있으면 Java 실행 전에 중단한다. Mock 토큰은 `BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN` 또는 `BOOKING_RECONFIRMATION_MOCK_SERVICE_TOKEN`을 허용하며 두 값이 다르면 중단한다. 기존 Spring·서비스에서 실제로 사용하는 값과 일치시켜야 한다.
+토큰을 파일·Git·로그·공유 메시지에 쓰지 않는다. Python 서버의 `ML_SERVICE_TOKEN`과 공통 Spring의 `ML_RISK_SERVICE_TOKEN`을 구분한다. 후자가 없으면 launcher가 전자의 값을 자식 환경에만 복사하며 두 값이 모두 있는데 다르면 `ML_AUTH_AMBIGUOUS`로 중단한다. ML 주소는 `ML_RISK_BASE_URL`이며 기존 `RISK_ML_BASEURL`과 상충하면 중단한다. Mock 토큰은 `BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN` 또는 `BOOKING_RECONFIRMATION_MOCK_SERVICE_TOKEN`을 허용하며 두 값이 다르면 중단한다. 기존 Spring·서비스에서 실제로 사용하는 값과 일치시켜야 한다. 직접 Spring을 실행할 때는 `ML_RISK_SERVICE_TOKEN`을 지정한다.
 
 JAR는 저장소의 `backend/build/libs`에서 `*-plain.jar`를 제외하고 정확히 하나를 찾는다. 파일이 없거나 여러 개면 자동 선택하지 않는다. 필요한 경우 `--jar <경로>`를 명시한다. `--java <실행파일>`로 JDK 21 실행 파일을 지정할 수 있다. Java는 언제나 `backend`를 작업 디렉터리로 실행하여 기존 local `.env` 경로를 유지한다. Spring은 `local` 프로필에서 업무 DB를 **실제로 쓰는 batch**다. 기존 `local-demo` 조회 서버와 다르다.
 

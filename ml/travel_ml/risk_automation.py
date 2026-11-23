@@ -1,14 +1,16 @@
-"""Explicit local launcher: observed files -> frozen projections -> Spring batch.
+"""Explicit local launcher: public observation snapshots -> common Spring batch.
 
 Python never connects to the business DB or calls an HTTP service here. The
-unchanged offline feature builder prepares local handoff files; a Spring JAR owns
-all inference HTTP, selection, writes and existing RECHECK-job recovery.
+unchanged offline feature builder prepares a parity reference; Spring computes
+the runtime features from the same captured observations and owns inference
+HTTP, selection, writes and existing RECHECK-job recovery.
 """
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
 from datetime import date
+import hashlib
 import json
 import math
 import os
@@ -22,7 +24,7 @@ import uuid
 from typing import Any
 
 from .common import ROOT
-from .risk_projection import ProjectionError, prepare_projection
+from .risk_projection import ProjectionError, _observations, prepare_projection
 
 REPOSITORY = ROOT.parent
 POLICIES = ("F1_BASELINE", "RECALL_50_F1", "MAX_OBSERVED_RECALL")
@@ -32,6 +34,15 @@ MAX_CAPTURE_BYTES = 16 * 1024 * 1024
 _NOT_ELIGIBLE = "NOT_ELIGIBLE: no confirmed platform bookings were known at D-1."
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}\Z")
 _CODE = re.compile(r"[A-Z][A-Z0-9_]{0,79}\Z")
+_EVENT_FIELDS = ("event_id", "hotel_id", "booking_id", "event_type", "occurred_at", "available_at")
+_PAYLOAD_FIELDS = {
+    "BOOKING_STATUS": ("status", "channel", "check_in_date", "check_out_date", "adults", "rooms"),
+    "RECONFIRMATION_REQUEST": ("request_id", "due_at"),
+    "HOTEL_REPLY": ("request_id", "http_status", "schema_valid", "nights"),
+    "INVENTORY_PROBE": ("request_id", "target_check_in_date", "check_out_date", "adults", "rooms",
+                        "room_type", "currency", "available_rooms", "http_status"),
+    "OBSERVED_OUTCOME": ("label", "check_in_date"),
+}
 
 
 class AutomationError(ValueError):
@@ -100,17 +111,37 @@ def _write_json(path: Path, value: Any) -> None:
         stream.write("\n")
 
 
+def observation_snapshot(source: dict, hotel_id: str) -> dict:
+    """Capture public history only; private simulator fields never reach Spring.
+
+    The existing observation validator is shared with prepare_projection. This
+    adapter only selects the serialized fields used by the frozen builders; it
+    does not change an event's timing, status or label, or invent missing history.
+    """
+    validated = _observations(source, hotel_id)
+    events = []
+    for event in validated["events"]:
+        payload = {key: event["payload"][key] for key in _PAYLOAD_FIELDS[event["event_type"]]
+                   if key in event["payload"]}
+        if "nights" in payload:
+            payload["nights"] = [{key: night[key] for key in ("stay_date", "status")}
+                                 for night in payload["nights"]]
+        events.append({**{key: event.get(key) for key in _EVENT_FIELDS}, "payload": payload})
+    return {"hotel": {"hotel_id": hotel_id}, "events": events}
+
+
 def prepare_cycle(sources: list[Source], target: str, output: Path) -> tuple[Path, list[dict]]:
     """Each cycle reads fresh observations and exclusively creates its own files."""
     try:
         output.mkdir(parents=True, exist_ok=True)
         run = output / ("cycle-" + uuid.uuid4().hex)
         run.mkdir()
-        projections, failures = [], []
+        projections, observations, failures = [], [], []
         for index, source in enumerate(sources):
             try:
                 observed = _read_json(source.path, 64 * 1024 * 1024)
                 projection = prepare_projection(observed, source.hotel_id, target)
+                snapshot = observation_snapshot(observed, source.hotel_id)
             except ProjectionError as error:
                 # A valid history can have no target-date cohort. Spring still
                 # decides DB eligibility and fails closed if it needed this input.
@@ -123,24 +154,46 @@ def prepare_cycle(sources: list[Source], target: str, output: Path) -> tuple[Pat
                 continue
             path = run / f"projection-{index:03d}.json"
             _write_json(path, projection)
+            history_path = run / f"observations-{index:03d}.json"
+            _write_json(history_path, snapshot)
             projections.append(str(path.resolve()))
+            observations.append({"hotelId": source.hotel_id, "path": str(history_path.resolve()),
+                                 "sha256": hashlib.sha256(history_path.read_bytes()).hexdigest()})
         manifest = run / "batch.json"
-        _write_json(manifest, {"format": "risk-automation-batch-1", "targetCheckInDate": target,
-                               "projections": projections})
+        _write_json(manifest, {"format": "risk-automation-batch-2", "targetCheckInDate": target,
+                               "projections": projections, "observations": observations})
         return manifest, failures
     except OSError:
         raise AutomationError("PREPARATION_STORAGE_FAILED") from None
 
 
 def require_auth(environment: dict[str, str]) -> None:
-    if not environment.get("ML_SERVICE_TOKEN", "").strip():
+    ml_tokens = [environment.get(name, "") for name in ("ML_RISK_SERVICE_TOKEN", "ML_SERVICE_TOKEN")]
+    configured = [token for token in ml_tokens if token.strip()]
+    if not configured:
         raise AutomationError("ML_AUTH_MISSING")
+    if len(configured) == 2 and configured[0] != configured[1]:
+        raise AutomationError("ML_AUTH_AMBIGUOUS")
     tokens = [environment.get(name, "").strip() for name in (
         "BOOKING_RECONFIRMATION_MOCK_SERVICETOKEN", "BOOKING_RECONFIRMATION_MOCK_SERVICE_TOKEN")]
     if not any(tokens):
         raise AutomationError("MOCK_AUTH_MISSING")
     if all(tokens) and tokens[0] != tokens[1]:
         raise AutomationError("MOCK_AUTH_AMBIGUOUS")
+
+
+def spring_environment(environment: dict[str, str]) -> dict[str, str]:
+    """Normalize common caller settings in a copy, never the parent environment."""
+    require_auth(environment)
+    result = dict(environment)
+    if not result.get("ML_RISK_SERVICE_TOKEN", "").strip():
+        result["ML_RISK_SERVICE_TOKEN"] = result["ML_SERVICE_TOKEN"]
+    canonical = result.get("ML_RISK_BASE_URL", "").strip()
+    legacy = result.get("RISK_ML_BASEURL", "").strip()
+    if canonical and legacy and canonical.rstrip("/") != legacy.rstrip("/"):
+        raise AutomationError("ML_BASE_URL_AMBIGUOUS")
+    result["ML_RISK_BASE_URL"] = canonical or legacy or "http://127.0.0.1:8002"
+    return result
 
 
 def resolve_jar(explicit: Path | None) -> Path:
@@ -246,13 +299,13 @@ def summarize_batch(value: Any) -> dict:
             "successful": value["successful"]}
 
 
-def run_spring(command: list[str], timeout: int) -> dict:
+def run_spring(command: list[str], timeout: int, environment: dict[str, str] | None = None) -> dict:
     """Capture privately, print no raw output, and reap only this child on stop."""
     child = None
     try:
         with tempfile.TemporaryFile() as capture:
             child = subprocess.Popen(command, cwd=REPOSITORY / "backend", stdout=capture,
-                                     stderr=subprocess.STDOUT, shell=False)
+                                     stderr=subprocess.STDOUT, shell=False, env=environment)
             try:
                 code = child.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
@@ -302,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
             raise AutomationError("INVALID_AUTOMATION_OPTIONS")
         sources_path = args.sources.resolve()
         load_sources(sources_path)
-        require_auth(os.environ)
+        environment = spring_environment(os.environ)
         jar = resolve_jar(args.jar)
         cycle, last_success = 0, False
         while args.cycles == 0 or cycle < args.cycles:
@@ -314,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
                 manifest, failures = prepare_cycle(sources, args.target_check_in_date, args.output.resolve())
                 report["preparationFailures"] = failures
                 report["batch"] = run_spring(spring_command(args.java, jar, manifest, args.policy),
-                                              args.timeout_seconds)
+                                              args.timeout_seconds, environment)
                 if report["batch"]["targetCheckInDate"] != args.target_check_in_date:
                     raise AutomationError("SPRING_RESULT_SCOPE_MISMATCH")
                 report["successful"] = not failures and report["batch"]["successful"]

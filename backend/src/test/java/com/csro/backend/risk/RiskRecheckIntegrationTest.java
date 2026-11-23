@@ -82,7 +82,7 @@ class RiskRecheckIntegrationTest {
     @Autowired JdbcClient jdbc;
     @Autowired PlatformTransactionManager transactions;
     @MockitoSpyBean BookingReconfirmationEvidenceService evidence;
-    @MockitoSpyBean RiskMlClient ml;
+    @MockitoSpyBean RiskAssessmentService ml;
 
     public static final class IsolatedDatabaseLoader extends SpringBootContextLoader {
         @Override
@@ -104,9 +104,9 @@ class RiskRecheckIntegrationTest {
                         Map.entry("spring.jpa.hibernate.ddl-auto", "none"),
                         Map.entry("spring.jpa.open-in-view", "false"),
                         Map.entry("risk.demo.enabled", "false"),
-                        Map.entry("risk.ml.base-url", System.getenv().getOrDefault(
+                        Map.entry("ml.risk.base-url", System.getenv().getOrDefault(
                                 "RISK_LINK_TEST_ML_URL", "http://127.0.0.1:18002")),
-                        Map.entry("risk.ml.service-token", System.getenv().getOrDefault("ML_SERVICE_TOKEN", "")),
+                        Map.entry("ml.risk.service-token", System.getenv().getOrDefault("ML_SERVICE_TOKEN", "")),
                         Map.entry("booking.reconfirmation.mock.base-url", System.getenv().getOrDefault(
                                 "RISK_LINK_TEST_MOCK_URL", "http://127.0.0.1:18001")),
                         Map.entry("booking.reconfirmation.mock.service-token",
@@ -247,7 +247,7 @@ class RiskRecheckIntegrationTest {
         assertNotNull(checked.caseCode());
         long jobId = jobId(checked.requestId());
         verify(evidence).reconfirmAndApply(eq(checked.bookingCode()), eq(checked.requestId()),
-                any(ReconfirmationScope.class), eq(jobId));
+                any(ReconfirmationScope.class), eq(jobId), any());
         assertEquals(List.of("UNAVAILABLE/VERIFIED", "UNKNOWN/UNCONFIRMED", "UNKNOWN/UNCONFIRMED"),
                 nightStates("YB-001"));
         assertEquals(1L, perBooking("cases", "YB-001"));
@@ -329,7 +329,7 @@ class RiskRecheckIntegrationTest {
                     rawScores[prediction.getAndIncrement()], MODEL, FEATURES);
         });
         when(pendingEvidence.reconfirmAndApply(anyString(), anyString(),
-                any(ReconfirmationScope.class), any(Long.class))).thenAnswer(call -> {
+                any(ReconfirmationScope.class), any(Long.class), any())).thenAnswer(call -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             assertFalse(TransactionSynchronizationManager.isSynchronizationActive());
             String booking = call.getArgument(0);
@@ -358,7 +358,7 @@ class RiskRecheckIntegrationTest {
         var attempt = above.rechecks().getFirst();
         assertEquals(RecheckStatus.PENDING, attempt.status());
         verify(pendingEvidence).reconfirmAndApply(eq("YB-002"), eq(attempt.requestId()),
-                any(ReconfirmationScope.class), eq(jobId(attempt.requestId())));
+                any(ReconfirmationScope.class), eq(jobId(attempt.requestId())), any());
         assertEquals("WAITING", jobState(attempt.requestId()));
         assertEquals(0L, perBooking("cases", "YB-002"));
     }
@@ -454,7 +454,7 @@ class RiskRecheckIntegrationTest {
         var input = request("001", high());
         var result = service.assessAndReconfirm(input, RiskSelectionPolicy.F1_BASELINE);
         assertFalse(result.selected());
-        assertEquals(before + 1, count("risk_assessments"));
+        assertEquals(before, count("risk_assessments")); // Shared store reuses the earlier identical assessment.
         assertStored(result.assessmentId(), input, "0.1609");
         verifyNoInteractions(evidence);
         assertEquals(2L, jdbc.sql("""

@@ -15,7 +15,7 @@ class RiskBatchRunnerTest {
             var context = context(new MockEnvironment().withProperty("spring.main.web-application-type", "none")
                     .withProperty(competing, "true"));
             assertThrows(IllegalArgumentException.class,
-                    () -> new RiskBatchRunner(service, context, "unused", "F1_BASELINE", 100, 10).run(null));
+                    () -> new RiskBatchRunner(service, context, "unused", "F1_BASELINE", 100, 10, null).run(null));
             verifyNoInteractions(service);
             verify(context).close();
         }

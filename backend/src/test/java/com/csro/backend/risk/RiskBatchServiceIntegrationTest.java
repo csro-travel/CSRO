@@ -77,18 +77,21 @@ class RiskBatchServiceIntegrationTest {
     @ValueSource(booleans = {false, true})
     void failingHotelDoesNotBlockAnotherHotelOrIndependentDueJobs(boolean unexpectedFailure) throws IOException {
         var healthy = fixture("Z", "CONFIRMED", cutoff());
-        when(assessments.assessBatchAndReconfirm(any(), any(), any())).thenAnswer(call -> {
-            RiskRequest request = call.getArgument(0);
+        when(assessments.assessBatchAndReconfirm(anyString(), any(), any(), any(), any())).thenAnswer(call -> {
+            RiskRequest request = call.getArgument(3);
+            assertEquals(request.hotelId(), call.getArgument(0));
+            assertEquals(target, call.getArgument(1));
             if (request.hotelId().equals(first.hotel())) {
                 if (unexpectedFailure) throw new UnsupportedOperationException("sensitive-provider-detail");
                 throw new RiskMlException(RiskMlException.Kind.UNAVAILABLE, 503, "private-code", "private-trace");
             }
             assertEquals(healthy.hotel(), request.hotelId());
-            assertEquals(List.of(healthy.booking()), call.getArgument(2));
+            assertEquals(List.of(healthy.booking()), call.getArgument(4));
             return successfulAssessment();
         });
         var result = batch.run(new RiskBatchManifest(target,
-                List.of(projection(first), projection(healthy))), RiskSelectionPolicy.F1_BASELINE, 100, 10);
+                List.of(projection(first), projection(healthy)), List.of(observation(first), observation(healthy))),
+                RiskSelectionPolicy.F1_BASELINE, 100, 10);
         assertEquals(2, result.eligibleHotels());
         assertFalse(result.successful());
         assertEquals(unexpectedFailure ? "UNEXPECTED_ERROR" : "ML_UNAVAILABLE",
@@ -96,7 +99,18 @@ class RiskBatchServiceIntegrationTest {
         assertEquals(RiskBatchService.State.ASSESSED, result.hotels().get(1).state());
         assertEquals(healthy.hotel(), result.hotels().get(1).hotelId());
         assertEquals(List.of(recoveredJob()), result.resumedJobs());
-        verify(assessments, times(2)).assessBatchAndReconfirm(any(), eq(RiskSelectionPolicy.F1_BASELINE), any());
+        verify(assessments, times(2)).assessBatchAndReconfirm(anyString(), eq(target),
+                eq(RiskSelectionPolicy.F1_BASELINE), any(), any());
+        verify(jobs).runDue(10);
+    }
+
+    @Test
+    void aReferenceProjectionWithoutRawHistoryCannotTriggerInferenceButDueJobsStillRecover() throws IOException {
+        var result = batch.run(new RiskBatchManifest(target, List.of(projection(first))),
+                RiskSelectionPolicy.F1_BASELINE, 100, 10);
+        assertFalse(result.successful());
+        assertEquals("MISSING_OBSERVATIONS", result.hotels().getFirst().errorCode());
+        verifyNoInteractions(assessments);
         verify(jobs).runDue(10);
     }
 
@@ -171,6 +185,11 @@ class RiskBatchServiceIntegrationTest {
         return new RiskRecheckService.BatchOutcome(new RiskRecheckService.Outcome(1, .02,
                 RiskSelectionPolicy.F1_BASELINE, RiskSelectionPolicy.F1_BASELINE.threshold(), false,
                 RiskMlClient.MODEL_VERSION, RiskRequest.FEATURE_SET_VERSION, List.of()), false);
+    }
+
+    private RiskBatchManifest.Observation observation(Fixture fixture) {
+        return new RiskBatchManifest.Observation(fixture.hotel(), projections.resolve(fixture.hotel() + "-events.json"),
+                "a".repeat(64));
     }
 
     private RiskRecheckJobs.Execution recoveredJob() {

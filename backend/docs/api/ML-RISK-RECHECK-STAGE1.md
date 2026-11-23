@@ -103,7 +103,7 @@ if (-not $env:ML_SERVICE_TOKEN) { throw 'ML 토큰 필요' }
 .\.venv\Scripts\python.exe -m uvicorn travel_ml.risk_api:app --host 127.0.0.1 --port 8002
 ```
 
-토큰 값을 Git·로그·이 문서에 기록하지 않는다. ML 서버와 Spring 호출자에서 같은 `ML_SERVICE_TOKEN`을 사용한다. 실행 중인 다른 서버를 임의로 종료하거나 포트를 가로채지 않는다. API-023 서버의 준비 확인·추론 검사는 API-023 인계 문서에 따른다.
+토큰 값을 Git·로그·이 문서에 기록하지 않는다. Python 서버는 `ML_SERVICE_TOKEN`, 현재 공통 Spring 호출자는 같은 값의 `ML_RISK_SERVICE_TOKEN`을 사용한다. 실행 중인 다른 서버를 임의로 종료하거나 포트를 가로채지 않는다. API-023 서버의 준비 확인·추론 검사는 API-023 인계 문서에 따른다.
 
 ### 3. 업무 DB 준비와 A 정책 수동 실행
 
@@ -114,14 +114,14 @@ Set-Location C:\Users\cy102\Downloads\CSRO
 docker compose up -d --wait
 if ($LASTEXITCODE -ne 0) { throw '로컬 DB 준비 실패' }
 Set-Location .\backend
-$env:ML_SERVICE_TOKEN = Read-Host 'ML 서버와 같은 로컬 시연 토큰 입력'
-if (-not $env:ML_SERVICE_TOKEN) { throw 'ML 토큰 필요' }
+$env:ML_RISK_SERVICE_TOKEN = Read-Host 'ML 서버와 같은 로컬 시연 토큰 입력'
+if (-not $env:ML_RISK_SERVICE_TOKEN) { throw 'ML 토큰 필요' }
 .\gradlew.bat bootRun --args="--spring.profiles.active=local --spring.main.web-application-type=none --risk.demo.enabled=true --risk.demo.request-file=examples/risk-stage1-high-count1.json"
 ```
 
 `risk.demo.policy`를 생략하면 `F1_BASELINE`을 사용한다. `risk.demo.enabled`를 명시하지 않은 일반 Spring 시작은 이 수동 평가를 자동 실행하지 않는다. 수동 실행은 결과를 출력한 뒤 종료한다. A의 예상 결과는 원점수 약 `.1609313`, 임계값 약 `.2234497`, `selected=false`, 재확인 결과 목록이 빈 상태다. 모델 원점수가 실패하면 0점으로 대신 저장하지 않는다.
 
-이 명령은 성공한 **위험 평가 한 행을 로컬 업무 DB에 실제로 추가**한다. 반복 실행은 새 평가 행을 추가하며, 위험 평가의 요청 멱등성을 보장하지 않는다. 기존 숙박일·근거·Case를 초기 상태로 되돌리지 않는다. 이미 근거·Case가 있는 DB에서 실행했다면 “이번 실행으로 추가 변경되지 않음”과 “처음부터 없음”을 구분한다.
+이 명령은 로컬 업무 DB에 위험 평가를 저장한다. 현재 [공통 경로](ML-RISK-COMMON-PATH.md)는 동일 모델·대상·asOf·여섯 입력·저장 점수의 평가를 재사용하며, 달라진 입력은 새 평가로 저장한다. 기존 숙박일·근거·Case를 초기 상태로 되돌리지 않는다. 이미 근거·Case가 있는 DB에서 실행했다면 “이번 실행으로 추가 변경되지 않음”과 “처음부터 없음”을 구분한다.
 
 ### 4. 저장 값 확인
 
@@ -147,7 +147,7 @@ docker compose exec postgres psql -X -U yb -d yeohaengbom -P pager=off -c "SELEC
 | 선별 후 알려진 재확인 외부 오류·대기 | 평가 행은 유지. 결과에 실패·대기를 표시하며 점수만으로 사실·사건을 생성하지 않음 |
 | 평가 커밋 후 예상 밖 DB 오류·업무 충돌 | 오류를 전파하고 실행을 중단. 평가 행은 남을 수 있으며 완성된 결과나 남은 예약 처리까지 보장하지 않음 |
 
-선별 후 재확인 요청 ID는 평가·예약 식별자에서 만든 안정적인 값이다. 발송 결과가 불명확한 경우 같은 재확인 요청 ID로 결과를 확인해야 한다. 전체 평가 명령을 다시 실행하면 새 평가 ID와 새 요청 ID가 생길 수 있으므로, 이를 “같은 발송 재시도”로 사용하지 않는다.
+선별 후 재확인 요청 ID는 평가·예약 식별자에서 만든 안정적인 값이다. 발송 결과가 불명확한 경우 같은 재확인 요청 ID로 결과를 확인해야 한다. 입력·모델·점수가 달라지면 다른 평가가 될 수 있으므로 발송 결과 재확인은 기존 jobs 경로와 같은 요청 ID를 사용한다.
 
 위험 평가 커밋과 재확인 발송 사이에는 프로세스 중단 가능 구간이 있다. durable outbox·작업 재개·자동 재시도·실패 행 영속 기록은 구현하지 않는다. 현재 단계의 수동 연결 시연 한계를 운영 완료로 표현하지 않는다.
 

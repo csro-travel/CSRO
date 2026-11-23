@@ -32,7 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Durable, explicitly drained RECHECK jobs for selected synthetic ML assessments.
  * A pending job commits with its assessment; claiming and finishing use short,
- * separate transactions. HTTP and evidence application run after the claim commits.
+ * separate transactions. After HTTP, successful finalization commits atomically with evidence.
  * This service neither schedules itself nor represents failed ML inference as a score.
  */
 @Service
@@ -76,7 +76,7 @@ public class RiskRecheckJobs {
      * rejects this whole assessment instead of silently hijacking its work.
      */
     public List<JobRef> enqueueSelected(long assessmentId, RiskRequest request,
-                                        RiskSelectionPolicy policy, double rawScore, List<Scope> scopes) {
+                                        RiskSelectionPolicy policy, double rawScore, String modelVersion, List<Scope> scopes) {
         requireWriteTransaction();
         if (assessmentId <= 0 || request == null || policy == null || scopes == null || scopes.isEmpty()) {
             throw new IllegalArgumentException("A selected assessment and booking scopes are required");
@@ -103,13 +103,13 @@ public class RiskRecheckJobs {
         for (Scope scope : scopes.stream().sorted(Comparator.comparingLong(Scope::bookingId)).toList()) {
             Optional<StoredJob> active = activeJob(scope.bookingId());
             if (active.isPresent()) {
-                refs.add(reusable(active.orElseThrow(), scope));
+                refs.add(reusable(active.orElseThrow(), scope, assessmentId));
                 continue;
             }
             String requestId = "RISK-" + assessmentId + "-" + scope.bookingId();
             Parameters parameters = new Parameters(PROTOCOL, requestId, scope,
                     new Selection(assessmentId, request, policy, rawScore, policy.threshold(),
-                            RiskMlClient.MODEL_VERSION), retryPolicy);
+                            modelVersion), retryPolicy);
             Optional<Long> inserted = jdbc.sql("""
                     INSERT INTO jobs (job_code, booking_id, risk_assessment_id, kind, trigger_type,
                         status, parameters, attempt_count, deadline_at, next_attempt_at, result_payload)
@@ -127,7 +127,7 @@ public class RiskRecheckJobs {
                 // this statement can see the row that won the unique-index race.
                 StoredJob winner = findOwned(requestId, false).or(() -> activeJob(scope.bookingId()))
                         .orElseThrow(() -> new IllegalStateException("RECHECK enqueue conflict could not be resolved"));
-                refs.add(reusable(winner, scope));
+                refs.add(reusable(winner, scope, assessmentId));
             }
         }
         return List.copyOf(refs);
@@ -155,22 +155,27 @@ public class RiskRecheckJobs {
         AttemptResult result;
         try {
             var outcome = evidence.reconfirmAndApply(job.parameters().scope().bookingCode(),
-                    job.parameters().requestId(), expectedScope(job.parameters().scope()), job.id());
+                    job.parameters().requestId(), expectedScope(job.parameters().scope()), job.id(),
+                    applied -> finish(jobCode, claim.token(), job.retryCount(), new AttemptResult(false, false,
+                            null, null, null, applied.activeCaseCode(), applied.supplierEvidenceId(),
+                            applied.hotelEvidenceId(), applied.replayed())));
             if (outcome == null || outcome.result() == null || outcome.result().hotel() == null) {
                 throw new IllegalStateException("Reconfirmation returned no validated outcome");
             }
-            result = outcome.result().hotel() instanceof HotelPending
-                    ? AttemptResult.failure("API_027", "HOTEL_PENDING", 202, true)
-                    : new AttemptResult(false, false, null, null, null, outcome.activeCaseCode(),
-                            outcome.supplierEvidenceId(), outcome.hotelEvidenceId(), outcome.replayed());
+            if (!(outcome.result().hotel() instanceof HotelPending)) {
+                return view(findOwned(jobCode, false).orElseThrow());
+            }
+            result = AttemptResult.failure("API_027", "HOTEL_PENDING", 202, true);
+        } catch (StaleClaimException stale) {
+            // The evidence transaction rolled back. Return the current owner's state.
+            return view(findOwned(jobCode, false).orElseThrow());
         } catch (BookingReconfirmationException failure) {
             result = AttemptResult.failure(failure.step().name(), failure.kind().name(),
                     safeHttpStatus(failure.httpStatus()), retryable(failure));
         } catch (BookingReconfirmationEvidenceService.RequestBodyConflictException failure) {
             result = AttemptResult.failure("EVIDENCE", "REQUEST_BODY_CONFLICT", null, false);
         }
-        // Unexpected DB/application failures deliberately propagate and leave the
-        // committed RUNNING lease for recovery with the SAME outbound request ID.
+        // Pending and failed attempts have no evidence to commit. Record their retry state separately.
         AttemptResult completed = result;
         return Objects.requireNonNull(write.execute(status -> finish(jobCode, claim.token(),
                 job.retryCount(), completed)), "Job finalization returned no result");
@@ -243,6 +248,7 @@ public class RiskRecheckJobs {
         validateOwned(current);
         if (current.state() != State.RUNNING || current.retryCount() != retryCount
                 || !token.equals(current.result().claimToken())) {
+            if (!result.failure()) throw new StaleClaimException();
             return view(current); // A later claimant owns finalization; never overwrite it.
         }
         OffsetDateTime now = now();
@@ -326,12 +332,12 @@ public class RiskRecheckJobs {
                 rs.getObject("next_attempt_at", OffsetDateTime.class), parameters, payload);
     }
 
-    private JobRef reusable(StoredJob job, Scope scope) {
+    private JobRef reusable(StoredJob job, Scope scope, long assessmentId) {
         if (job.parameters() == null) {
             throw new IllegalStateException("Booking already has another workflow's active RECHECK job");
         }
         validateOwned(job);
-        if (!scope.equals(job.parameters().scope())) {
+        if (job.riskId() != assessmentId || !scope.equals(job.parameters().scope())) {
             throw new IllegalStateException("Active RECHECK booking scope differs from the selected assessment");
         }
         return new JobRef(job.jobCode(), scope.bookingCode(), job.parameters().requestId());
@@ -355,7 +361,7 @@ public class RiskRecheckJobs {
                 || !p.scope().checkInDate().equals(p.selection().request().targetCheckInDate())
                 || p.selection().policy() == null || !p.selection().policy().selects(p.selection().rawScore())
                 || Double.compare(p.selection().threshold(), p.selection().policy().threshold()) != 0
-                || !RiskMlClient.MODEL_VERSION.equals(p.selection().modelVersion())) {
+                || blank(p.selection().modelVersion())) {
             throw new IllegalStateException("Invalid owned RECHECK selection snapshot");
         }
     }
@@ -461,6 +467,8 @@ public class RiskRecheckJobs {
             return new StoredJob(id, jobCode, bookingId, riskId, next, retry, deadlineAt, nextAt, parameters, payload);
         }
     }
+    private static final class StaleClaimException extends RuntimeException {}
+
     private record Claim(StoredJob job, String token) {}
     private record AttemptResult(boolean failure, boolean retryable, String step, String errorCode,
                                  Integer httpStatus, String caseCode, Long supplierEvidenceId,

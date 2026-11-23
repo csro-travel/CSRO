@@ -42,7 +42,7 @@ class RiskRecheckJobsTest {
     @Test
     void enqueueCannotCommitIndependentlyOfItsAssessment() {
         assertThrows(IllegalStateException.class, () -> jobs.enqueueSelected(1, request(),
-                RiskSelectionPolicy.F1_BASELINE, .9, List.of(scope())));
+                RiskSelectionPolicy.F1_BASELINE, .9, "test-model", List.of(scope())));
 
         verifyNoInteractions(evidence, jdbc, transactions);
     }
@@ -53,7 +53,7 @@ class RiskRecheckJobsTest {
         TransactionSynchronizationManager.setCurrentTransactionReadOnly(true);
 
         assertThrows(IllegalStateException.class, () -> jobs.enqueueSelected(1, request(),
-                RiskSelectionPolicy.F1_BASELINE, .9, List.of(scope())));
+                RiskSelectionPolicy.F1_BASELINE, .9, "test-model", List.of(scope())));
 
         verifyNoInteractions(evidence, jdbc, transactions);
     }
@@ -83,9 +83,9 @@ class RiskRecheckJobsTest {
         TransactionSynchronizationManager.setActualTransactionActive(true);
 
         assertThrows(IllegalArgumentException.class, () -> jobs.enqueueSelected(1, request(),
-                RiskSelectionPolicy.F1_BASELINE, .01, List.of(scope())));
+                RiskSelectionPolicy.F1_BASELINE, .01, "test-model", List.of(scope())));
         assertThrows(IllegalArgumentException.class, () -> jobs.enqueueSelected(1, request(),
-                RiskSelectionPolicy.F1_BASELINE, .9, List.of(scope(), scope())));
+                RiskSelectionPolicy.F1_BASELINE, .9, "test-model", List.of(scope(), scope())));
 
         verifyNoInteractions(evidence, jdbc, transactions);
     }

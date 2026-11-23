@@ -1,11 +1,11 @@
 package com.csro.backend.risk;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -16,17 +16,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.csro.backend.reconfirmation.BookingReconfirmationEvidenceService;
-import com.csro.backend.risk.RiskMlClient.Assessment;
 
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Internal, explicitly invoked bridge from model score to local Mock reconfirmation.
- * The cohort is a current simulated fixture with a creation-time cutoff, not a
- * reconstructed historical event snapshot. This service is not a scheduler or a
- * historical-state reconstruction, and repeating an assessment creates a new
- * assessment row. The explicit batch entry point reuses an identical stored
- * assessment; selected reconfirmations use the existing durable jobs in both modes.
+/** Common risk prediction/storage followed by explicitly selected local Mock reconfirmation.
+ * Raw-request overloads remain manual tools; automation uses observed-history preparation and parity checks.
  */
 @Service
 public class RiskRecheckService {
@@ -43,7 +37,8 @@ public class RiskRecheckService {
             ORDER BY b.id
             """;
 
-    private final RiskMlClient ml;
+    private final RiskAssessmentService risk;
+    private final RiskAssessmentStore store;
     private final RiskRecheckJobs jobs;
     private final JdbcClient jdbc;
     private final TransactionTemplate read;
@@ -54,10 +49,27 @@ public class RiskRecheckService {
         this(ml, reconfirmation, jdbc, manager, new RiskRecheckJobs(reconfirmation, jdbc, manager));
     }
 
-    @Autowired
     public RiskRecheckService(RiskMlClient ml, BookingReconfirmationEvidenceService reconfirmation,
                              JdbcClient jdbc, PlatformTransactionManager manager, RiskRecheckJobs jobs) {
-        this.ml = ml;
+        this(legacyCore(ml, jdbc), jdbc, manager, jobs);
+    }
+
+    private RiskRecheckService(LegacyCore core, JdbcClient jdbc, PlatformTransactionManager manager,
+                              RiskRecheckJobs jobs) {
+        this(core.risk(), core.store(), jdbc, manager, jobs);
+    }
+
+    private static LegacyCore legacyCore(RiskMlClient ml, JdbcClient jdbc) {
+        var store = new RiskAssessmentStore(jdbc, JSON);
+        return new LegacyCore(new RiskAssessmentService(Optional.empty(), store, ml,
+                RiskMlClient.MODEL_VERSION), store);
+    }
+
+    @Autowired
+    public RiskRecheckService(RiskAssessmentService risk, RiskAssessmentStore store,
+                             JdbcClient jdbc, PlatformTransactionManager manager, RiskRecheckJobs jobs) {
+        this.risk = risk;
+        this.store = store;
         this.jobs = jobs;
         this.jdbc = jdbc;
         this.read = new TransactionTemplate(manager);
@@ -80,25 +92,53 @@ public class RiskRecheckService {
     /** A local event projection can additionally bind the exact prediction-time booking codes. */
     public Outcome assessAndReconfirm(RiskRequest request, RiskSelectionPolicy policy,
                                      List<String> expectedCohortBookingCodes) {
-        return assess(request, policy, expectedCohortBookingCodes, false).outcome();
+        return assess(request, policy, expectedCohortBookingCodes).outcome();
+    }
+
+    /** Common entry point used by the integrated Spring flow. */
+    public Outcome assessAndReconfirm(String hotel, LocalDate target, RiskSelectionPolicy policy) {
+        requireNoCallerTransaction();
+        if (policy == null) throw new IllegalArgumentException("Select a comparison policy explicitly");
+        var prepared = risk.prepare(hotel, target);
+        return assess(RiskAssessmentService.request(prepared.input()), policy, prepared.bookings()).outcome();
     }
 
     /**
-     * Repeated batch cycles reuse the same accepted score snapshot and stable jobs.
-     * Inference still runs outside a transaction on each call: the existing DB
-     * stores a rounded score, which cannot safely replace the original score for
-     * policy selection. No batch marker is added to the six-feature snapshot.
+     * Automation derives the actual request from complete observed history in Spring.
+     * The Python projection is a parity oracle, never a replacement for the provider.
      */
+    public BatchOutcome assessBatchAndReconfirm(String hotel, LocalDate target, RiskSelectionPolicy policy,
+                                                RiskRequest expectedRequest, List<String> expectedCodes) {
+        requireNoCallerTransaction();
+        if (policy == null || expectedRequest == null || expectedCodes == null) {
+            throw new IllegalArgumentException("Observed batch requires a policy and reference projection");
+        }
+        expectedRequest.validate();
+        if (!expectedRequest.hotelId().equals(hotel) || !expectedRequest.targetCheckInDate().equals(target)) {
+            throw new IllegalArgumentException("Reference projection does not match the requested target");
+        }
+        var prepared = risk.prepare(hotel, target);
+        var request = RiskAssessmentService.request(prepared.input());
+        request.validate();
+        if (!sameInput(request, expectedRequest) || expectedCodes.isEmpty()
+                || new HashSet<>(expectedCodes).size() != expectedCodes.size()
+                || !new HashSet<>(prepared.bookings()).equals(new HashSet<>(expectedCodes))) {
+            throw new IllegalArgumentException("Observed Spring features or cohort differ from the Python projection");
+        }
+        return assess(request, policy, prepared.bookings());
+    }
+
+    /** Explicit legacy local input, using the same canonical HTTP and storage implementation. */
     public BatchOutcome assessBatchAndReconfirm(RiskRequest request, RiskSelectionPolicy policy,
                                                 List<String> expectedCohortBookingCodes) {
         if (expectedCohortBookingCodes == null) {
             throw new IllegalArgumentException("Batch assessment requires prediction-time booking codes");
         }
-        return assess(request, policy, expectedCohortBookingCodes, true);
+        return assess(request, policy, expectedCohortBookingCodes);
     }
 
     private BatchOutcome assess(RiskRequest request, RiskSelectionPolicy policy,
-                                List<String> expectedCohortBookingCodes, boolean reuseAssessment) {
+                                List<String> expectedCohortBookingCodes) {
         // Do not wrap this method in @Transactional(NEVER): Spring may create
         // an empty synchronization scope even without a real transaction.
         // This guard also covers direct calls that do not pass through a proxy.
@@ -122,54 +162,30 @@ public class RiskRecheckService {
 
         // No database transaction or booking lock is held during the ML call.
         requireNoCallerTransaction();
-        Assessment assessment = ml.assess(request);
-        validateAssessment(request, assessment);
-        boolean selected = policy.selects(assessment.riskScore());
+        var input = RiskAssessmentService.input(request);
+        var assessment = risk.predict(input);
+        double rawScore = assessment.score().doubleValue();
+        boolean selected = policy.selects(rawScore);
 
         // Store just the six request features. Policy/demonstration metadata is
         // returned separately and never smuggled into the model input snapshot.
-        String features = JSON.writeValueAsString(request.features());
         SavedAssessment saved = Objects.requireNonNull(write.execute(status -> {
             lockSimulatedHotel(request);
             List<CohortBooking> current = loadCohort(request, true);
             if (!cohort.equals(current)) {
                 throw new IllegalStateException("Risk cohort changed during model assessment");
             }
-            // Hotel locking serializes both manual and batch writes. A batch
-            // can adopt an identical existing manual/main assessment as well.
-            // Retain the fresh raw score for selection, never the DB rounding.
-            Long existingId = reuseAssessment ? jdbc.sql("""
-                    SELECT id FROM risk_assessments
-                    WHERE hotel_id = :hotelId AND target_check_in_date = :targetDate AND as_of = :asOf
-                        AND model_version = :modelVersion AND feature_set_version = :featureSetVersion
-                        AND feature_snapshot = CAST(:features AS jsonb) AND risk_score = round(:score, 4)
-                    ORDER BY id LIMIT 1
-                    """).param("hotelId", cohort.getFirst().hotelId())
-                    .param("targetDate", request.targetCheckInDate()).param("asOf", request.asOf())
-                    .param("modelVersion", assessment.modelVersion())
-                    .param("featureSetVersion", assessment.featureSetVersion())
-                    .param("features", features).param("score", BigDecimal.valueOf(assessment.riskScore()))
-                    .query(Long.class).optional().orElse(null) : null;
-            long id = existingId != null ? existingId : jdbc.sql("""
-                    INSERT INTO risk_assessments (hotel_id, target_check_in_date, as_of, risk_score,
-                        model_version, feature_set_version, feature_snapshot)
-                    VALUES (:hotelId, :targetDate, :asOf, :score, :modelVersion, :featureSetVersion,
-                        CAST(:features AS jsonb))
-                    RETURNING id
-                    """).param("hotelId", cohort.getFirst().hotelId())
-                    .param("targetDate", request.targetCheckInDate()).param("asOf", request.asOf())
-                    .param("score", BigDecimal.valueOf(assessment.riskScore()))
-                    .param("modelVersion", assessment.modelVersion())
-                    .param("featureSetVersion", assessment.featureSetVersion())
-                    .param("features", features).query(Long.class).single();
+            // The shared store serializes and reuses exact accepted snapshots in every mode.
+            var accepted = store.saveWithReuse(input, request.asOf(), assessment.score(), assessment.modelVersion());
+            long id = accepted.id();
             List<RiskRecheckJobs.JobRef> selectedJobs = selected
-                    ? jobs.enqueueSelected(id, request, policy, assessment.riskScore(),
+                    ? jobs.enqueueSelected(id, request, policy, rawScore, assessment.modelVersion(),
                             cohort.stream().map(booking -> new RiskRecheckJobs.Scope(
                                     booking.id(), booking.bookingCode(), request.hotelId(), booking.supplierCode(),
                                     booking.supplierBookingId(), request.targetCheckInDate(), booking.checkOutDate(),
                                     booking.adults(), booking.rooms())).toList())
                     : List.of();
-            return new SavedAssessment(id, selectedJobs, existingId != null);
+            return new SavedAssessment(id, selectedJobs, accepted.reused());
         }), "Risk assessment write returned no ID");
 
         // The assessment and selected jobs commit together before HTTP. A crash
@@ -186,8 +202,8 @@ public class RiskRecheckService {
             rechecks.add(new RecheckOutcome(execution.bookingCode(), execution.requestId(), status,
                     execution.errorCode(), execution.caseCode()));
         }
-        return new BatchOutcome(new Outcome(saved.id(), assessment.riskScore(), policy, policy.threshold(), selected,
-                assessment.modelVersion(), assessment.featureSetVersion(), rechecks), saved.reused());
+        return new BatchOutcome(new Outcome(saved.id(), rawScore, policy, policy.threshold(), selected,
+                assessment.modelVersion(), request.featureSetVersion(), rechecks), saved.reused());
     }
 
     private List<CohortBooking> loadCohort(RiskRequest request, boolean forUpdate) {
@@ -220,14 +236,22 @@ public class RiskRecheckService {
                 .orElseThrow(() -> new IllegalStateException("Simulated risk hotel is no longer available"));
     }
 
-    private static void validateAssessment(RiskRequest request, Assessment assessment) {
-        if (assessment == null || !request.hotelId().equals(assessment.hotelId())
-                || !request.targetCheckInDate().equals(assessment.targetCheckInDate())
-                || assessment.asOf() == null || !request.asOf().isEqual(assessment.asOf())
-                || !request.featureSetVersion().equals(assessment.featureSetVersion())
-                || !RiskMlClient.MODEL_VERSION.equals(assessment.modelVersion())) {
-            throw new IllegalStateException("Model assessment does not match the requested prediction scope");
-        }
+    private static boolean sameInput(RiskRequest actual, RiskRequest expected) {
+        return actual.hotelId().equals(expected.hotelId())
+                && actual.targetCheckInDate().equals(expected.targetCheckInDate())
+                && actual.asOf().isEqual(expected.asOf())
+                && actual.featureSetVersion().equals(expected.featureSetVersion())
+                && actual.features().targetConfirmedBookingCount() == expected.features().targetConfirmedBookingCount()
+                && actual.features().isPeakDay() == expected.features().isPeakDay()
+                && sameNumber(actual.features().pastFailureRate90d(), expected.features().pastFailureRate90d())
+                && sameNumber(actual.features().bookingVolumeGrowth7d(), expected.features().bookingVolumeGrowth7d())
+                && sameNumber(actual.features().reconfirmationOverdueRate7d(), expected.features().reconfirmationOverdueRate7d())
+                && sameNumber(actual.features().inventoryUnavailableRate7d(), expected.features().inventoryUnavailableRate7d());
+    }
+
+    private static boolean sameNumber(double actual, double expected) {
+        // Cross-runtime arithmetic may differ by a few ULPs; this never rounds the model score or threshold.
+        return Double.isFinite(actual) && Double.isFinite(expected) && Math.abs(actual - expected) <= 1e-12;
     }
 
     private static void requireNoCallerTransaction() {
@@ -255,6 +279,8 @@ public class RiskRecheckService {
     private record CohortBooking(long id, long hotelId, String bookingCode, String supplierCode,
                                  String supplierBookingId, LocalDate checkOutDate, int adults, int rooms,
                                  String dataSource, boolean hasConflict) {}
+
+    private record LegacyCore(RiskAssessmentService risk, RiskAssessmentStore store) {}
 
     private record SavedAssessment(long id, List<RiskRecheckJobs.JobRef> jobs, boolean reused) {}
 }
