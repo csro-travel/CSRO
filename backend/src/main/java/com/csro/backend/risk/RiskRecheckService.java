@@ -25,7 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
  * The cohort is a current simulated fixture with a creation-time cutoff, not a
  * reconstructed historical event snapshot. This service is not a scheduler or a
  * historical-state reconstruction, and repeating an assessment creates a new
- * assessment row. Selected reconfirmations use the durable, manually drained jobs.
+ * assessment row. The explicit batch entry point reuses an identical stored
+ * assessment; selected reconfirmations use the existing durable jobs in both modes.
  */
 @Service
 public class RiskRecheckService {
@@ -79,6 +80,25 @@ public class RiskRecheckService {
     /** A local event projection can additionally bind the exact prediction-time booking codes. */
     public Outcome assessAndReconfirm(RiskRequest request, RiskSelectionPolicy policy,
                                      List<String> expectedCohortBookingCodes) {
+        return assess(request, policy, expectedCohortBookingCodes, false).outcome();
+    }
+
+    /**
+     * Repeated batch cycles reuse the same accepted score snapshot and stable jobs.
+     * Inference still runs outside a transaction on each call: the existing DB
+     * stores a rounded score, which cannot safely replace the original score for
+     * policy selection. No batch marker is added to the six-feature snapshot.
+     */
+    public BatchOutcome assessBatchAndReconfirm(RiskRequest request, RiskSelectionPolicy policy,
+                                                List<String> expectedCohortBookingCodes) {
+        if (expectedCohortBookingCodes == null) {
+            throw new IllegalArgumentException("Batch assessment requires prediction-time booking codes");
+        }
+        return assess(request, policy, expectedCohortBookingCodes, true);
+    }
+
+    private BatchOutcome assess(RiskRequest request, RiskSelectionPolicy policy,
+                                List<String> expectedCohortBookingCodes, boolean reuseAssessment) {
         // Do not wrap this method in @Transactional(NEVER): Spring may create
         // an empty synchronization scope even without a real transaction.
         // This guard also covers direct calls that do not pass through a proxy.
@@ -115,7 +135,22 @@ public class RiskRecheckService {
             if (!cohort.equals(current)) {
                 throw new IllegalStateException("Risk cohort changed during model assessment");
             }
-            long id = jdbc.sql("""
+            // Hotel locking serializes both manual and batch writes. A batch
+            // can adopt an identical existing manual/main assessment as well.
+            // Retain the fresh raw score for selection, never the DB rounding.
+            Long existingId = reuseAssessment ? jdbc.sql("""
+                    SELECT id FROM risk_assessments
+                    WHERE hotel_id = :hotelId AND target_check_in_date = :targetDate AND as_of = :asOf
+                        AND model_version = :modelVersion AND feature_set_version = :featureSetVersion
+                        AND feature_snapshot = CAST(:features AS jsonb) AND risk_score = round(:score, 4)
+                    ORDER BY id LIMIT 1
+                    """).param("hotelId", cohort.getFirst().hotelId())
+                    .param("targetDate", request.targetCheckInDate()).param("asOf", request.asOf())
+                    .param("modelVersion", assessment.modelVersion())
+                    .param("featureSetVersion", assessment.featureSetVersion())
+                    .param("features", features).param("score", BigDecimal.valueOf(assessment.riskScore()))
+                    .query(Long.class).optional().orElse(null) : null;
+            long id = existingId != null ? existingId : jdbc.sql("""
                     INSERT INTO risk_assessments (hotel_id, target_check_in_date, as_of, risk_score,
                         model_version, feature_set_version, feature_snapshot)
                     VALUES (:hotelId, :targetDate, :asOf, :score, :modelVersion, :featureSetVersion,
@@ -134,7 +169,7 @@ public class RiskRecheckService {
                                     booking.supplierBookingId(), request.targetCheckInDate(), booking.checkOutDate(),
                                     booking.adults(), booking.rooms())).toList())
                     : List.of();
-            return new SavedAssessment(id, selectedJobs);
+            return new SavedAssessment(id, selectedJobs, existingId != null);
         }), "Risk assessment write returned no ID");
 
         // The assessment and selected jobs commit together before HTTP. A crash
@@ -151,8 +186,8 @@ public class RiskRecheckService {
             rechecks.add(new RecheckOutcome(execution.bookingCode(), execution.requestId(), status,
                     execution.errorCode(), execution.caseCode()));
         }
-        return new Outcome(saved.id(), assessment.riskScore(), policy, policy.threshold(), selected,
-                assessment.modelVersion(), assessment.featureSetVersion(), rechecks);
+        return new BatchOutcome(new Outcome(saved.id(), assessment.riskScore(), policy, policy.threshold(), selected,
+                assessment.modelVersion(), assessment.featureSetVersion(), rechecks), saved.reused());
     }
 
     private List<CohortBooking> loadCohort(RiskRequest request, boolean forUpdate) {
@@ -215,9 +250,11 @@ public class RiskRecheckService {
         }
     }
 
+    public record BatchOutcome(Outcome outcome, boolean reusedAssessment) {}
+
     private record CohortBooking(long id, long hotelId, String bookingCode, String supplierCode,
                                  String supplierBookingId, LocalDate checkOutDate, int adults, int rooms,
                                  String dataSource, boolean hasConflict) {}
 
-    private record SavedAssessment(long id, List<RiskRecheckJobs.JobRef> jobs) {}
+    private record SavedAssessment(long id, List<RiskRecheckJobs.JobRef> jobs, boolean reused) {}
 }
