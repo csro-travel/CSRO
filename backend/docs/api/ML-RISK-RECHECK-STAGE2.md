@@ -110,3 +110,5 @@ Remove-Item Env:RISK_JOBS_TEST -ErrorAction SilentlyContinue
 쓰기 통합 검사는 `RiskJobsIntegrationTest`만 별도로 실행한다. `RISK_JOBS_TEST=true`, URL `jdbc:postgresql://127.0.0.1:25435/yeohaengbom_risk_stage2_test`, user `yb`, 전용 비밀번호가 모두 필요하다. 기본 업무 DB·다른 URL은 Spring/Flyway 전 검증에서 차단한다. 기존 업무 DB를 테스트용으로 지정하거나 지우지 않는다.
 
 환경변수 이름은 각각 `RISK_JOBS_TEST_URL`, `RISK_JOBS_TEST_USER`, `RISK_JOBS_TEST_PASSWORD`다. 전용 DB가 준비된 경우에만 `./gradlew test --tests "com.csro.backend.risk.RiskJobsIntegrationTest"`를 실행한다. 이 11개 시나리오는 기존 CI의 두 PostgreSQL 검사 목록에 자동 추가되지 않는다. 향후 CI 확대는 공통 설정 담당자와 별도로 정한다. 새 단위 검사 클래스는 `ciUnitTest`의 일반 검색 대상이고, Python `test_risk_projection.py`는 기존 `test_risk*.py` 패턴에 들어간다.
+
+후속 [자동 점검 배치](ML-RISK-AUTOMATION.md)는 이 경로를 재사용한다. 이 문서의 개별 수동 실행 의미를 유지하면서, 별도 배치 진입점에만 평가 재사용과 명시적 로컬 반복 실행을 추가했다.
