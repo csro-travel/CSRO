@@ -99,18 +99,18 @@ class RiskJobsIntegrationTest {
     void retryableFailureCommitsWaitingThenReusesTheSameRequestAndAssessment() {
         var job = enqueue();
         var failure = upstreamFailure(BookingReconfirmationException.Kind.UNAVAILABLE, 503);
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
                 .thenAnswer(call -> {
                     assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
                     assertEquals("RUNNING", status(job.jobCode()));
                     assertEquals(1L, assessmentCount());
                     throw failure;
-                }).thenReturn(completed());
+                }).thenAnswer(this::completeClaim);
         var first = jobs.execute(job.jobCode());
         assertEquals(State.WAITING, first.state());
         assertEquals(0, retryCount(job.jobCode()));
         assertEquals(State.WAITING, jobs.execute(job.jobCode()).state()); // Not due: no second HTTP.
-        verify(evidence, times(1)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong(), any());
         clock.advance(31);
         var second = jobs.execute(job.jobCode());
         assertEquals(State.COMPLETED, second.state());
@@ -121,20 +121,20 @@ class RiskJobsIntegrationTest {
         assertEquals(1, jdbc.sql("SELECT jsonb_array_length(result_payload -> 'history') FROM jobs WHERE job_code=:code")
                 .param("code", job.jobCode()).query(Integer.class).single());
         jobs.execute(job.jobCode());
-        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong());
+        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong(), any());
     }
 
     @Test
     void permanentFailureAndAttemptExhaustionRequireManualHandlingWithoutAFabricatedCase() {
         var job = enqueue();
         var failure = upstreamFailure(BookingReconfirmationException.Kind.NOT_FOUND, 404);
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
                 .thenThrow(failure);
         assertEquals(State.FAILED, jobs.execute(job.jobCode()).state());
         assertTrue(jdbc.sql("SELECT (result_payload ->> 'manualRequired')::boolean FROM jobs WHERE job_code=:code")
                 .param("code", job.jobCode()).query(Boolean.class).single());
         jobs.execute(job.jobCode());
-        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
         assertEquals(0L, fixtureRows("cases"));
         assertEquals(0L, fixtureRows("evidence_records"));
     }
@@ -143,7 +143,7 @@ class RiskJobsIntegrationTest {
     void repeated503StopsAfterThreeTotalAttemptsWithRetryCountsZeroOneTwo() {
         var job = enqueue();
         var failure = upstreamFailure(BookingReconfirmationException.Kind.UNAVAILABLE, 503);
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
                 .thenThrow(failure);
         assertEquals(State.WAITING, jobs.execute(job.jobCode()).state());
         assertEquals(0, retryCount(job.jobCode()));
@@ -157,7 +157,7 @@ class RiskJobsIntegrationTest {
         assertEquals(2, retryCount(job.jobCode()));
         clock.advance(300);
         assertEquals(State.FAILED, jobs.execute(job.jobCode()).state());
-        verify(evidence, times(3)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong());
+        verify(evidence, times(3)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong(), any());
     }
 
     @Test
@@ -167,9 +167,9 @@ class RiskJobsIntegrationTest {
         var pending = new BookingReconfirmationResult(validated.bookingCode(), validated.supplier(),
                 new HotelPending(job.requestId(), "SYNTHETIC-PENDING", "PENDING", AS_OF),
                 validated.supplierEvidence(), validated.hotelEvidence());
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong()))
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
                 .thenReturn(new BookingReconfirmationEvidenceService.Outcome(pending, null, null, null, false))
-                .thenReturn(completed());
+                .thenAnswer(this::completeClaim);
         var waiting = jobs.execute(job.jobCode());
         assertEquals(State.WAITING, waiting.state());
         assertEquals("HOTEL_PENDING", waiting.errorCode());
@@ -177,7 +177,7 @@ class RiskJobsIntegrationTest {
         assertEquals(0L, fixtureRows("cases"));
         clock.advance(31);
         assertEquals(State.COMPLETED, jobs.execute(job.jobCode()).state());
-        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong());
+        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong(), any());
         assertEquals(1L, assessmentCount());
     }
 
@@ -237,30 +237,37 @@ class RiskJobsIntegrationTest {
     }
 
     @Test
-    void committedEvidenceCanBeReplayedAfterWorkerFailureWithoutDuplicatingTheCaseOrTask() {
+    void finalAttemptCommitsJobWithEvidenceBeforeWorkerInterruption() {
         var job = enqueue();
-        var validated = validatedResult(job.requestId());
-        var realEvidence = RiskEvidenceTestFactory.validatedReply(jdbc, manager, validated);
-        var crashBoundary = mock(BookingReconfirmationEvidenceService.class);
-        when(crashBoundary.reconfirmAndApply(anyString(), anyString(), any(), anyLong())).thenAnswer(call -> {
-            realEvidence.reconfirmAndApply(call.getArgument(0), call.getArgument(1), call.getArgument(2), call.getArgument(3));
-            throw new IllegalStateException("Simulated worker interruption after evidence commit");
-        });
-        assertThrows(IllegalStateException.class, () -> worker(crashBoundary).execute(job.jobCode()));
-        assertEquals("RUNNING", status(job.jobCode()));
+        var realEvidence = RiskEvidenceTestFactory.validatedReply(jdbc, manager, validatedResult(job.requestId()));
+        var boundary = mock(BookingReconfirmationEvidenceService.class);
+        var failure = upstreamFailure(BookingReconfirmationException.Kind.UNAVAILABLE, 503);
+        when(boundary.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any()))
+                .thenThrow(failure).thenThrow(failure).thenAnswer(call -> {
+                    realEvidence.reconfirmAndApply(call.getArgument(0), call.getArgument(1),
+                            call.getArgument(2), call.getArgument(3), call.getArgument(4));
+                    throw new IllegalStateException("Worker interrupted immediately after evidence commit");
+                });
+        var worker = worker(boundary);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            assertEquals(State.WAITING, worker.execute(job.jobCode()).state());
+            clock.advance(31);
+        }
+        assertThrows(IllegalStateException.class, () -> worker.execute(job.jobCode()));
+        clock.advance(901);
+        var recovered = worker.execute(job.jobCode());
+        assertEquals(State.COMPLETED, recovered.state());
+        assertEquals(2, retryCount(job.jobCode()));
+        assertEquals(recovered.caseCode(), jdbc.sql("""
+                SELECT c.case_code FROM jobs j JOIN cases c ON c.id=j.case_id
+                JOIN evidence_records s ON s.id=(j.result_payload #>> '{last,supplierEvidenceId}')::bigint
+                JOIN evidence_records h ON h.id=(j.result_payload #>> '{last,hotelEvidenceId}')::bigint
+                WHERE s.job_id=j.id AND h.job_id=j.id AND j.job_code=:code
+                """).param("code", job.jobCode()).query(String.class).single());
         assertEquals(2L, fixtureRows("evidence_records"));
         assertEquals(1L, fixtureRows("cases"));
         assertEquals(1L, fixtureRows("case_tasks"));
-        assertEquals(2L, jdbc.sql("""
-                SELECT count(*) FROM evidence_records e JOIN jobs j ON j.id=e.job_id
-                WHERE j.job_code=:code AND e.booking_id=j.booking_id
-                """).param("code", job.jobCode()).query(Long.class).single());
-        clock.advance(61);
-        assertEquals(State.COMPLETED, worker(realEvidence).execute(job.jobCode()).state());
-        assertEquals(1, retryCount(job.jobCode()));
-        assertEquals(2L, fixtureRows("evidence_records"));
-        assertEquals(1L, fixtureRows("cases"));
-        assertEquals(1L, fixtureRows("case_tasks"));
+        verify(boundary, times(3)).reconfirmAndApply(anyString(), eq(job.requestId()), any(), anyLong(), any());
         assertEquals("CONFIRMED", jdbc.sql("SELECT supplier_status FROM bookings WHERE id=:id")
                 .param("id", fixture.bookingId()).query(String.class).single());
     }
@@ -270,10 +277,10 @@ class RiskJobsIntegrationTest {
         var job = enqueue();
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong())).thenAnswer(call -> {
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any())).thenAnswer(call -> {
             entered.countDown();
             assertTrue(release.await(10, TimeUnit.SECONDS));
-            return completed();
+            return completeClaim(call);
         });
         try (var pool = Executors.newFixedThreadPool(2)) {
             var first = pool.submit(() -> jobs.execute(job.jobCode()));
@@ -285,7 +292,7 @@ class RiskJobsIntegrationTest {
             }
             assertEquals(State.COMPLETED, first.get(10, TimeUnit.SECONDS).state());
         }
-        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong());
+        verify(evidence, times(1)).reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any());
     }
 
     @Test
@@ -294,29 +301,34 @@ class RiskJobsIntegrationTest {
         var firstEntered = new CountDownLatch(1);
         var releaseOldWorker = new CountDownLatch(1);
         var calls = new AtomicInteger();
-        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong())).thenAnswer(call -> {
+        var realEvidence = RiskEvidenceTestFactory.validatedReply(jdbc, manager, validatedResult(job.requestId()));
+        when(evidence.reconfirmAndApply(anyString(), anyString(), any(), anyLong(), any())).thenAnswer(call -> {
             if (calls.getAndIncrement() == 0) {
                 firstEntered.countDown();
                 assertTrue(releaseOldWorker.await(10, TimeUnit.SECONDS));
-                throw upstreamFailure(BookingReconfirmationException.Kind.UNAVAILABLE, 503);
+                return realEvidence.reconfirmAndApply(call.getArgument(0), call.getArgument(1),
+                        call.getArgument(2), call.getArgument(3), call.getArgument(4));
             }
-            return completed();
+            throw upstreamFailure(BookingReconfirmationException.Kind.NOT_FOUND, 404);
         });
         try (var pool = Executors.newFixedThreadPool(2)) {
             var old = pool.submit(() -> jobs.execute(job.jobCode()));
             try {
                 assertTrue(firstEntered.await(10, TimeUnit.SECONDS));
                 clock.advance(61);
-                assertEquals(State.COMPLETED, pool.submit(() -> jobs.execute(job.jobCode())).get(10, TimeUnit.SECONDS).state());
+                assertEquals(State.FAILED, pool.submit(() -> jobs.execute(job.jobCode())).get(10, TimeUnit.SECONDS).state());
             } finally {
                 releaseOldWorker.countDown();
             }
-            assertEquals(State.COMPLETED, old.get(10, TimeUnit.SECONDS).state());
+            assertEquals(State.FAILED, old.get(10, TimeUnit.SECONDS).state());
         }
-        assertEquals("COMPLETED", status(job.jobCode()));
+        assertEquals("FAILED", status(job.jobCode()));
+        assertEquals(0L, fixtureRows("evidence_records"));
+        assertEquals(0L, fixtureRows("cases"));
+        assertEquals(0L, fixtureRows("case_tasks"));
         assertEquals(1, retryCount(job.jobCode()));
         assertEquals(1L, assessmentCount());
-        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong());
+        verify(evidence, times(2)).reconfirmAndApply(eq(fixture.booking()), eq(job.requestId()), any(), anyLong(), any());
     }
 
     private RiskRecheckJobs worker(BookingReconfirmationEvidenceService boundary) {
@@ -349,8 +361,11 @@ class RiskJobsIntegrationTest {
         return new RiskObservations.Prepared(input, List.of(booking));
     }
 
-    private BookingReconfirmationEvidenceService.Outcome completed() {
-        return new BookingReconfirmationEvidenceService.Outcome(validatedResult("unused"), null, null, null, false);
+    private BookingReconfirmationEvidenceService.Outcome completeClaim(org.mockito.invocation.InvocationOnMock call) {
+        var outcome = new BookingReconfirmationEvidenceService.Outcome(validatedResult(call.getArgument(1)), null, null, null, false);
+        java.util.function.Consumer<BookingReconfirmationEvidenceService.Outcome> complete = call.getArgument(4);
+        write.executeWithoutResult(status -> complete.accept(outcome));
+        return outcome;
     }
 
     private BookingReconfirmationResult validatedResult(String requestId) {

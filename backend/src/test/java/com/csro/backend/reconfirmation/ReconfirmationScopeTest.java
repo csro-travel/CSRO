@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -126,7 +127,7 @@ class ReconfirmationScopeTest {
         var evidence = new BookingReconfirmationEvidenceService(reconfirmation, bookings, jdbc, manager);
 
         assertSame(result, evidence.reconfirmAndApply("YB-001", "legacy-request").result());
-        assertSame(result, evidence.reconfirmAndApply("YB-001", "stable-job-request", SCOPE, 7L).result());
+        assertSame(result, evidence.reconfirmAndApply("YB-001", "stable-job-request", SCOPE, 7L, ignored -> fail("Pending reply cannot complete a job")).result());
 
         verify(reconfirmation).reconfirm("YB-001", "legacy-request");
         verify(reconfirmation).reconfirm("YB-001", "stable-job-request", SCOPE);

@@ -10,6 +10,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -47,28 +48,33 @@ public class BookingReconfirmationEvidenceService {
     @Transactional(propagation = Propagation.NEVER)
     public Outcome reconfirmAndApply(String bookingCode, String requestId) {
         BookingReconfirmationResult result = reconfirmation.reconfirm(bookingCode, requestId);
-        return applyReply(result, null);
+        return applyReply(result, null, outcome -> {});
     }
 
     /** Internal durable-job entry point; the job and frozen booking scope never come from public HTTP. */
     @Transactional(propagation = Propagation.NEVER)
     public Outcome reconfirmAndApply(String bookingCode, String requestId,
-                                     ReconfirmationScope expectedScope, Long jobId) {
-        if (jobId != null && jobId < 1) {
+                                     ReconfirmationScope expectedScope, long jobId, Consumer<Outcome> completeJob) {
+        Objects.requireNonNull(completeJob);
+        if (jobId < 1) {
             throw new IllegalArgumentException("Invalid reconfirmation job reference");
         }
         BookingReconfirmationResult result = reconfirmation.reconfirm(bookingCode, requestId, expectedScope);
-        return applyReply(result, jobId);
+        return applyReply(result, jobId, completeJob);
     }
 
-    private Outcome applyReply(BookingReconfirmationResult result, Long jobId) {
+    private Outcome applyReply(BookingReconfirmationResult result, Long jobId, Consumer<Outcome> completeJob) {
         if (!(result.hotel() instanceof HotelReply reply)) {
             return new Outcome(result, null, null, null, false);
         }
         if (!result.supplierEvidence().localMock() || !result.hotelEvidence().localMock()) {
             throw new IllegalStateException("Evidence application requires the local simulation source");
         }
-        return write.execute(status -> apply(result, reply, jobId));
+        return write.execute(status -> {
+            Outcome outcome = apply(result, reply, jobId);
+            completeJob.accept(outcome);
+            return outcome;
+        });
     }
 
     private Outcome apply(BookingReconfirmationResult result, HotelReply reply, Long jobId) {
@@ -81,7 +87,7 @@ public class BookingReconfirmationEvidenceService {
                 .orElseThrow(() -> new IllegalStateException("Simulated booking no longer available"));
 
         if (jobId != null) {
-            // Deliberately no job-row lock: workers claim jobs before locking a booking.
+            // Finalization locks the job after the booking, in the same order as enqueue.
             boolean belongsToBooking = jdbc.sql("""
                     SELECT EXISTS (SELECT 1 FROM jobs
                         WHERE id = :jobId AND booking_id = :bookingId AND kind = 'RECHECK')
