@@ -144,7 +144,11 @@ export function CaseListView({
               const task = item.nextAction;
 
               return (
-                <tr key={item.caseId} className="hover:bg-muted/50">
+                <tr
+                  key={item.caseId}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => onOpen(item.caseId)}
+                >
                   <td className="px-4 py-4">
                     <span className={`inline-flex whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-bold ${
                       urgent ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground"
@@ -190,7 +194,10 @@ export function CaseListView({
                     <Button
                       type="button"
                       aria-label={`${item.caseId} 사건 열기`}
-                      onClick={() => onOpen(item.caseId)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpen(item.caseId);
+                      }}
                     >
                       사건 열기
                     </Button>

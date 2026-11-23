@@ -34,8 +34,11 @@ export function getCaseDetail(
 export function getCaseMessages(
   caseId: string,
   signal: AbortSignal,
+  beforeMessageId?: string,
 ): Promise<CaseMessageList> {
-  return read(`/demo/cases/${encodeURIComponent(caseId)}/messages`, signal);
+  const path = `/demo/cases/${encodeURIComponent(caseId)}/messages`;
+  const query = beforeMessageId ? `?${new URLSearchParams({ beforeMessageId })}` : "";
+  return read(path + query, signal);
 }
 
 export class CaseMessageSendError extends Error {

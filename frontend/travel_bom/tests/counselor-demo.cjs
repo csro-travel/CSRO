@@ -59,20 +59,24 @@ async function checkDashboard() {
       console.log('PASS live empty case list and OPEN filter')
     }
 
-    if (liveList.items.some(item => item.caseId === 'C-001')) {
-      await caseRow(live, 'C-001').getByRole('button', {name: /사건 열기/}).click()
-      await live.getByText(/^YB-001 · 사건 OPEN · 공급사 계약 CONFIRMED$/).waitFor()
-      await live.getByText('2026-11-10 · UNAVAILABLE / VERIFIED', {exact:true}).waitFor()
-      await live.getByText('2026-11-11 · UNKNOWN / UNCONFIRMED', {exact:true}).waitFor()
-      await live.getByText('2026-11-12 · UNKNOWN / UNCONFIRMED', {exact:true}).waitFor()
-      await live.getByText(/CONTACT_CUSTOMER · TODO · 기한 미정/).waitFor()
-      const hotel = live.locator('section').filter({has: live.locator('strong', {hasText: 'HOTEL_API'})})
-      await hotel.getByText('응답 원문', {exact:true}).click()
-      const evidence = JSON.parse(await hotel.locator('pre').innerText())
-      assert.equal(evidence.propertyId, 'HOTEL-001')
-      console.log('PASS live C-001 detail')
-    } else {
-      console.log('SKIP live C-001 detail: C-001 is absent from the active first page')
+    const scenario = liveList.items.find(item => item.caseId === 'C-002') ?? liveList.items[0]
+    if (scenario) {
+      const [response] = await Promise.all([
+        live.waitForResponse(response => new URL(response.url()).pathname === `/demo/cases/${scenario.caseId}`),
+        caseRow(live, scenario.caseId).getByText(scenario.caseId, {exact:true}).click(),
+      ])
+      assert.equal(response.status(), 200)
+      const details = await response.json()
+      const casePanel = live.getByRole('tabpanel', {name: '사건', exact: true})
+      await casePanel.getByText(details.booking.bookingId, {exact:true}).waitFor()
+      if (details.caseId === 'C-002') {
+        await casePanel.getByText('고객에게 확인된 상황 안내', {exact:true}).waitFor()
+        await casePanel.getByText('체크인 실패 신고 · 호텔 현장', {exact:true}).waitFor()
+        await casePanel.getByText('검증 완료', {exact:true}).waitFor()
+        await casePanel.getByText('응답 원문', {exact:true}).click()
+        assert.match(await casePanel.locator('pre').innerText(), /11월 22일\(첫날\)에는 객실을 제공할 수 없습니다/)
+      }
+      console.log(`PASS live ${details.caseId} detail`)
     }
     await live.close()
 
@@ -158,14 +162,14 @@ async function checkDashboard() {
         },
       },
     ]
-    const chatPanel = page.getByRole('region', {name: '고객과의 대화', exact:true})
+    const chatPanel = page.getByRole('region', {name: '채팅', exact:true})
     const history = chatPanel.getByRole('region', {name: '대화 내역', exact:true})
     const firstMessages = history.getByText(/^첫 사건 대화 [123]$/)
     const releaseFirstChat = await holdChatHistory(page, 'C-101', firstChat)
     try {
       const [request] = await Promise.all([
         page.waitForRequest('**/demo/cases/C-101/messages'),
-        first.getByRole('button', {name: 'C-101 사건 열기'}).click(),
+        first.getByText('C-101', {exact:true}).click(),
       ])
       assert.equal(request.method(), 'GET')
       assert.equal(request.headers()['x-demo-read'], '1')

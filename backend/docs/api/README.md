@@ -47,21 +47,18 @@ $chatDemoJar = (Get-ChildItem build/libs/*.jar | Where-Object Name -NotLike '*-p
 $chatDemoSpring = Start-Process java -ArgumentList @('-jar', ('"' + $chatDemoJar + '"'), '--spring.profiles.active=local-chat-demo') -WindowStyle Hidden -PassThru
 ```
 
-`GET http://127.0.0.1:18082/hello`가 응답하면 시연 예약에 활성 사건을 하나 만든다. 이어 같은 사건에 한 건을 전송하고, 응답의 ID를 API-011에서 조회한다.
+`GET http://127.0.0.1:18082/hello`가 응답하면 전용 컨테이너에 시연용 `C-002 / YB-002`를 추가한다. 이 시드는 DB 이름과 계정을 확인하고, 재실행할 때 이미 준비된 사례와 이후 상담사가 보낸 답장을 보존한다.
 
 ```powershell
-docker exec csro-local-chat-demo-db psql -X -v ON_ERROR_STOP=1 -U yb_chat_demo -d yeohaengbom_chat_demo -c "INSERT INTO cases (case_code, booking_id, status) SELECT 'C-001', id, 'OPEN' FROM bookings WHERE booking_code = 'YB-001' ON CONFLICT (case_code) DO NOTHING;"
-$chatDemoHeaders = @{ Authorization = "Bearer $env:CSRO_CHAT_DEMO_TOKEN" }
-$chatDemoUrl = 'http://127.0.0.1:18082/api/v1/cases/C-001/messages'
-$chatDemoBody = @{ body = '상담 시연 메시지' } | ConvertTo-Json -Compress
-$sent = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $chatDemoUrl -Headers $chatDemoHeaders -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($chatDemoBody))
-$messageId = ($sent.Content | ConvertFrom-Json).messageId
-$history = Invoke-RestMethod -Uri $chatDemoUrl -Headers $chatDemoHeaders
-$sent.StatusCode
-$history.items | Where-Object messageId -EQ $messageId
+$chatDemoBinding = docker port csro-local-chat-demo-db 5432/tcp
+if ($LASTEXITCODE -ne 0 -or $chatDemoBinding -ne '127.0.0.1:25434') { throw '전용 시연 DB 포트를 확인해 주세요.' }
+$chatDemoSeed = (Resolve-Path 'tools/seed-chat-demo-case.sql').Path
+docker cp $chatDemoSeed csro-local-chat-demo-db:/tmp/csro-seed-chat-demo-case.sql
+if ($LASTEXITCODE -ne 0) { throw '시드 복사에 실패했습니다.' }
+docker exec csro-local-chat-demo-db psql -X -U yb_chat_demo -d yeohaengbom_chat_demo -f /tmp/csro-seed-chat-demo-case.sql
 ```
 
-같은 시연 DB를 브라우저에서 조회하려면, 토큰을 발급한 PowerShell의 `frontend/travel_bom`에서 빌드 후 프록시를 실행한다. `http://127.0.0.1:3100/cases`에서 C-001을 열면 상담 사건 상세와 대화 내역을 볼 수 있다. 프록시는 목록·상세·대화 GET을 같은 Spring으로 전달한다.
+같은 시연 DB를 브라우저에서 조회하려면 토큰을 발급한 PowerShell의 `frontend/travel_bom`에서 빌드 후 프록시를 실행한다. `http://127.0.0.1:3100/cases`에서 C-002를 열어 첫날 제공 불가, 고객 신고, 호텔 회신 원문과 다음 업무를 확인한다. 채팅에서 답장한 뒤 새로고침하고 같은 사건을 다시 열면 저장된 답장을 볼 수 있다.
 
 ```powershell
 pnpm build
@@ -74,5 +71,12 @@ node demo-server.mjs
 ```
 
 `CSRO_CHAT_DEMO_PROXY=true`인 `3100 → 18082` 구성에서는 같은 출처의 브라우저 요청에 한해 `POST /demo/cases/{caseId}/messages`를 허용한다. 프록시는 JSON 본문에 상담사 인증 헤더를 붙여 Spring으로 전달한다. 브라우저의 `Origin`은 `http://127.0.0.1:3100`, `Sec-Fetch-Site`는 `same-origin`이어야 한다. 이 설정을 생략하면 조회 전용 프록시로 실행된다.
+
+Notion API-003·004의 상태 표기에는 구현이 남아 있지만, 현재 시연은 Spring 목록·상세 응답을 사용한다. API-004의 예시에는 근거 요약이 있으나 현재 응답은 `evidence.summary`를 `null`로 반환한다. 화면은 회신에서 채택된 숙박일 상태와 저장된 원문을 표시한다. 고객 신고 응답에는 유형·현장 여부·접수 시각이 있고, 신고 원문은 연결된 첫 고객 메시지로 API-011에서 조회한다.
+
+API-011은 최신 이력 조회와 이전 방향 커서를 제공하며 새 대화 확인은 채팅의 조회 버튼으로 실행한다. API-012의 공통 Bearer 연동은 후속 작업이며 로컬 시연에서는 위 전용 프로필의 상담사 주체를 사용한다.
+
+- [API-009 대체 숙소 견적 목록](https://app.notion.com/p/7906adbd23b38309a1f80136789fce11)은 상세 계약과 Spring 경로가 미구현이다. 화면의 ‘견적 조회 기능 미연결’은 조회 결과 0건과 구분한다.
+- [API-013 고객 후보 제안](https://app.notion.com/p/1106adbd23b382e7a16c81f28e26980b)은 제안 전송 계약과 Spring 경로가 미구현이다. 별도 대체 숙소 탐색 시연은 사건별 제안 전송과 독립적이다.
 
 시연을 마치면 이 세션에서 `Stop-Process -Id $chatDemoSpring.Id`와 `docker stop csro-local-chat-demo-db`를 실행한다. 컨테이너의 메모리 볼륨에 저장한 시연 메시지는 컨테이너 종료 시 사라진다.

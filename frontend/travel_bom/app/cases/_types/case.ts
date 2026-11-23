@@ -34,13 +34,21 @@ export type CaseDetail = {
     bookingId: string;
     hotel: { name: string };
     supplierStatus: string;
+    checkInDate?: string;
+    checkOutDate?: string;
   };
-  nights: { stayDate: string; fulfillmentStatus: string; factStatus: string }[];
+  nights: {
+    stayDate: string;
+    fulfillmentStatus: string;
+    factStatus: string;
+    evidenceId?: string | null;
+  }[];
   evidence: {
     evidenceId: string;
     sourceType: string;
     sourceAuthenticated: boolean;
-    originalContent: string;
+    originalContent: string | null;
+    receivedAt?: string;
     assertions: {
       stayDate: string;
       reportedProvisionStatus: string;

@@ -80,7 +80,7 @@ async function checkChatSend() {
     await page.goto(`http://127.0.0.1:${port}/cases`)
     const openCase = caseId => page.getByRole('button', { name: `${caseId} 사건 열기`, exact: true }).click()
     await openCase('C-101')
-    const panel = page.getByRole('region', { name: '고객과의 대화', exact: true })
+    const panel = page.getByRole('region', { name: '채팅', exact: true })
     const history = panel.getByRole('region', { name: '대화 내역', exact: true })
     const draft = panel.getByRole('textbox', { name: '메시지', exact: true })
     const send = panel.getByRole('button', { name: /^전송(?: 중…)?$/ })
