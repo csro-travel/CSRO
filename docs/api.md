@@ -20,3 +20,9 @@
 ## API-023 구현
 
 [Notion API-023](https://app.notion.com/p/417e04d22bed8136935fc2504f94525f)의 URI·응답·인증·오류·책임 경계에 따라 Python 내부 추론 서버를 구현한다. 원문의 가상 v0.1 특성 대신 기존 ML 모델의 명시적인 `risk-features-0.2` 여섯 특성만 받는다. v0.1은 422로 거부하며 특성 산식의 팀 전체 승인이나 Spring 연동 완료를 뜻하지 않는다. [구현 계약](../ml/docs/api/API-023.md) · [실행·인계](../ml/docs/api/API-023_HANDOFF.md)
+
+Spring의 내부 진입점은 `RiskAssessmentService.assess(hotelCode, targetCheckInDate)`다. `RiskObservations`가 평가 시점까지의 완전한 호텔 관측 이력을 제공해야 하며, 현재 제공자는 테스트 Fixture에만 있다. 운영 이력이 없으면 HTTP 요청 전에 중단한다. 정상 응답은 대상·시각·버전·점수를 확인한 뒤 여섯 입력 특성과 함께 기존 `risk_assessments`에 저장한다.
+
+로컬 연동에서 Spring의 `ML_RISK_BASE_URL`은 ML 서버 주소를, `ML_RISK_SERVICE_TOKEN`은 Python의 `ML_SERVICE_TOKEN`과 같은 서버 간 인증 값을 사용한다. `ML_RISK_MODEL_VERSION` 기본값은 저장 모델 `process-synthetic-lightgbm-0.2-84d386281d22`다. `RiskAssessmentLiveTest`는 명시적으로 `CSRO_RISK_LIVE_TEST=true`를 설정하고 전용 PostgreSQL(`127.0.0.1:25439/csro_risk_fixture_test`, 사용자 `yb`, 비밀번호 `CSRO_RISK_TEST_DB_PASSWORD`)에 V1과 YB-001 시드를 준비한 경우 실행한다. 검증 범위는 평가 저장까지다.
+
+동일 모델·대상·평가 시각·입력·저장 점수의 재시도는 같은 평가 행을 재사용한다. 관련 변경의 CI에서는 두 라이브 테스트를 각각 빈 격리 DB에서 실행한다. `RiskCaseDemoLiveTest`는 평가 후 YB-001을 명시적으로 선택해 재확인·사건 조회까지 확인한다. 운영 대상 자동 선별은 연결 전이다.
