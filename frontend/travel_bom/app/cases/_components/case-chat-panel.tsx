@@ -231,11 +231,11 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
     }
   }
 
-  // Leave space above and below the desktop panel for the case heading and page padding.
+  // Leave space for the shared case header, navigation and page padding.
   return (
     <section
       aria-label="채팅"
-      className="flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_12rem)] lg:min-h-[21rem]"
+      className="flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_17rem)] lg:min-h-[21rem]"
     >
       <div className="flex shrink-0 flex-wrap justify-end gap-1 border-b px-3 py-1.5">
         {history?.beforeMessageId && (

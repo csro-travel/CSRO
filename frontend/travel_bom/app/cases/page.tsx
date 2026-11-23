@@ -96,16 +96,14 @@ export default function Cases() {
         <p role="status">사건 조회 중…</p>
       )}
       {selected && detail && !error && (
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <CaseDetailTabs
-            key={detail.caseId}
-            title={[detail.caseId, detail.booking.hotel.name].join(" · ")}
-            bookingId={detail.booking.bookingId}
-          >
-            <CaseDetails detail={detail} />
-          </CaseDetailTabs>
-          <CaseChatPanel key={detail.caseId} caseId={detail.caseId} closed={detail.status === "CLOSED"} />
-        </div>
+        <CaseDetailTabs
+          key={detail.caseId}
+          title={[detail.caseId, detail.booking.hotel.name].join(" · ")}
+          bookingId={detail.booking.bookingId}
+          chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} />}
+        >
+          <CaseDetails detail={detail} />
+        </CaseDetailTabs>
       )}
     </main>
   );

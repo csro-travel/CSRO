@@ -22,6 +22,15 @@ const reply = {
   body: '호텔에 확인한 뒤 답변드리겠습니다.',
   sentAt: '2026-11-10T01:00:00.000Z', offer: null,
 }
+const hotelEvidence = {
+  evidenceId: 'EV-101', sourceType: 'HOTEL_API', sourceAuthenticated: true,
+  receivedAt: '2026-11-10T00:45:00.000Z',
+  originalContent: [
+    '11월 10일 객실 제공이 어렵습니다. 이후 숙박일은 객실 배정을 확인하고 있습니다.',
+    ...Array.from({ length: 30 }, (_, index) => `확인 기록 ${index + 1}: 객실 배정 담당자와 예약 내역을 확인했습니다.`),
+  ].join('\n'),
+  assertions: [{ stayDate: '2026-11-10', reportedProvisionStatus: 'UNAVAILABLE', reviewStatus: 'ACCEPTED' }],
+}
 
 async function assertInViewport(locator, label) {
   const { top, right, bottom, left, width, height } = await locator.evaluate(
@@ -55,9 +64,12 @@ async function checkChatViewport() {
           caseId, status: 'OPEN',
           booking: { bookingId, hotel: { name: hotelName }, supplierStatus: 'CONFIRMED' },
           nights: Array.from({ length: 20 }, (_, index) => ({
-            stayDate: `2026-11-${10 + index}`, fulfillmentStatus: 'UNKNOWN', factStatus: 'UNCONFIRMED',
+            stayDate: `2026-11-${10 + index}`,
+            fulfillmentStatus: index === 0 ? 'UNAVAILABLE' : 'UNKNOWN',
+            factStatus: index === 0 ? 'VERIFIED' : 'UNCONFIRMED',
+            evidenceId: index === 0 ? hotelEvidence.evidenceId : null,
           })),
-          nextAction: null, evidence: [], customerReports: [],
+          nextAction: null, evidence: [hotelEvidence], customerReports: [],
         } })
       }
       if (pathname === messagesPath && request.method() === 'GET') {
@@ -82,6 +94,23 @@ async function checkChatViewport() {
     await history.getByText(historyMessages[0].body, { exact: true }).waitFor()
     await page.evaluate(() => document.fonts.ready)
 
+    const heading = page.getByRole('heading', { name: `${caseId} · ${hotelName}`, exact: true })
+    const header = page.locator('header').filter({ has: heading })
+    const tabs = header.getByRole('tablist', { name: '사건 상세', exact: true })
+    const firstCard = page.getByRole('region', { name: '예약과 사건 요약', exact: true })
+    const [headerBox, headingBox, tabsBox, cardBox, chatBox] = await Promise.all(
+      [header, heading, tabs, firstCard, panel].map(element => element.boundingBox()),
+    )
+    assert.equal(cardBox.y, chatBox.y, 'The first left card and chat must share the same top')
+    assert(headerBox.x <= cardBox.x && headerBox.x + headerBox.width >= chatBox.x + chatBox.width)
+    assert(headingBox.y + headingBox.height <= cardBox.y && tabsBox.y + tabsBox.height <= cardBox.y)
+
+    const rawEvidence = page.getByText('응답 원문', { exact: true })
+    // The evidence toggle is below the fold. Open it without moving the viewport.
+    await rawEvidence.evaluate(summary => summary.click())
+    const evidence = page.locator('details[open] pre')
+    await evidence.waitFor({ state: 'visible' })
+    assert.equal(await evidence.textContent(), hotelEvidence.originalContent)
     assert.equal(await page.evaluate(() => window.scrollY), 0)
     assert(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight))
     await assertInViewport(draft, 'Message input')
@@ -106,6 +135,27 @@ async function checkChatViewport() {
     await draft.fill(reply.body)
     assert.equal(await page.evaluate(() => window.scrollY), 0)
     await assertInViewport(send, 'Send button with a draft')
+
+    const originalChat = await panel.elementHandle()
+    const chatWithDraft = await panel.boundingBox()
+    const alternatives = page.getByRole('tabpanel', { name: '대체 숙소', exact: true }).locator('section').first()
+    for (const [tabName, leftCard, hiddenCard] of [
+      ['대체 숙소', alternatives, firstCard], ['사건', firstCard, alternatives],
+    ]) {
+      const tab = tabs.getByRole('tab', { name: tabName, exact: true })
+      await tab.click()
+      await leftCard.waitFor({ state: 'visible' })
+      await hiddenCard.waitFor({ state: 'hidden' })
+      assert.equal(await tab.getAttribute('aria-selected'), 'true')
+      assert.equal((await leftCard.boundingBox()).y, chatWithDraft.y)
+      assert.deepEqual(await panel.boundingBox(), chatWithDraft)
+      assert(await panel.evaluate((current, original) => current === original, originalChat))
+      assert.equal(await draft.inputValue(), reply.body)
+      assert.equal(await page.evaluate(() => window.scrollY), 0)
+      await assertInViewport(draft, `Message input in the ${tabName} tab`)
+      await assertInViewport(send, `Send button in the ${tabName} tab`)
+    }
+    await originalChat.dispose()
     const [response] = await Promise.all([
       page.waitForResponse(response =>
         response.request().method() === 'POST' && new URL(response.url()).pathname === messagesPath),
@@ -118,7 +168,7 @@ async function checkChatViewport() {
     await assertInViewport(send, 'Send button after sending')
     assert.equal(await draft.inputValue(), '')
     assert.equal(await page.evaluate(() => window.scrollY), 0)
-    console.log('PASS chat composer stays in the 1366×768 viewport while long history scrolls and a reply is sent')
+    console.log('PASS shared header, same-row panels, and retained draft at 1366×768 with long evidence and history')
   } finally {
     await browser.close()
   }
