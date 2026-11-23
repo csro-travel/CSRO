@@ -29,7 +29,8 @@ public final class RiskJobsDemoRunner implements ApplicationRunner {
         try {
             if (!"none".equalsIgnoreCase(context.getEnvironment()
                     .getProperty("spring.main.web-application-type", ""))
-                    || context.getEnvironment().getProperty("risk.demo.enabled", Boolean.class, false)) {
+                    || context.getEnvironment().getProperty("risk.demo.enabled", Boolean.class, false)
+                    || context.getEnvironment().getProperty("risk.batch.enabled", Boolean.class, false)) {
                 throw new IllegalArgumentException("Job drain requires a separate non-web invocation");
             }
             var results = jobs.runDue(limit);

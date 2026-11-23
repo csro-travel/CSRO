@@ -64,7 +64,8 @@ public final class RiskDemoRunner implements ApplicationRunner {
                     .getProperty("spring.main.web-application-type", ""))) {
                 throw new IllegalArgumentException("Risk demo requires spring.main.web-application-type=none");
             }
-            if (context.getEnvironment().getProperty("risk.jobs.demo.enabled", Boolean.class, false)) {
+            if (context.getEnvironment().getProperty("risk.jobs.demo.enabled", Boolean.class, false)
+                    || context.getEnvironment().getProperty("risk.batch.enabled", Boolean.class, false)) {
                 throw new IllegalArgumentException("Risk assessment and job drain must run separately");
             }
             if (requestFile.isBlank() == projectionFile.isBlank()) {
