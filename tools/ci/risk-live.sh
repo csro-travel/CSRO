@@ -2,7 +2,11 @@
 # Run only inside the isolated GitHub Actions matrix job.
 set -euo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true ]]
-case "$1" in RiskAssessmentLiveTest|RiskCaseDemoLiveTest) ;; *) exit 2 ;; esac
+case "$1" in RiskAssessmentLiveTest|RiskCaseDemoLiveTest|RiskJobsIntegrationTest) ;; *) exit 2 ;; esac
+if [[ "$1" == RiskJobsIntegrationTest ]]; then
+  export RISK_JOBS_TEST=true RISK_JOBS_TEST_USER=yb RISK_JOBS_TEST_PASSWORD=ci-isolated-db-only
+  export RISK_JOBS_TEST_URL=jdbc:postgresql://127.0.0.1:25435/yeohaengbom_risk_stage2_test
+else
 export PGHOST=127.0.0.1 PGPORT=25439 PGDATABASE=csro_risk_fixture_test PGUSER=yb
 export PGPASSWORD=ci-isolated-db-only CSRO_RISK_TEST_DB_PASSWORD=ci-isolated-db-only
 db=(psql -X --no-password --set=ON_ERROR_STOP=1)
@@ -34,6 +38,7 @@ if [[ "$1" == RiskCaseDemoLiveTest ]]; then
   wait_for http://127.0.0.1:18038/hello
 else
   export CSRO_RISK_LIVE_TEST=true
+fi
 fi
 (cd backend && bash gradlew test --tests "com.csro.backend.risk.$1")
 python - "$1" <<'PY'

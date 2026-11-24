@@ -25,4 +25,6 @@ Spring의 내부 진입점은 `RiskAssessmentService.assess(hotelCode, targetChe
 
 로컬 연동에서 Spring의 `ML_RISK_BASE_URL`은 ML 서버 주소를, `ML_RISK_SERVICE_TOKEN`은 Python의 `ML_SERVICE_TOKEN`과 같은 서버 간 인증 값을 사용한다. `ML_RISK_MODEL_VERSION` 기본값은 저장 모델 `process-synthetic-lightgbm-0.2-84d386281d22`다. `RiskAssessmentLiveTest`는 명시적으로 `CSRO_RISK_LIVE_TEST=true`를 설정하고 전용 PostgreSQL(`127.0.0.1:25439/csro_risk_fixture_test`, 사용자 `yb`, 비밀번호 `CSRO_RISK_TEST_DB_PASSWORD`)에 V1과 YB-001 시드를 준비한 경우 실행한다. 검증 범위는 평가 저장까지다.
 
-동일 모델·대상·평가 시각·입력·저장 점수의 재시도는 같은 평가 행을 재사용한다. 관련 변경의 CI에서는 두 라이브 테스트를 각각 빈 격리 DB에서 실행한다. `RiskCaseDemoLiveTest`는 평가 후 YB-001을 명시적으로 선택해 재확인·사건 조회까지 확인한다. 운영 대상 자동 선별은 연결 전이다.
+동일 모델·대상·평가 시각·입력·저장 점수의 재시도는 같은 평가 행을 재사용한다. 내부 시연 진입점 `RiskRecheckService.assessAndReconfirm(hotel, target, policy)`은 정책을 명시해야 한다. 기준 시점의 예약 ID 집합과 현재 시뮬레이션 예약을 대조하고 ML 호출 뒤 잠금 안에서 다시 검사한다. 선택된 예약의 RECHECK Job과 평가를 같은 트랜잭션에서 저장하고 커밋 후 기존 재확인 서비스를 호출한다. 검증된 근거·사건과 Job 성공 상태는 같은 트랜잭션에서 반영한다. 실행 중단 후에는 `RiskRecheckJobs.runDue(limit)`으로 해당 프로토콜의 작업만 수동 재개한다. 세 임계값은 비교용이며 운영 관측 공급자와 자동 스케줄러는 없다.
+
+CI는 위험 평가, 정책 기반 사건 조회, Job 재시도·복구를 독립 DB에서 검증한다. Job 복구 검사는 `RISK_JOBS_TEST=true`와 전용 DB `127.0.0.1:25435/yeohaengbom_risk_stage2_test`를 사용한다.

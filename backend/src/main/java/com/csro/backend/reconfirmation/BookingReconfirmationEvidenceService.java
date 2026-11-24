@@ -10,6 +10,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -47,16 +48,36 @@ public class BookingReconfirmationEvidenceService {
     @Transactional(propagation = Propagation.NEVER)
     public Outcome reconfirmAndApply(String bookingCode, String requestId) {
         BookingReconfirmationResult result = reconfirmation.reconfirm(bookingCode, requestId);
+        return applyReply(result, null, outcome -> {});
+    }
+
+    /** Internal durable-job entry point; the job and frozen booking scope never come from public HTTP. */
+    @Transactional(propagation = Propagation.NEVER)
+    public Outcome reconfirmAndApply(String bookingCode, String requestId,
+                                     ReconfirmationScope expectedScope, long jobId, Consumer<Outcome> completeJob) {
+        Objects.requireNonNull(completeJob);
+        if (jobId < 1) {
+            throw new IllegalArgumentException("Invalid reconfirmation job reference");
+        }
+        BookingReconfirmationResult result = reconfirmation.reconfirm(bookingCode, requestId, expectedScope);
+        return applyReply(result, jobId, completeJob);
+    }
+
+    private Outcome applyReply(BookingReconfirmationResult result, Long jobId, Consumer<Outcome> completeJob) {
         if (!(result.hotel() instanceof HotelReply reply)) {
             return new Outcome(result, null, null, null, false);
         }
         if (!result.supplierEvidence().localMock() || !result.hotelEvidence().localMock()) {
             throw new IllegalStateException("Evidence application requires the local simulation source");
         }
-        return write.execute(status -> apply(result, reply));
+        return write.execute(status -> {
+            Outcome outcome = apply(result, reply, jobId);
+            completeJob.accept(outcome);
+            return outcome;
+        });
     }
 
-    private Outcome apply(BookingReconfirmationResult result, HotelReply reply) {
+    private Outcome apply(BookingReconfirmationResult result, HotelReply reply, Long jobId) {
         long bookingId = jdbc.sql("""
                 SELECT b.id FROM bookings b JOIN hotels h ON h.id = b.hotel_id
                 WHERE b.booking_code = :code AND b.supplier_code = 'MOCK_SUPPLIER'
@@ -64,6 +85,17 @@ public class BookingReconfirmationEvidenceService {
                 FOR UPDATE OF b
                 """).param("code", result.bookingCode()).query(Long.class).optional()
                 .orElseThrow(() -> new IllegalStateException("Simulated booking no longer available"));
+
+        if (jobId != null) {
+            // Finalization locks the job after the booking, in the same order as enqueue.
+            boolean belongsToBooking = jdbc.sql("""
+                    SELECT EXISTS (SELECT 1 FROM jobs
+                        WHERE id = :jobId AND booking_id = :bookingId AND kind = 'RECHECK')
+                    """).param("jobId", jobId).param("bookingId", bookingId).query(Boolean.class).single();
+            if (!belongsToBooking) {
+                throw new IllegalStateException("Reconfirmation job does not match the booking");
+            }
+        }
 
         Map<LocalDate, StoredNight> nights = new HashMap<>();
         jdbc.sql("""
@@ -85,8 +117,10 @@ public class BookingReconfirmationEvidenceService {
         Optional<Evidence> existingSupplier = findEvidence(bookingId, SUPPLIER, eventKey);
         Optional<Evidence> existingHotel = findEvidence(bookingId, HOTEL, eventKey);
         if (existingSupplier.isPresent() || existingHotel.isPresent()) {
-            if (existingSupplier.filter(row -> supplierHash.equals(row.hash())).isEmpty()
+            if (existingSupplier.filter(row -> supplierHash.equals(row.hash())
+                            && Objects.equals(jobId, row.jobId())).isEmpty()
                     || existingHotel.filter(row -> hotelHash.equals(row.hash())
+                            && Objects.equals(jobId, row.jobId())
                             && Objects.equals(result.hotelEvidence().requestJson(), row.requestJson())).isEmpty()) {
                 throw new RequestBodyConflictException();
             }
@@ -95,9 +129,9 @@ public class BookingReconfirmationEvidenceService {
         }
 
         long supplierId = insertEvidence(bookingId, "SUPPLIER_API", SUPPLIER, eventKey,
-                supplierHash, result.supplierEvidence(), result.supplier().updatedAt());
+                supplierHash, result.supplierEvidence(), result.supplier().updatedAt(), jobId);
         long hotelId = insertEvidence(bookingId, "HOTEL_API", HOTEL, eventKey,
-                hotelHash, result.hotelEvidence(), reply.occurredAt());
+                hotelHash, result.hotelEvidence(), reply.occurredAt(), jobId);
 
         for (Night claim : reply.nights()) {
             applyNight(bookingId, hotelId, nights.get(claim.stayDate()), claim);
@@ -118,29 +152,29 @@ public class BookingReconfirmationEvidenceService {
 
     private Optional<Evidence> findEvidence(long bookingId, String provider, String eventKey) {
         return jdbc.sql("""
-                SELECT id, payload_hash, raw_payload ->> 'requestJson' AS request_json
+                SELECT id, payload_hash, raw_payload ->> 'requestJson' AS request_json, job_id
                 FROM evidence_records
                 WHERE booking_id = :bookingId AND provider_code = :provider AND provider_event_id = :eventKey
                 """)
                 .param("bookingId", bookingId).param("provider", provider).param("eventKey", eventKey)
                 .query((rs, row) -> new Evidence(rs.getLong("id"), rs.getString("payload_hash"),
-                        rs.getString("request_json"))).optional();
+                        rs.getString("request_json"), rs.getObject("job_id", Long.class))).optional();
     }
 
     private long insertEvidence(long bookingId, String source, String provider, String eventKey, String hash,
-                                EvidenceBody evidence, OffsetDateTime occurredAt) {
+                                EvidenceBody evidence, OffsetDateTime occurredAt, Long jobId) {
         // Outbound Bearer authenticates the caller. The local HTTP Mock does not authenticate itself.
         return jdbc.sql("""
-                INSERT INTO evidence_records (booking_id, source_type, provider_code, provider_event_id,
+                INSERT INTO evidence_records (booking_id, job_id, source_type, provider_code, provider_event_id,
                     source_authenticated, raw_text, raw_payload, occurred_at, received_at, payload_hash)
-                VALUES (:bookingId, :source, :provider, :eventKey, false, :raw,
+                VALUES (:bookingId, :jobId, :source, :provider, :eventKey, false, :raw,
                     CASE WHEN CAST(:request AS text) IS NULL THEN CAST(:raw AS jsonb)
                          ELSE jsonb_build_object('requestJson', CAST(:request AS text), 'response', CAST(:raw AS jsonb))
                     END,
                     :occurredAt, :receivedAt, :hash)
                 RETURNING id
                 """)
-                .param("bookingId", bookingId).param("source", source).param("provider", provider)
+                .param("bookingId", bookingId).param("jobId", jobId).param("source", source).param("provider", provider)
                 .param("eventKey", eventKey).param("raw", evidence.rawJson()).param("request", evidence.requestJson())
                 .param("occurredAt", occurredAt)
                 .param("receivedAt", evidence.receivedAt()).param("hash", hash).query(Long.class).single();
@@ -232,6 +266,6 @@ public class BookingReconfirmationEvidenceService {
     }
 
     private record StoredNight(long id, LocalDate date, String fulfillment, String fact) {}
-    private record Evidence(long id, String hash, String requestJson) {}
+    private record Evidence(long id, String hash, String requestJson, Long jobId) {}
     private record ActiveCase(long id, String code) {}
 }

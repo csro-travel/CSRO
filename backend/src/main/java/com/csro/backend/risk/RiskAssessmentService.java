@@ -40,11 +40,26 @@ public class RiskAssessmentService {
 
     @Transactional(propagation = Propagation.NEVER)
     public Assessment assess(String hotel, LocalDate target) {
+        var prepared = prepare(hotel, target);
+        var prediction = predict(prepared.input());
+        long id = store.save(prepared.input(), OffsetDateTime.parse(prepared.input().asOf()),
+                prediction.score(), prediction.modelVersion());
+        return new Assessment(id, prediction.score(), prepared);
+    }
+
+    record Prediction(BigDecimal score, String modelVersion) {}
+
+    RiskObservations.Prepared prepare(String hotel, LocalDate target) {
         var cutoff = target.minusDays(1).atTime(9, 0).atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime();
         var history = observations.flatMap(source -> source.completeHistory(hotel, cutoff))
                 .orElseThrow(() -> new IllegalStateException("Complete point-in-time risk observations unavailable"));
-        var prepared = new RiskProjection(hotel, target, cutoff, history).prepare();
-        var input = prepared.input();
+        return new RiskProjection(hotel, target, cutoff, history).prepare();
+    }
+
+    Prediction predict(RiskObservations.Input input) {
+        String hotel = input.hotelId();
+        LocalDate target = input.targetCheckInDate();
+        OffsetDateTime cutoff = OffsetDateTime.parse(input.asOf());
         if (token.isBlank()) throw new IllegalStateException("Missing ML service token");
         var reply = ml.post().uri("/internal/v1/risk-assessments").headers(h -> h.setBearerAuth(token))
                 .contentType(MediaType.APPLICATION_JSON).body(input).retrieve().toEntity(JsonNode.class);
@@ -60,7 +75,6 @@ public class RiskAssessmentService {
         BigDecimal score = body.get("riskScore").decimalValue();
         if (score.signum() < 0 || score.compareTo(BigDecimal.ONE) > 0)
             throw new IllegalStateException("Invalid API-023 score");
-        long id = store.save(input, cutoff, score, modelVersion);
-        return new Assessment(id, score, prepared);
+        return new Prediction(score, modelVersion);
     }
 }

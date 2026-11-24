@@ -28,29 +28,36 @@ import static org.junit.jupiter.api.Assertions.*;
         "booking.reconfirmation.mock.base-url=http://127.0.0.1:18027"})
 class RiskCaseDemoLiveTest {
     @org.springframework.boot.test.context.TestConfiguration
-    @Import(RiskAssessmentLiveTest.Config.class)
+    @Import({RiskAssessmentLiveTest.Config.class, RiskRecheckService.class, RiskRecheckJobs.class})
     @ComponentScan(basePackageClasses = BookingReconfirmationEvidenceService.class)
     static class Config {}
 
     @Autowired RiskAssessmentService risk;
     @Autowired RiskObservations observations;
-    @Autowired BookingReconfirmationEvidenceService reconfirmation;
+    @Autowired RiskRecheckService selection;
     @Autowired JdbcClient jdbc;
     @Autowired RiskAssessmentStore store;
 
-    // Explicit selection in a fresh isolated demo, independent of the numerical risk score.
+    // Same raw inference, two explicit comparison policies; no scheduler or production default.
     private void runDemo(RiskAssessmentService assessor, LocalDate date, Consumer<RiskAssessmentService.Assessment> afterScore) {
         var assessment = assessor.assess(HOTEL, date);
         afterScore.accept(assessment);
         assertEquals(List.of("YB-001"), assessment.prepared().bookings());
-        var first = reconfirmation.reconfirmAndApply("YB-001", "DEMO-RISK-001");
-        assertFalse(first.replayed());
-        assertEquals("C-001", first.activeCaseCode());
-        var replay = reconfirmation.reconfirmAndApply("YB-001", "DEMO-RISK-001");
-        assertTrue(replay.replayed());
-        assertEquals(first.supplierEvidenceId(), replay.supplierEvidenceId());
-        assertEquals(first.hotelEvidenceId(), replay.hotelEvidenceId());
-        assertEquals(first.activeCaseCode(), replay.activeCaseCode());
+        var low = selection.assessAndReconfirm(HOTEL, date, RiskSelectionPolicy.F1_BASELINE);
+        assertFalse(low.selected());
+        assertEquals(assessment.id(), low.assessmentId());
+        assertBeforeRecheck(1);
+        assertEquals(0, jdbc.sql("SELECT count(*) FROM jobs").query(Integer.class).single());
+        var first = selection.assessAndReconfirm(HOTEL, date, RiskSelectionPolicy.RECALL_50_F1);
+        assertTrue(first.selected());
+        assertEquals(1, first.rechecks().size());
+        assertEquals("C-001", first.rechecks().getFirst().caseCode());
+        var replay = selection.assessAndReconfirm(HOTEL, date, RiskSelectionPolicy.RECALL_50_F1);
+        assertEquals(first, replay);
+        assertEquals(1, jdbc.sql("SELECT count(*) FROM jobs WHERE status='COMPLETED' AND risk_assessment_id=:id")
+                .param("id", assessment.id()).query(Integer.class).single());
+        assertEquals(2, jdbc.sql("SELECT count(*) FROM evidence_records WHERE job_id IS NOT NULL")
+                .query(Integer.class).single());
     }
 
     private void assertBeforeRecheck(int assessments) {

@@ -38,12 +38,31 @@ public class BookingReconfirmationService {
     /** Performs an internal read and external HTTP validation without applying the claims. */
     @Transactional(propagation = Propagation.NEVER)
     public BookingReconfirmationResult reconfirm(String bookingCode, String requestId) {
+        return reconfirmCurrent(bookingCode, requestId, null);
+    }
+
+    /** Rejects changed booking fields before reusing a durable job's outbound request ID. */
+    @Transactional(propagation = Propagation.NEVER)
+    public BookingReconfirmationResult reconfirm(String bookingCode, String requestId,
+                                                ReconfirmationScope expectedScope) {
+        Assert.notNull(expectedScope, "Frozen reconfirmation scope is required");
+        return reconfirmCurrent(bookingCode, requestId, expectedScope);
+    }
+
+    private BookingReconfirmationResult reconfirmCurrent(String bookingCode, String requestId,
+                                                         ReconfirmationScope expectedScope) {
         Assert.hasText(bookingCode, "bookingCode is required");
         Assert.hasText(requestId, "reconfirmationRequestId is required");
 
-        Booking booking = bookings.findByCode(bookingCode).orElseThrow(() ->
+        Booking stored = bookings.findByCode(bookingCode).orElseThrow(() ->
                 new BookingReconfirmationException(Step.BOOKING, Kind.BOOKING_NOT_FOUND, null, null, null));
+        Booking booking = new Booking(stored.bookingCode(), stored.supplierBookingId(), stored.propertyId(),
+                stored.supplierStatus(), stored.checkInDate(), stored.checkOutDate(), stored.adults(),
+                stored.rooms(), List.copyOf(stored.stayDates()));
         validateBookingNights(booking);
+        if (expectedScope != null && !expectedScope.matches(booking)) {
+            throw new BookingReconfirmationException(Step.BOOKING, Kind.REQUEST_MISMATCH, null, null, null);
+        }
         var supplierResponse = mock.getSupplierBooking(booking.supplierBookingId());
         SupplierBooking supplier = supplierResponse.body();
         validateSupplier(booking, supplier);
