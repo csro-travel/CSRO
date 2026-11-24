@@ -263,6 +263,59 @@ jobs:
           QUOTE_SEARCH_TEST_DB_PASSWORD: ci-isolated-quote-db-only
         run: bash ./gradlew --no-daemon --console=plain test --tests 'com.csro.backend.quotes.QuoteSearchIntegrationTest'
 
+  offers:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      offers-db:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: yb_offer_test
+          POSTGRES_DB: yeohaengbom_offers_test
+          POSTGRES_PASSWORD: ci-isolated-offer-db-only
+        ports:
+          - 127.0.0.1:25441:5432
+        options: >-
+          --health-cmd "pg_isready -U yb_offer_test -d yeohaengbom_offers_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      chat-db:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: yb
+          POSTGRES_DB: yeohaengbom_chat_api_test
+          POSTGRES_PASSWORD: ci-isolated-chat-db-only
+        ports:
+          - 127.0.0.1:25433:5432
+        options: >-
+          --health-cmd "pg_isready -U yb -d yeohaengbom_chat_api_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: backend/**/*.gradle*
+      - name: 제안·선택·대화 조회 격리 DB 검사
+        working-directory: backend
+        env:
+          OFFER_SELECTION_TEST: 'true'
+          OFFER_SELECTION_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25441/yeohaengbom_offers_test
+          OFFER_SELECTION_TEST_DB_USER: yb_offer_test
+          OFFER_SELECTION_TEST_DB_PASSWORD: ci-isolated-offer-db-only
+          CHATTING_API_INTEGRATION_TEST: 'true'
+          CHATTING_API_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25433/yeohaengbom_chat_api_test
+          CHATTING_API_TEST_DB_PASSWORD: ci-isolated-chat-db-only
+        run: >-
+          bash ./gradlew --no-daemon --console=plain test
+          --tests 'com.csro.backend.offers.OfferSelectionIntegrationTest'
+          --tests 'com.csro.backend.cases.CaseMessagesIntegrationTest'
+
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
@@ -283,7 +336,7 @@ jobs:
       - run: |
           pnpm build
           pnpm exec tsc --noEmit
-          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs
+          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs tests/demo-offers-proxy.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -358,7 +411,7 @@ jobs:
 
   ci-gate:
     if: always()
-    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes]
+    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes, offers]
     runs-on: ubuntu-latest
     steps:
       - name: 필수 테스트 결과 확인
@@ -371,8 +424,8 @@ jobs:
           if jobs['changes']['result'] != 'success':
               sys.exit('변경 영역 판단 실패')
           outputs = jobs['changes']['outputs']
-          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes'):
-              selected = outputs.get(name) == 'true' or (name == 'backend' and outputs.get('postgres') == 'true') or (name == 'quotes' and outputs.get('backend') == 'true')
+          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes', 'offers'):
+              selected = outputs.get(name) == 'true' or (name == 'backend' and outputs.get('postgres') == 'true') or (name in ('quotes', 'offers') and outputs.get('backend') == 'true')
               if selected and jobs[name]['result'] != 'success':
                   sys.exit(f'{name}: {jobs[name]["result"]}')
           print('변경 영역 CI 통과')

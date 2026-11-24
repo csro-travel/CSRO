@@ -2,7 +2,17 @@
 
 ## API-009/010 견적 연결
 
-사용자 승인 [최소 계약](../backend/docs/api/API-009-010-PROPOSAL.md)에 따라 상담사의 검색 접수와 저장 견적 조회를 구현한다. Spring이 기존 QUOTE_SEARCH·견적·비교 테이블을 소유하며 API-028/025는 기존 HTTP 경계에서 호출한다. 공급사 견적 ID는 검색 스냅샷별로 구분하고 제안·선택·가상 예약까지 보존할 값이다. 현재 연결은 사건 화면의 후보 표시까지이며 고객 전송·선택·예약은 후속이다. [실행·검증](../backend/docs/api/QUOTES-DEMO.md)
+사용자 승인 [최소 계약](../backend/docs/api/API-009-010-PROPOSAL.md)에 따라 상담사의 검색 접수와 저장 견적 조회를 구현한다. Spring이 기존 QUOTE_SEARCH·견적·비교 테이블을 소유하며 API-028/025는 기존 HTTP 경계에서 호출한다. 공급사 견적 ID는 검색 스냅샷별로 구분하고 제안·선택·가상 예약까지 보존할 값이다. [실행·검증](../backend/docs/api/QUOTES-DEMO.md)
+
+## API-013/014 제안·선택과 API-011 확장
+
+사용자 승인 [최소 계약](../backend/docs/api/API-013-014-PROPOSAL.md)으로 `POST /api/v1/cases/{caseId}/offers`와 `PUT /api/v1/cases/{caseId}/selection`을 구현한다. Notion 팀 전체의 설계 승인 상태를 바꾼 것은 아니다. 상담사는 같은 사건·검색·기간 그룹의 유효한 저장 견적 중 서로 다른 숙소 3곳을 발송하고, 예약 소유 고객만 현재 ACTIVE 제안의 실제 항목을 선택한다. 요청의 가격·고객 ID·판단 시각으로 업무 사실을 덮어쓰지 않는다.
+
+각 요청은 필수 Idempotency-Key와 정규화 본문 해시를 사용한다. 같은 키·같은 본문은 최초의 불변 결과, 다른 본문은 409다. 인증·현재 소유권 확인 후 같은 booking→case 잠금에서 재생 여부를 먼저 판단한다. 이후 제안 교체·기한 만료·사건 종료에도 옛 요청은 기록만 재생하며 현재 상태를 되돌리지 않는다. 새 제안과 항목·OFFER 메시지·감사 기록, 새 선택과 SYSTEM 알림·감사 기록은 각각 원자 저장한다.
+
+API-011의 기존 메시지·페이지 계약에 `activeOfferId`, `currentSelection`, `effectiveAt`, `clockMode`를 추가해 현재 상태를 읽는다. 새 전체 기간 제안의 기존 `priceDifference` 필드는 발송 때 `case_actions.details`에 보존한 기준 원금으로 계산한다. 부분 기간·옛 스냅샷은 null이며 현재 booking 금액으로 재계산하지 않는다. 고객용 새 조회 URI를 만들거나 API-004를 고객에게 개방하지 않는다.
+
+실제 예약·입실·종료는 이 API들이 실행하지 않는다. `local-chat-demo`에서만 별도 고객 토큰을 고정 고객 주체에 연결하고 3101→18082의 메시지 조회·선택 프록시를 명시적으로 켠다. 기존 전용 DB·loopback·독점 프로필 검증과 일반 인증 경계는 유지한다. [실행·검증과 남은 범위](../backend/docs/api/OFFERS-DEMO.md)
 
 ## 유지할 계약
 

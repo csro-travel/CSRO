@@ -7,9 +7,11 @@
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
 | API-009 | 사건의 대체 견적 조회 | `GET /api/v1/cases/{caseId}/quotes` | `1124cy-core-flow` | 저장 견적·검색 상태·기간별 그룹·비교 결과 조회. 조회 자체는 검색하지 않음 | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-010 | 대체 견적 검색 접수 | `POST /api/v1/cases/{caseId}/quote-searches` | `1124cy-core-flow` | 202 접수, 동일 키 재사용, QUOTE_SEARCH·견적 저장·025 비교, 격리 시연 Worker | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
-| API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객의 소유 사건·활성 상담사 큐 조회, 이전 페이지와 제안 카드 이력 | [API-011 구현 메모](#api-011-구현-메모) |
+| API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 · `1124cy-core-flow` 확장 | 소유 사건·상담사 큐 조회, 이전 페이지·제안 카드·현재 제안/선택·서버 판단 시각 | [API-011 구현 메모](#api-011-구현-메모) · [제안·선택 연결](OFFERS-DEMO.md) |
 | API-012 | 사건별 상담 채팅 메시지 전송 | `POST /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객·상담사의 일반 텍스트 저장 | [API-012 구현 메모](#api-012-구현-메모) |
-| API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | Spring에 저장한 견적 ID의 규칙 기반 순서·근거 반환, 유효 결과 저장. 고객 제안은 후속 | [구현 범위](../../../llm/agent/docs/API-025.md) |
+| API-013 | 고객 후보 제안 | `POST /api/v1/cases/{caseId}/offers` | `1124cy-core-flow` | 상담사가 유효한 저장 견적의 서로 다른 숙소 3곳 발송, 카드·메시지·감사 기록 원자 저장·동일 키 재생 | [사용자 승인 최소 계약](API-013-014-PROPOSAL.md) · [실행·경계](OFFERS-DEMO.md) |
+| API-014 | 고객 선택 저장 | `PUT /api/v1/cases/{caseId}/selection` | `1124cy-core-flow` | 예약 소유 고객이 현재 발송 항목 선택, 이력·SYSTEM 알림·현재 선택 조회. 예약 실행은 후속 | [사용자 승인 최소 계약](API-013-014-PROPOSAL.md) · [실행·경계](OFFERS-DEMO.md) |
+| API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | Spring에 저장한 견적 ID의 규칙 기반 순서·근거 반환, 유효 결과 저장. 고객 발송은 Spring API-013 책임 | [구현 범위](../../../llm/agent/docs/API-025.md) |
 | API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색별 스냅샷 ID, Spring 검증·저장 연결. 예약·재고 차감은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
 | API-023 Spring 호출·후속 처리 | 호텔 위험 평가 저장·재확인 선별 | Spring → `POST /internal/v1/risk-assessments` | A팀 · `1122cy-risk-link` | 합성 관측 이벤트의 오프라인 특징값 생성, 평가·선별 작업 원자 저장, 동일 요청 ID로 재확인 재개. 실시간 수집·자동 스케줄러·ML 추론 실패 영속 저장은 미구현 | [2단계 실행·경계](ML-RISK-RECHECK-STAGE2.md) · [1단계 기록](ML-RISK-RECHECK-STAGE1.md) |
 | 내부 자동 점검 배치 | 대상 호텔 자동 조회·평가·작업 재개 | 로컬 CLI → Spring 비웹 배치 → 기존 API-023/026/027 | A팀 · `1122cy-risk-link` | 고정 시연 날짜·합성 관측 공급자, 공통 집계와 Python 기준 대조, 반복 평가·작업 재사용, 명시적 간격 반복. 운영 스케줄러·새 HTTP API 없음 | [자동화 실행·경계](ML-RISK-AUTOMATION.md) |
@@ -24,7 +26,7 @@ API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같
 
 활성 고객은 소유 예약의 사건을, 활성 상담사는 단일 큐의 사건을 읽는다. 접근 가능한 종료 사건도 조회한다. `limit` 기본값은 30, 범위는 1~50이다. `beforeMessageId`는 같은 사건의 공개 메시지 번호다. `(sent_at, id)`로 메시지 페이지를 먼저 선택하고, 선택된 페이지를 오래된 순으로 반환한다.
 
-제안은 V1에 저장된 카드를 발송 순서대로 읽는다. V1에는 발송 당시 비교 기준액이 없어 `priceDifference`는 `null`이다. 제안당 카드 3장의 수량 보장은 API-013 발송 시점의 책임이다.
+제안은 V1에 저장된 카드를 발송 순서대로 읽는다. 사용자 승인 API-013/014 계약에 따라 최상위 `activeOfferId`, `currentSelection`, `effectiveAt`, `clockMode`를 반환한다. 현재 요약은 해당 메시지 페이지에 카드가 있는지와 무관하다. 새 전체 기간 제안은 발송 당시 `case_actions.details`의 불변 비교 기준으로 `priceDifference`를 표시한다. 부분 기간·기준 스냅샷이 없는 과거 제안은 `null`이다. 현재 예약 금액으로 과거 차액을 다시 계산하지 않는다. 서로 다른 숙소 3곳의 수량·권한·기한 검증은 API-013 발송 시점의 책임이다.
 
 통합 테스트는 새 격리 PostgreSQL을 사용한다. `CHATTING_API_INTEGRATION_TEST=true`, `CHATTING_API_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_chat_api_test`와 `CHATTING_API_TEST_DB_PASSWORD`를 테스트 프로세스에 설정한 뒤 `backend`에서 `.\gradlew.bat test --tests '*CaseMessagesIntegrationTest'`를 실행한다. 테스트는 Spring과 Flyway를 시작하기 전에 DB 이름과 사용자 `yb`를 확인한다.
 
@@ -85,6 +87,6 @@ Notion API-003·004의 상태 표기에는 구현이 남아 있지만, 현재 �
 API-011은 최신 이력 조회와 이전 방향 커서를 제공하며 새 대화 확인은 채팅의 조회 버튼으로 실행한다. API-012의 공통 Bearer 연동은 후속 작업이며 로컬 시연에서는 위 전용 프로필의 상담사 주체를 사용한다.
 
 - API-009/010은 사용자 승인 최소 계약으로 Spring 저장·사건 화면에 연결했다. [실행·검증 및 시연 시각](QUOTES-DEMO.md)을 확인한다. 검색 전·진행 중·실패·완료 0건은 서로 구분한다.
-- [API-013 고객 후보 제안](https://app.notion.com/p/1106adbd23b382e7a16c81f28e26980b)은 제안 전송 계약과 Spring 경로가 미구현이다. 별도 대체 숙소 탐색 시연은 사건별 제안 전송과 독립적이다.
+- API-013/014는 [사용자 승인 최소 계약](API-013-014-PROPOSAL.md)으로 전송·선택 저장에 연결했다. [고객 전용 시연](OFFERS-DEMO.md)은 별도 고객 토큰·3101 프록시를 명시적으로 켜며, 기존 DB·loopback·프로필 검증을 유지한다. 고객은 API-011 이력과 API-014 선택만 사용한다. 별도 대체 숙소 탐색 시연은 이 저장 견적·제안 흐름과 독립적이다.
 
 시연을 마치면 이 세션에서 `Stop-Process -Id $chatDemoSpring.Id`와 `docker stop csro-local-chat-demo-db`를 실행한다. 컨테이너의 메모리 볼륨에 저장한 시연 메시지는 컨테이너 종료 시 사라진다.
