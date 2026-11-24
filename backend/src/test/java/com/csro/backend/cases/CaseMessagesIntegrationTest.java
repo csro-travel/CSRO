@@ -136,6 +136,50 @@ class CaseMessagesIntegrationTest {
     }
 
     @Test
+    void readsCurrentChoiceOutsideThePageAndKeepsTheSentComparisonBasis() throws Exception {
+        insertOffer();
+        String offerCode = "OFFER-" + suffix;
+        String selectionCode = "SEL-" + suffix;
+        jdbc.sql("UPDATE offers SET status = 'ACTIVE' WHERE case_id = :caseId")
+                .param("caseId", closedCase.id()).update();
+        jdbc.sql("""
+                INSERT INTO alternative_selections (selection_code, case_id, offer_id, quote_id,
+                    selected_by, selected_at, idempotency_key, request_hash)
+                SELECT :selection, o.case_id, o.id, q.id, :owner, :selectedAt, :selection, repeat('1', 64)
+                FROM offers o JOIN alternative_quotes q ON q.case_id = o.case_id
+                WHERE o.offer_code = :offer AND q.quote_code = :quote
+                """).param("selection", selectionCode).param("owner", ownerId)
+                .param("selectedAt", TIE.plusMinutes(1)).param("offer", offerCode)
+                .param("quote", quoteCode(1)).update();
+        jdbc.sql("""
+                INSERT INTO case_actions (case_id, actor_id, action_type, details, acted_at, booking_id)
+                VALUES (:caseId, :actor, 'OFFER_SENT', CAST(:details AS jsonb), :sentAt, :booking)
+                """).param("caseId", closedCase.id()).param("actor", counselorId)
+                .param("details", JSON.writeValueAsString(Map.of("protocol", "offer-selection-v1",
+                        "offerId", offerCode, "coverageMode", "FULL_STAY", "originalAmount", 450000)))
+                .param("sentAt", TIE).param("booking", closedCase.bookingId()).update();
+        jdbc.sql("UPDATE bookings SET original_total_amount = 900000 WHERE id = :booking")
+                .param("booking", closedCase.bookingId()).update();
+
+        mvc.perform(get(MESSAGES, closedCase.code()).principal(() -> owner).param("limit", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].messageType").value("SYSTEM"))
+                .andExpect(jsonPath("$.activeOfferId").value(offerCode))
+                .andExpect(jsonPath("$.currentSelection.selectionId").value(selectionCode))
+                .andExpect(jsonPath("$.currentSelection.offerId").value(offerCode))
+                .andExpect(jsonPath("$.currentSelection.quoteId").value(quoteCode(1)))
+                .andExpect(jsonPath("$.effectiveAt").isNotEmpty())
+                .andExpect(jsonPath("$.clockMode").value("REAL_TIME"));
+
+        mvc.perform(get(MESSAGES, closedCase.code()).principal(() -> owner).param("limit", "1")
+                        .param("beforeMessageId", messageCode("NEW")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].offer.items[0].priceDifference").value(30000))
+                .andExpect(jsonPath("$.activeOfferId").value(offerCode))
+                .andExpect(jsonPath("$.currentSelection.selectionId").value(selectionCode));
+    }
+
+    @Test
     void checksCaseAccessBeforeValidatingTheCursor() throws Exception {
         String foreignCursor = messageCode("OTHER");
         insertMessage(openCase.id(), foreignCursor, ownerId, "CUSTOMER", "TEXT", "테스트 메시지", null, FIRST);
