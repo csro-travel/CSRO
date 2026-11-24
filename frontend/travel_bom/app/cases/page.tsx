@@ -16,6 +16,7 @@ export default function Cases() {
   const [selected, select] = useState<string>();
   const [detail, show] = useState<CaseDetail>();
   const [error, fail] = useState("");
+  const [chatRefresh, setChatRefresh] = useState(0);
 
   function navigate(target: number) {
     setList(undefined);
@@ -102,7 +103,8 @@ export default function Cases() {
           caseId={detail.caseId}
           closed={detail.status === "CLOSED"}
           bookingId={detail.booking.bookingId}
-          chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} />}
+          onOfferSent={() => setChatRefresh(value => value + 1)}
+          chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} />}
         >
           <CaseDetails detail={detail} />
         </CaseDetailTabs>

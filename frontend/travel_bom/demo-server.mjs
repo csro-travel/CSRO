@@ -23,11 +23,26 @@ function allowsCaseRead(req) {
       /^\/demo\/cases\/C-[0-9]{3,38}\/quotes$/.test(req.url) || allowsMessageList(req.url))
 }
 
-export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, handle, fetchUpstream = fetch }) {
+function allowsCustomerRead(req) {
+  return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
+    req.headers['sec-fetch-site'] === 'same-origin' &&
+    /^\/demo\/cases\/C-[0-9]{3,38}\/messages(?:\?|$)/.test(req.url) && allowsMessageList(req.url)
+}
+
+function validateCustomerConfig(customerMode, port, backendPort, token) {
+  if (customerMode && (port !== 3101 || backendPort !== 18082 || typeof token !== 'string' || !token)) {
+    throw Error('Explicit isolated customer demo configuration required')
+  }
+}
+
+export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, handle, fetchUpstream = fetch }) {
+  validateCustomerConfig(customerMode, port, backendPort, token)
   const authority = host + ':' + port
   const origin = 'http://' + authority
-  const canSendMessages = chatWrites && port === 3100 && backendPort === 18082
-  const canSearchQuotes = quoteWrites && port === 3100 && backendPort === 18082
+  const counselorMode = !customerMode && port === 3100 && backendPort === 18082
+  const canSendMessages = chatWrites && counselorMode
+  const canSearchQuotes = quoteWrites && counselorMode
+  const canSendOffers = offerWrites && counselorMode
 
   return http.createServer(async (req, res) => {
     if (req.socket.remoteAddress !== host || req.headers.host !== authority ||
@@ -40,10 +55,12 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
 
     const headers = { Authorization: 'Bearer ' + token }
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
-    if (req.method === 'POST') {
-      const message = canSendMessages && /^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)
-      const quoteSearch = canSearchQuotes && /^\/demo\/cases\/C-[0-9]{3,38}\/quote-searches$/.test(req.url)
-      if ((!message && !quoteSearch) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const message = req.method === 'POST' && canSendMessages && /^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)
+      const quoteSearch = req.method === 'POST' && canSearchQuotes && /^\/demo\/cases\/C-[0-9]{3,38}\/quote-searches$/.test(req.url)
+      const offer = req.method === 'POST' && canSendOffers && /^\/demo\/cases\/C-[0-9]{3,38}\/offers$/.test(req.url)
+      const selection = req.method === 'PUT' && customerMode && /^\/demo\/cases\/C-[0-9]{3,38}\/selection$/.test(req.url)
+      if ((!message && !quoteSearch && !offer && !selection) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -52,7 +69,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
         res.writeHead(415).end()
         return
       }
-      if (quoteSearch) {
+      if (quoteSearch || offer || selection) {
         const key = req.headers['idempotency-key']
         if (typeof key !== 'string' || !/^[A-Za-z0-9._:-]{1,100}$/.test(key)) {
           res.writeHead(400).end()
@@ -63,7 +80,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       headers['Content-Type'] = contentType
       options.body = req
       options.duplex = 'half'
-    } else if (!allowsCaseRead(req)) {
+    } else if (!(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
       res.writeHead(403).end()
       return
     }
@@ -81,13 +98,17 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const port = Number(process.env.PORT || 3000)
   const backendPort = Number(process.env.CSRO_DEMO_SPRING_PORT || 18080)
-  const token = process.env.CSRO_DEMO_TOKEN
+  const customerMode = process.env.CSRO_CUSTOMER_DEMO_PROXY === 'true'
+  const token = customerMode ? process.env.CSRO_CUSTOMER_DEMO_TOKEN : process.env.CSRO_DEMO_TOKEN
   if (process.env.CSRO_LOCAL_DEMO !== 'true' || !token) throw Error('Explicit local demo configuration required')
+  validateCustomerConfig(customerMode, port, backendPort, token)
   const app = next({ dev: false, hostname: host, port })
   await app.prepare()
   createDemoServer({
     port, backendPort, token, handle: app.getRequestHandler(),
     chatWrites: process.env.CSRO_CHAT_DEMO_PROXY === 'true',
     quoteWrites: process.env.CSRO_QUOTE_DEMO_PROXY === 'true',
+    offerWrites: process.env.CSRO_OFFER_DEMO_PROXY === 'true',
+    customerMode,
   }).listen(port, host)
 }

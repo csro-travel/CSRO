@@ -48,6 +48,7 @@ function quoteList(value: unknown, caseId: string): value is CaseQuoteList {
         !textList(group.warnings) || !Array.isArray(group.quotes)) return false;
     return group.quotes.every((quote: unknown) => {
       if (!record(quote) || !text(quote.quoteId) || ids.has(quote.quoteId) || !text(quote.propertyName) ||
+          !(quote.propertyId === undefined || text(quote.propertyId)) ||
           !text(quote.roomName) || !integer(quote.distanceMeters) || !integer(quote.totalAmount) ||
           quote.currency !== "KRW" || !(quote.priceDifference === null ||
             (typeof quote.priceDifference === "number" && Number.isSafeInteger(quote.priceDifference))) ||

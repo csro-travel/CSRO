@@ -15,6 +15,7 @@ export function CaseDetailTabs({
   bookingId,
   children,
   chat,
+  onOfferSent,
 }: {
   title: string;
   caseId: string;
@@ -22,6 +23,7 @@ export function CaseDetailTabs({
   bookingId: string;
   children: ReactNode;
   chat: ReactNode;
+  onOfferSent?: () => void;
 }) {
   return (
     <Tabs.Root defaultValue="case" className="min-w-0 space-y-4">
@@ -46,7 +48,7 @@ export function CaseDetailTabs({
           </Tabs.Panel>
           <Tabs.Panel value="alternatives">
             <p className="mb-3 text-sm text-muted-foreground">예약번호 <span className="font-medium text-foreground">{bookingId}</span></p>
-            <CaseQuotesPanel key={caseId} caseId={caseId} closed={closed} />
+            <CaseQuotesPanel key={caseId} caseId={caseId} closed={closed} onOfferSent={onOfferSent} />
           </Tabs.Panel>
         </div>
         {chat}

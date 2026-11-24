@@ -2,6 +2,7 @@ export type QuoteSearchStatus = "PENDING" | "RUNNING" | "WAITING" | "COMPLETED" 
 
 export type CaseQuote = {
   quoteId: string;
+  propertyId?: string;
   propertyName: string;
   roomName: string;
   distanceMeters: number;
