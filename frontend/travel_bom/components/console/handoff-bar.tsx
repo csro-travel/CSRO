@@ -1,34 +1,12 @@
-import { Check } from 'lucide-react'
-
-type HandoffBarProps = {
-  selectedName: string
-  sent: boolean
-  onSend: () => void
-}
-
-export function HandoffBar({ selectedName, sent, onSend }: HandoffBarProps) {
+export function HandoffBar({ selectedName }: { selectedName: string }) {
   return (
-    <div className="flex flex-col gap-4 rounded-xl bg-muted px-5 py-5 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p className="font-bold">상담사 전달 시연</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          가격과 재고는 시연용 값입니다. 이 화면에서 실제 메시지는 전송되지 않습니다.
-        </p>
-        <p className="mt-1 text-xs text-foreground" aria-live="polite">
-          {sent
-            ? `${selectedName} 후보 전달 시연 완료 · 실제 전송되지 않았습니다.`
-            : `선택된 후보: ${selectedName}`}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onSend}
-        disabled={sent}
-        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-70"
-      >
-        {sent && <Check className="size-4" aria-hidden="true" />}
-        {sent ? '전달 시연 완료' : '전달 동작 시연'}
-      </button>
+    <div className="space-y-2 rounded-xl bg-muted px-5 py-5">
+      <p className="font-bold">검토 중인 후보: {selectedName}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        고객 제안 발송과 상담사 전달은 아직 연결되지 않았습니다.
+        현재 선택은 이 화면에만 표시되며 서버에 저장되지 않습니다.
+        예약·결제·보상 승인은 실행되지 않았습니다.
+      </p>
     </div>
   )
 }

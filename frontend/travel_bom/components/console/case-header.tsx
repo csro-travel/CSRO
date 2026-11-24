@@ -4,18 +4,19 @@ import { formatWon, type BookingCase } from '@/lib/alternative-stays'
 type CaseHeaderProps = {
   bookingCase: BookingCase
   searching: boolean
+  disabled?: boolean
   onSearch: () => void
 }
 
-export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps) {
+export function CaseHeader({ bookingCase, searching, disabled, onSearch }: CaseHeaderProps) {
   return (
     <section
-      aria-label="시연용 사건 정보"
+      aria-label="예약 케이스 정보"
       className="flex flex-col gap-5 rounded-2xl border bg-card p-6 md:flex-row md:items-center md:justify-between"
     >
       <div className="min-w-0">
         <h2 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-lg font-bold">
-          <span>시연 사건 {bookingCase.caseId}</span>
+          <span>{bookingCase.caseId}</span>
           <span aria-hidden="true" className="h-4 w-0.5 bg-foreground" />
           <span>예약번호 {bookingCase.reservationNo}</span>
         </h2>
@@ -36,7 +37,7 @@ export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps
           </div>
           <div>
             <dt className="sr-only">요금</dt>
-            <dd>1박 {formatWon(bookingCase.nightlyPrice)}</dd>
+            <dd>1박 평균 {formatWon(bookingCase.nightlyPrice)}</dd>
           </div>
         </dl>
       </div>
@@ -44,7 +45,7 @@ export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps
       <button
         type="button"
         onClick={onSearch}
-        disabled={searching}
+        disabled={searching || disabled}
         className="inline-flex h-14 shrink-0 items-center justify-center gap-3 rounded-xl bg-primary px-12 text-base font-bold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-70"
       >
         {searching ? (
@@ -52,7 +53,7 @@ export function CaseHeader({ bookingCase, searching, onSearch }: CaseHeaderProps
         ) : (
           <Play className="size-5 fill-current" aria-hidden="true" />
         )}
-        {searching ? '탐색 시연 중…' : '대체 숙소 탐색 시연'}
+        {searching ? '탐색 중...' : '대체 숙소 자동 탐색'}
       </button>
     </section>
   )

@@ -11,8 +11,8 @@ const notoSansKr = Noto_Sans_KR({
 })
 
 export const metadata: Metadata = {
-  title: '대체 숙소 탐색 시연 | 여행봄',
-  description: '고정된 사례로 대체 숙소 후보 비교와 전달 동작을 시연합니다.',
+  title: '여행봄 | 상담 지원',
+  description: '예약 문제의 확인 근거와 상담 업무, 대체 숙소 후보를 검토합니다.',
   generator: 'v0.app',
   icons: {
     icon: [
