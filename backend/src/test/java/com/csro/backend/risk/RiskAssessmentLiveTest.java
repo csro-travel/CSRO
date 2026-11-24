@@ -12,7 +12,6 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.*;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 import static com.csro.backend.risk.RiskProjectionTest.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,7 +49,9 @@ class RiskAssessmentLiveTest {
         assertEquals(before, count());
         var rejected = new RiskAssessmentService(Optional.of(source), store,
                 System.getenv("ML_RISK_BASE_URL"), "deliberately-invalid", "unused");
-        assertThrows(HttpClientErrorException.Unauthorized.class, () -> rejected.assess(HOTEL, DAY));
+        var denied = assertThrows(RiskMlException.class, () -> rejected.assess(HOTEL, DAY));
+        assertEquals(RiskMlException.Kind.AUTHENTICATION, denied.kind());
+        assertEquals(401, denied.httpStatus());
         assertEquals(before, count());
 
         var result = service.assess(HOTEL, DAY);

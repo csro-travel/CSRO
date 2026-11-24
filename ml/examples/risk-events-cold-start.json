@@ -1,0 +1,24 @@
+{
+  "hotel": {
+    "hotel_id": "HOTEL-001",
+    "data_source": "SIMULATED"
+  },
+  "events": [
+    {
+      "event_id": "SYNTHETIC-YB001-CONFIRMED-D1",
+      "event_type": "BOOKING_STATUS",
+      "hotel_id": "HOTEL-001",
+      "booking_id": "YB-001",
+      "occurred_at": "2026-11-09T09:00:00+09:00",
+      "available_at": "2026-11-09T09:00:00+09:00",
+      "payload": {
+        "status": "CONFIRMED",
+        "channel": "PLATFORM",
+        "check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-13",
+        "rooms": 1,
+        "adults": 2
+      }
+    }
+  ]
+}

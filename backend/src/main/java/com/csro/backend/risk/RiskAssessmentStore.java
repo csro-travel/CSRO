@@ -21,6 +21,12 @@ class RiskAssessmentStore {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public long save(RiskObservations.Input input, OffsetDateTime cutoff, BigDecimal score, String model) {
+        return saveWithReuse(input, cutoff, score, model).id();
+    }
+
+    /** The same single write implementation serves manual and repeated batch assessments. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Saved saveWithReuse(RiskObservations.Input input, OffsetDateTime cutoff, BigDecimal score, String model) {
         long hotel = jdbc.sql("SELECT id FROM hotels WHERE hotel_code=:code FOR UPDATE")
                 .param("code", input.hotelId()).query(Long.class).single();
         String snapshot = json.writeValueAsString(input.features());
@@ -34,8 +40,8 @@ class RiskAssessmentStore {
                 """).param("hotel", hotel).param("target", input.targetCheckInDate()).param("cutoff", cutoff)
                 .param("model", model).param("version", input.featureSetVersion()).param("score", score)
                 .param("snapshot", snapshot).query(Long.class).optional();
-        if (existing.isPresent()) return existing.get();
-        return jdbc.sql("""
+        if (existing.isPresent()) return new Saved(existing.get(), true);
+        long id = jdbc.sql("""
                 INSERT INTO risk_assessments (hotel_id,target_check_in_date,as_of,risk_score,
                                               model_version,feature_set_version,feature_snapshot)
                 VALUES (:hotel,:target,:cutoff,:score,:model,:version,CAST(:snapshot AS jsonb))
@@ -43,5 +49,8 @@ class RiskAssessmentStore {
                 """).param("hotel", hotel).param("target", input.targetCheckInDate()).param("cutoff", cutoff)
                 .param("model", model).param("version", input.featureSetVersion()).param("score", score)
                 .param("snapshot", snapshot).query(Long.class).single();
+        return new Saved(id, false);
     }
+
+    public record Saved(long id, boolean reused) {}
 }

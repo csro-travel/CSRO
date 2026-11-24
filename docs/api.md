@@ -21,10 +21,16 @@
 
 [Notion API-023](https://app.notion.com/p/417e04d22bed8136935fc2504f94525f)의 URI·응답·인증·오류·책임 경계에 따라 Python 내부 추론 서버를 구현한다. 원문의 가상 v0.1 특성 대신 기존 ML 모델의 명시적인 `risk-features-0.2` 여섯 특성만 받는다. v0.1은 422로 거부하며 특성 산식의 팀 전체 승인이나 Spring 연동 완료를 뜻하지 않는다. [구현 계약](../ml/docs/api/API-023.md) · [실행·인계](../ml/docs/api/API-023_HANDOFF.md)
 
-Spring의 내부 진입점은 `RiskAssessmentService.assess(hotelCode, targetCheckInDate)`다. `RiskObservations`가 평가 시점까지의 완전한 호텔 관측 이력을 제공해야 하며, 현재 제공자는 테스트 Fixture에만 있다. 운영 이력이 없으면 HTTP 요청 전에 중단한다. 정상 응답은 대상·시각·버전·점수를 확인한 뒤 여섯 입력 특성과 함께 기존 `risk_assessments`에 저장한다.
+Spring의 내부 진입점은 `RiskAssessmentService.assess(hotelCode, targetCheckInDate)`다. `RiskObservations`가 평가 시점까지의 완전한 호텔 관측 이력을 제공해야 하며, 운영 관측 공급자는 후속이며, 명시적으로 켠 로컬 자동 배치에서는 합성 파일용 `RiskFileObservations`를 사용한다. 운영 이력이 없으면 HTTP 요청 전에 중단한다. 정상 응답은 대상·시각·버전·점수를 확인한 뒤 여섯 입력 특성과 함께 기존 `risk_assessments`에 저장한다.
 
 로컬 연동에서 Spring의 `ML_RISK_BASE_URL`은 ML 서버 주소를, `ML_RISK_SERVICE_TOKEN`은 Python의 `ML_SERVICE_TOKEN`과 같은 서버 간 인증 값을 사용한다. `ML_RISK_MODEL_VERSION` 기본값은 저장 모델 `process-synthetic-lightgbm-0.2-84d386281d22`다. `RiskAssessmentLiveTest`는 명시적으로 `CSRO_RISK_LIVE_TEST=true`를 설정하고 전용 PostgreSQL(`127.0.0.1:25439/csro_risk_fixture_test`, 사용자 `yb`, 비밀번호 `CSRO_RISK_TEST_DB_PASSWORD`)에 V1과 YB-001 시드를 준비한 경우 실행한다. 검증 범위는 평가 저장까지다.
 
-동일 모델·대상·평가 시각·입력·저장 점수의 재시도는 같은 평가 행을 재사용한다. 내부 시연 진입점 `RiskRecheckService.assessAndReconfirm(hotel, target, policy)`은 정책을 명시해야 한다. 기준 시점의 예약 ID 집합과 현재 시뮬레이션 예약을 대조하고 ML 호출 뒤 잠금 안에서 다시 검사한다. 선택된 예약의 RECHECK Job과 평가를 같은 트랜잭션에서 저장하고 커밋 후 기존 재확인 서비스를 호출한다. 검증된 근거·사건과 Job 성공 상태는 같은 트랜잭션에서 반영한다. 실행 중단 후에는 `RiskRecheckJobs.runDue(limit)`으로 해당 프로토콜의 작업만 수동 재개한다. 세 임계값은 비교용이며 운영 관측 공급자와 자동 스케줄러는 없다.
+동일 모델·대상·평가 시각·입력·저장 점수의 재시도는 같은 평가 행을 재사용한다. 내부 시연 진입점 `RiskRecheckService.assessAndReconfirm(hotel, target, policy)`은 정책을 명시해야 한다. 기준 시점의 예약 ID 집합과 현재 시뮬레이션 예약을 대조하고 ML 호출 뒤 잠금 안에서 다시 검사한다. 선택된 예약의 RECHECK Job과 평가를 같은 트랜잭션에서 저장하고 커밋 후 기존 재확인 서비스를 호출한다. 검증된 근거·사건과 Job 성공 상태는 같은 트랜잭션에서 반영한다. 실행 중단 후에는 `RiskRecheckJobs.runDue(limit)`으로 해당 프로토콜의 작업만 수동 또는 명시적 로컬 배치에서 재개한다. 세 임계값은 비교용이며 운영 관측 공급자와 상시 운영 스케줄러는 없다.
 
-CI는 위험 평가, 정책 기반 사건 조회, Job 재시도·복구를 독립 DB에서 검증한다. Job 복구 검사는 `RISK_JOBS_TEST=true`와 전용 DB `127.0.0.1:25435/yeohaengbom_risk_stage2_test`를 사용한다.
+CI는 위험 평가, 정책 기반 사건 조회, Job 재시도·복구와 배치 평가·대상 선별 및 실제 ML/Mock 재확인을 각각 독립 DB에서 검증하도록 구성한다. Job 복구 검사는 `RISK_JOBS_TEST=true`와 전용 DB `127.0.0.1:25435/yeohaengbom_risk_stage2_test`를 사용한다. 배치 검사는 `RISK_BATCH_TEST=true`와 `127.0.0.1:25436/yeohaengbom_risk_batch_test`, 재확인 통합 검사는 `RISK_LINK_TEST=true`와 `127.0.0.1:25434/yeohaengbom_risk_link_test`를 사용한다.
+
+## 공통 위험 평가와 로컬 자동화
+
+`RiskAssessmentService`의 관측 준비·추론과 `RiskAssessmentStore`의 저장을 공통 경로로 사용한다. API-023 HTTP는 엄격한 `RiskMlClient` 한 구현을 거친다. `RiskRecheckService`는 선별된 예약의 평가·RECHECK 등록을 같은 트랜잭션에서 처리하고 HTTP는 잠금 밖에서 실행한다. PR #14(`2f26f6b`)의 성공 근거·사건·Job 완료 원자성과 실행권 검증을 유지한다.
+
+자동 배치에는 명시적으로 켠 합성 파일용 `RiskFileObservations`를 사용한다. Spring이 계산한 여섯 값과 대상 예약을 기존 Python 계산과 대조하며 실제 운영 관측 공급자를 구현한 것은 아니다. 고객 API·ML/Mock HTTP 계약·Flyway·기준 모델은 변경하지 않는다. [실행과 한계](../backend/docs/api/ML-RISK-COMMON-PATH.md)

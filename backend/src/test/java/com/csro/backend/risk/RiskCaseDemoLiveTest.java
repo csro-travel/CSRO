@@ -15,7 +15,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 
@@ -76,7 +75,9 @@ class RiskCaseDemoLiveTest {
         assertBeforeRecheck(0);
         var unauthorized = new RiskAssessmentService(Optional.of(observations), store,
                 "http://127.0.0.1:18023", "invalid-demo-token", "unused");
-        assertThrows(HttpClientErrorException.Unauthorized.class, () -> runDemo(unauthorized, DAY, a -> fail()));
+        var denied = assertThrows(RiskMlException.class, () -> runDemo(unauthorized, DAY, a -> fail()));
+        assertEquals(RiskMlException.Kind.AUTHENTICATION, denied.kind());
+        assertEquals(401, denied.httpStatus());
         assertBeforeRecheck(0);
         runDemo(risk, DAY, a -> {
             assertBeforeRecheck(1);
