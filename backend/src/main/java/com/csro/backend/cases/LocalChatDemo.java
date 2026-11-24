@@ -25,8 +25,9 @@ public final class LocalChatDemo {
     private static final String DATABASE_URL = "jdbc:postgresql://127.0.0.1:25434/" + DATABASE;
     private static final String FLYWAY_LOCATIONS = "classpath:db/migration,classpath:db/local";
     private static final Principal COUNSELOR = () -> "demo-counselor-001";
-    private static final Pattern CASE_READ_PATH = Pattern.compile("/api/v1/cases(?:/[^/]+(?:/messages)?)?");
+    private static final Pattern CASE_READ_PATH = Pattern.compile("/api/v1/cases(?:/[^/]+(?:/(?:messages|quotes))?)?");
     private static final Pattern MESSAGES_PATH = Pattern.compile("/api/v1/cases/[^/]+/messages");
+    private static final Pattern QUOTE_SEARCH_PATH = Pattern.compile("/api/v1/cases/[^/]+/quote-searches");
 
     private LocalChatDemo() {}
 
@@ -88,7 +89,7 @@ public final class LocalChatDemo {
             String path = request.getServletPath();
             return switch (request.getMethod()) {
                 case "GET" -> !CASE_READ_PATH.matcher(path).matches();
-                case "POST" -> !MESSAGES_PATH.matcher(path).matches();
+                case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches();
                 default -> true;
             };
         }

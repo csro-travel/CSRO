@@ -5,10 +5,12 @@
 | API | 기능 | 경로 | 작업 범위·브랜치 | 현재 범위 | 구현 문서 |
 | --- | --- | --- | --- | --- | --- |
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
+| API-009 | 사건의 대체 견적 조회 | `GET /api/v1/cases/{caseId}/quotes` | `1124cy-core-flow` | 저장 견적·검색 상태·기간별 그룹·비교 결과 조회. 조회 자체는 검색하지 않음 | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
+| API-010 | 대체 견적 검색 접수 | `POST /api/v1/cases/{caseId}/quote-searches` | `1124cy-core-flow` | 202 접수, 동일 키 재사용, QUOTE_SEARCH·견적 저장·025 비교, 격리 시연 Worker | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객의 소유 사건·활성 상담사 큐 조회, 이전 페이지와 제안 카드 이력 | [API-011 구현 메모](#api-011-구현-메모) |
 | API-012 | 사건별 상담 채팅 메시지 전송 | `POST /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객·상담사의 일반 텍스트 저장 | [API-012 구현 메모](#api-012-구현-메모) |
-| API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | 입력 견적 ID의 규칙 기반 순서·근거만 반환. Spring 견적 저장·고객 제안은 미연결 | [구현 범위](../../../llm/agent/docs/API-025.md) |
-| API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색 필터. 예약·재고 차감·Spring 견적 저장은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
+| API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | Spring에 저장한 견적 ID의 규칙 기반 순서·근거 반환, 유효 결과 저장. 고객 제안은 후속 | [구현 범위](../../../llm/agent/docs/API-025.md) |
+| API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색별 스냅샷 ID, Spring 검증·저장 연결. 예약·재고 차감은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
 | API-023 Spring 호출·후속 처리 | 호텔 위험 평가 저장·재확인 선별 | Spring → `POST /internal/v1/risk-assessments` | A팀 · `1122cy-risk-link` | 합성 관측 이벤트의 오프라인 특징값 생성, 평가·선별 작업 원자 저장, 동일 요청 ID로 재확인 재개. 실시간 수집·자동 스케줄러·ML 추론 실패 영속 저장은 미구현 | [2단계 실행·경계](ML-RISK-RECHECK-STAGE2.md) · [1단계 기록](ML-RISK-RECHECK-STAGE1.md) |
 | 내부 자동 점검 배치 | 대상 호텔 자동 조회·평가·작업 재개 | 로컬 CLI → Spring 비웹 배치 → 기존 API-023/026/027 | A팀 · `1122cy-risk-link` | 고정 시연 날짜·합성 관측 공급자, 공통 집계와 Python 기준 대조, 반복 평가·작업 재사용, 명시적 간격 반복. 운영 스케줄러·새 HTTP API 없음 | [자동화 실행·경계](ML-RISK-AUTOMATION.md) |
 
@@ -82,7 +84,7 @@ Notion API-003·004의 상태 표기에는 구현이 남아 있지만, 현재 �
 
 API-011은 최신 이력 조회와 이전 방향 커서를 제공하며 새 대화 확인은 채팅의 조회 버튼으로 실행한다. API-012의 공통 Bearer 연동은 후속 작업이며 로컬 시연에서는 위 전용 프로필의 상담사 주체를 사용한다.
 
-- [API-009 대체 숙소 견적 목록](https://app.notion.com/p/7906adbd23b38309a1f80136789fce11)은 상세 계약과 Spring 경로가 미구현이다. 화면의 ‘견적 조회 기능 미연결’은 조회 결과 0건과 구분한다.
+- API-009/010은 사용자 승인 최소 계약으로 Spring 저장·사건 화면에 연결했다. [실행·검증 및 시연 시각](QUOTES-DEMO.md)을 확인한다. 검색 전·진행 중·실패·완료 0건은 서로 구분한다.
 - [API-013 고객 후보 제안](https://app.notion.com/p/1106adbd23b382e7a16c81f28e26980b)은 제안 전송 계약과 Spring 경로가 미구현이다. 별도 대체 숙소 탐색 시연은 사건별 제안 전송과 독립적이다.
 
 시연을 마치면 이 세션에서 `Stop-Process -Id $chatDemoSpring.Id`와 `docker stop csro-local-chat-demo-db`를 실행한다. 컨테이너의 메모리 볼륨에 저장한 시연 메시지는 컨테이너 종료 시 사라진다.
