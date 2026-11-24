@@ -67,7 +67,10 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
           ))}
         </ul>
       )}
-      {group.warnings.length > 0 && <ul className="space-y-1 text-sm text-muted-foreground">{group.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{warning}</li>)}</ul>}
+      {group.warnings.length > 0 && <div className="space-y-1 text-sm text-muted-foreground">
+        <p className="font-medium">견적 검색·비교 당시 안내</p>
+        <ul className="space-y-1">{group.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{warning}</li>)}</ul>
+      </div>}
     </section>
   );
 }

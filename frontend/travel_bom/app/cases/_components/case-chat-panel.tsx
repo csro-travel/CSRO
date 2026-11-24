@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { formatWon } from "@/lib/alternative-stays";
 import { CaseMessageSendError, getCaseMessages, sendCaseMessage } from "../_api/cases";
 import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, selectCaseOffer, type PendingIntent, type SelectionBody } from "../_api/offers";
+import { replacementPointer } from "../_api/replacements";
+import { CaseReplacementPanel, replacementStatusText, useCaseReplacement } from "./case-replacement-panel";
 import type { CaseChatMessage, CaseChatState, CaseMessageList } from "../_types/message";
 
 const senderLabels = {
@@ -126,7 +128,8 @@ function readChatState(response: CaseMessageList): CaseChatState | null {
       !(response.clockMode === "REAL_TIME" || response.clockMode === "SYNTHETIC_DEMO")) return null;
   const choice = response.currentSelection;
   if (choice !== null && (!choice || !isText(choice.selectionId) || !isText(choice.offerId) || !isText(choice.quoteId) || !isTime(choice.selectedAt) || choice.offerId !== response.activeOfferId)) return null;
-  return { activeOfferId: response.activeOfferId, currentSelection: choice, effectiveAt: response.effectiveAt, clockMode: response.clockMode };
+  if (!(response.latestReplacementBooking === undefined || response.latestReplacementBooking === null || replacementPointer(response.latestReplacementBooking))) return null;
+  return { activeOfferId: response.activeOfferId, currentSelection: choice, effectiveAt: response.effectiveAt, clockMode: response.clockMode, latestReplacementBooking: response.latestReplacementBooking };
 }
 
 type HistoryDirection = "latest" | "older";
@@ -193,7 +196,8 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
         return;
       }
       const { items, pagination } = response;
-      setChatState(readChatState(response));
+      const state = readChatState(response);
+      setChatState(state);
       const nextBeforeMessageId = pagination?.hasMoreBefore ? pagination.nextBeforeMessageId : null;
       if (transcript.current) pendingScroll.current = captureScrollPosition(transcript.current, direction);
       setHistory((current) => {
@@ -209,6 +213,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
           beforeMessageId: overlaps ? current.beforeMessageId : nextBeforeMessageId,
         };
       });
+      return state;
     } catch {
       if (!request.signal.aborted) setHistoryError(direction);
     } finally {
@@ -218,6 +223,10 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
       }
     }
   }, [caseId]);
+
+  const refreshChat = useCallback(async () => !!(await loadHistory(undefined, true)), [loadHistory]);
+  const replacement = useCaseReplacement({ caseId, customer, closed, selection: chatState?.currentSelection ?? null,
+    activeOfferId: chatState?.activeOfferId ?? null, pointer: chatState?.latestReplacementBooking, refreshChat });
 
   useEffect(() => {
     mounted.current = true;
@@ -245,6 +254,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
   const messages = useMemo(() => mergeMessages(sentMessages, history?.items ?? []), [history, sentMessages]);
   const dateGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
   const canSend = !customer && !closed && !sending && draft.trim().length > 0;
+  const hasReplacementMetadata = chatState?.latestReplacementBooking !== undefined;
 
   useLayoutEffect(() => {
     const view = transcript.current;
@@ -286,7 +296,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
   }
 
   async function choose(offerId?: string, quoteId?: string) {
-    if (!customer || selectingNow.current || !selectionStorageReady || (!pendingSelection && (!offerId || !quoteId || !chatState))) return;
+    if (!customer || selectingNow.current || !selectionStorageReady || (!pendingSelection && (!offerId || !quoteId || !chatState || replacement.selectionBlocked))) return;
     const intent: PendingIntent<SelectionBody> = pendingSelection ?? { version: 1, key: crypto.randomUUID(), body: { offerId: offerId!, quoteId: quoteId! } };
     try { persistIntent("selection", caseId, intent); }
     catch { setSelectionError("요청을 안전하게 보관하지 못해 선택하지 않았습니다. 브라우저 저장소를 확인해 주세요."); return; }
@@ -312,12 +322,13 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
   return (
     <section
       aria-label="채팅"
-      className="flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_17rem)] lg:min-h-[21rem]"
+      className={`flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:min-h-[21rem] ${hasReplacementMetadata ? "" : "lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_17rem)]"}`}
     >
       {chatState && <div className="space-y-1 border-b px-5 py-3 text-sm">
         <p className="text-xs text-muted-foreground">{chatState.clockMode === "SYNTHETIC_DEMO" ? "시연용 합성 데이터 · 가상 판단 시각" : "서버 판단 시각"}: <time dateTime={chatState.effectiveAt}>{formatTimestamp(chatState.effectiveAt, offerExpiryFormat)}</time></p>
-        <p role="status">{chatState.currentSelection ? `현재 선택: ${messages.flatMap(message => message.offer?.items ?? []).find(item => item.quoteId === chatState.currentSelection?.quoteId)?.propertyName ?? chatState.currentSelection.quoteId} · 선택 완료 · 예약 진행 전` : "현재 선택 없음 · 고객 선택은 예약 확정이 아닙니다."}</p>
+        <p role="status">{chatState.currentSelection ? `현재 선택: ${messages.flatMap(message => message.offer?.items ?? []).find(item => item.quoteId === chatState.currentSelection?.quoteId)?.propertyName ?? chatState.currentSelection.quoteId} · ${replacement.booking?.selectionId === chatState.currentSelection.selectionId ? replacementStatusText[replacement.booking.status] : replacement.target && !replacement.booking ? "예약 처리 상태 확인 필요" : "선택 완료 · 예약 진행 전"}` : "현재 선택 없음 · 고객 선택은 예약 확정이 아닙니다."}</p>
       </div>}
+      <CaseReplacementPanel state={replacement} customer={customer} />
       {customer && !chatState && history && <p className="border-b px-5 py-3 text-sm">현재 제안·선택과 서버 판단 시각을 확인해야 선택할 수 있습니다. 새 메시지 확인을 눌러 주세요.</p>}
       {customer && <div className="space-y-2 border-b px-5 py-3 text-sm">
         <p>고객 본인에게 전송된 현재 제안에서 숙소를 선택할 수 있습니다. 일반 메시지 전송은 이 시연에 포함되지 않습니다.</p>
@@ -351,7 +362,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
         role="region"
         aria-label="대화 내역"
         aria-busy={historyLoading !== null}
-        className="flex max-h-[28rem] min-h-40 flex-1 flex-col overflow-y-auto bg-muted/50 px-5 py-4 [overflow-anchor:none] lg:max-h-none lg:min-h-0 lg:overscroll-y-contain"
+        className={`flex max-h-[28rem] min-h-40 flex-1 flex-col overflow-y-auto bg-muted/50 px-5 py-4 [overflow-anchor:none] lg:overscroll-y-contain ${hasReplacementMetadata ? "lg:max-h-[28rem] lg:min-h-64" : "lg:max-h-none lg:min-h-0"}`}
       >
         {messages.length > 0 && (
           <div className="space-y-5">
@@ -367,7 +378,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
                 <ol className="space-y-3">
                   {dayMessages.map((message) => (
                     <MessageItem key={message.messageId} message={message} state={chatState} customer={customer} selecting={selecting}
-                      selectionBlocked={closed || !!pendingSelection || !selectionStorageReady} onSelect={(offerId, quoteId) => void choose(offerId, quoteId)} />
+                      selectionBlocked={closed || !!pendingSelection || !selectionStorageReady || replacement.selectionBlocked} onSelect={(offerId, quoteId) => void choose(offerId, quoteId)} />
                   ))}
                 </ol>
               </div>

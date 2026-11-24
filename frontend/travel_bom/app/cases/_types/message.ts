@@ -1,3 +1,5 @@
+import type { ReplacementPointer } from "./replacement";
+
 type CaseChatOfferItem = {
   quoteId: string;
   displayOrder: number;
@@ -34,6 +36,7 @@ export type CaseMessageList = {
   currentSelection?: CaseCurrentSelection | null;
   effectiveAt?: string;
   clockMode?: "REAL_TIME" | "SYNTHETIC_DEMO";
+  latestReplacementBooking?: ReplacementPointer | null;
   pagination: {
     hasMoreBefore: boolean;
     nextBeforeMessageId: string | null;
@@ -52,4 +55,5 @@ export type CaseChatState = {
   currentSelection: CaseCurrentSelection | null;
   effectiveAt: string;
   clockMode: "REAL_TIME" | "SYNTHETIC_DEMO";
+  latestReplacementBooking?: ReplacementPointer | null;
 };
