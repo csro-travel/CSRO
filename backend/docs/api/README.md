@@ -7,6 +7,8 @@
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
 | API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객의 소유 사건·활성 상담사 큐 조회, 이전 페이지와 제안 카드 이력 | [API-011 구현 메모](#api-011-구현-메모) |
 | API-012 | 사건별 상담 채팅 메시지 전송 | `POST /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객·상담사의 일반 텍스트 저장 | [API-012 구현 메모](#api-012-구현-메모) |
+| API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | 입력 견적 ID의 규칙 기반 순서·근거만 반환. Spring 견적 저장·고객 제안은 미연결 | [구현 범위](../../../llm/agent/docs/API-025.md) |
+| API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색 필터. 예약·재고 차감·Spring 견적 저장은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
 | API-023 Spring 호출·후속 처리 | 호텔 위험 평가 저장·재확인 선별 | Spring → `POST /internal/v1/risk-assessments` | A팀 · `1122cy-risk-link` | 합성 관측 이벤트의 오프라인 특징값 생성, 평가·선별 작업 원자 저장, 동일 요청 ID로 재확인 재개. 실시간 수집·자동 스케줄러·ML 추론 실패 영속 저장은 미구현 | [2단계 실행·경계](ML-RISK-RECHECK-STAGE2.md) · [1단계 기록](ML-RISK-RECHECK-STAGE1.md) |
 | 내부 자동 점검 배치 | 대상 호텔 자동 조회·평가·작업 재개 | 로컬 CLI → Spring 비웹 배치 → 기존 API-023/026/027 | A팀 · `1122cy-risk-link` | 고정 시연 날짜·합성 관측 공급자, 공통 집계와 Python 기준 대조, 반복 평가·작업 재사용, 명시적 간격 반복. 운영 스케줄러·새 HTTP API 없음 | [자동화 실행·경계](ML-RISK-AUTOMATION.md) |
 
