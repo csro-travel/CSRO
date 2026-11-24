@@ -14,6 +14,16 @@ API-011의 기존 메시지·페이지 계약에 `activeOfferId`, `currentSelect
 
 실제 예약·입실·종료는 이 API들이 실행하지 않는다. `local-chat-demo`에서만 별도 고객 토큰을 고정 고객 주체에 연결하고 3101→18082의 메시지 조회·선택 프록시를 명시적으로 켠다. 기존 전용 DB·loopback·독점 프로필 검증과 일반 인증 경계는 유지한다. [실행·검증과 남은 범위](../backend/docs/api/OFFERS-DEMO.md)
 
+## API-015/016 대체 예약과 API-029/030
+
+사용자 승인 [최소 계약](../backend/docs/api/API-015-016-PROPOSAL.md)에 따라 상담사만 `POST /api/v1/cases/{caseId}/replacement-bookings`로 `{"selectionId":"…"}`와 필수 Idempotency-Key를 접수한다. 현재 선택의 상품·기간·가격을 서버에서 동결하고 202 및 BRQ 접수번호를 반환한다. 같은 키·본문은 최초 접수 결과를 재생하며, 같은 선택에 다른 키를 쓰면 기존 BRQ와 409를 반환한다. API-011의 `latestReplacementBooking` 포인터로 새로고침 뒤에도 같은 요청을 찾는다.
+
+`GET /api/v1/replacement-bookings/{replacementBookingId}`는 상담사 또는 원예약 소유 고객에게 업무 DB의 저장 상태만 반환한다. 공급사 호출·예약 실행·재시도 예산 초기화를 하지 않는다. 결과 불명과 조회 장애를 확정 실패로 해석하지 않는다.
+
+선택적으로 켠 격리 Spring Worker가 잠금 밖에서 API-029/030을 호출한다. 응답 유실 뒤에는 동일 BRQ로 결과를 확인하고, 인증된 030 미존재일 때만 동결한 같은 본문·같은 BRQ의 제한된 POST 재시도를 허용한다. 한도 소진은 RESULT_UNKNOWN/manualRequired로 보존한다. 다른 키·변경 가격으로 대체 예약을 만들지 않는다. 확정 결과·SYSTEM 안내·필수 입실/원예약 후속 TODO와 감사 기록을 원자 저장하며 기존 업무를 자동 완료하지 않는다.
+
+Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결과를 원자 저장한다. 기존 DB 없는 026/027/028 모드는 유지하며 업무 DB·Spring V1·jobs.kind·ML 모델을 변경하지 않는다. 상태 저장 모드로 전환한 뒤 새 검색→제안→선택을 해야 하며 Spring의 과거 견적을 Mock에 복사하지 않는다. 기존 상담사·고객 시연 토큰에 정확한 015/016 경로만 추가하고 운영 인증은 그대로 후속이다. [실행·복구·검증 범위](../backend/docs/api/REPLACEMENT-DEMO.md)
+
 ## 유지할 계약
 
 - 각 API의 URI·메서드·요청·응답·오류 조건은 현행 Notion 상세 명세에서 확인한다. 성공은 리소스 JSON을 직접 반환한다. 오류는 `application/problem+json`과 안정적인 `code`, 추적용 `traceId`를 유지한다.
