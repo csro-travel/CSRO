@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   BarChart3,
   CalendarCheck,
@@ -16,24 +19,26 @@ type NavItem = {
   label: string
   icon: LucideIcon
   href: string
-  active?: boolean
-  children?: { label: string; href: string; active?: boolean }[]
+  children?: { label: string; href: string }[]
 }
+
+const casesLink = { label: 'CS 상담 관리', href: '/cases' }
+const alternativeSearchLink = { label: '대체 숙소 탐색', href: '/' }
+const mobileLinks = [casesLink, alternativeSearchLink]
 
 const navItems: NavItem[] = [
   { label: '홈', icon: House, href: '#' },
   { label: '예약 관리', icon: CalendarCheck, href: '#' },
-  { label: 'CS 상담 관리', icon: Headset, href: '/cases' },
+  { ...casesLink, icon: Headset },
   {
     label: '사전 위험 관리',
     icon: ShieldAlert,
     href: '#',
-    active: true,
     children: [
       { label: '자동 확인 작업', href: '#' },
       { label: '재배인 결과', href: '#' },
       { label: '호출 회신 분석', href: '#' },
-      { label: '대체 숙소 탐색', href: '#', active: true },
+      alternativeSearchLink,
     ],
   },
   { label: '공급사 커뮤니케이션', icon: MessagesSquare, href: '#' },
@@ -41,7 +46,7 @@ const navItems: NavItem[] = [
   { label: '기준정보 관리', icon: Settings, href: '#' },
 ]
 
-export function Brand() {
+function Brand() {
   return (
     <div>
       <p className="flex items-center gap-1.5 text-2xl font-bold text-primary">
@@ -53,7 +58,31 @@ export function Brand() {
   )
 }
 
+export function ConsoleHeader() {
+  const pathname = usePathname()
+
+  return (
+    <header className="border-b bg-background px-5 py-4 lg:hidden">
+      <Brand />
+      <nav aria-label="주 메뉴" className="mt-3 flex flex-wrap gap-1.5">
+        {mobileLinks.map(link => (
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-current={link.href === pathname ? 'page' : undefined}
+            className="rounded-lg px-3 py-2 text-sm hover:bg-muted aria-[current=page]:bg-accent aria-[current=page]:font-bold aria-[current=page]:text-accent-foreground"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+    </header>
+  )
+}
+
 export function Sidebar() {
+  const pathname = usePathname()
+
   return (
     <aside className="hidden w-60 shrink-0 border-r bg-background lg:block">
       <div className="sticky top-0 flex h-dvh flex-col px-4 py-6">
@@ -67,10 +96,10 @@ export function Sidebar() {
               <li key={item.label}>
                 <Link
                   href={item.href}
-                  aria-current={item.active && !item.children ? 'page' : undefined}
+                  aria-current={item.href === pathname ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-colors',
-                    item.active
+                    item.href === pathname || item.children?.some(child => child.href === pathname)
                       ? 'bg-accent font-bold text-accent-foreground'
                       : 'text-foreground hover:bg-muted',
                   )}
@@ -85,10 +114,10 @@ export function Sidebar() {
                       <li key={child.label}>
                         <Link
                           href={child.href}
-                          aria-current={child.active ? 'page' : undefined}
+                          aria-current={child.href === pathname ? 'page' : undefined}
                           className={cn(
                             'block rounded-lg px-4 py-2 text-sm transition-colors',
-                            child.active
+                            child.href === pathname
                               ? 'bg-accent font-bold text-accent-foreground'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                           )}

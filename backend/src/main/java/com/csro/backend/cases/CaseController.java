@@ -9,6 +9,8 @@ import java.util.Arrays;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -16,10 +18,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(value="/api/v1/cases", produces=MediaType.APPLICATION_JSON_VALUE)
 public class CaseController {
     private final CaseQueries queries;
+    private final CaseMessageCommands messageCommands;
     private final Environment environment;
 
-    CaseController(CaseQueries queries, Environment environment) {
+    CaseController(CaseQueries queries, CaseMessageCommands messageCommands, Environment environment) {
         this.queries = queries;
+        this.messageCommands = messageCommands;
         this.environment = environment;
     }
 
@@ -50,6 +54,22 @@ public class CaseController {
         return ok(queries.detail(principal(request), caseId));
     }
 
+    /** API-011 사건별 상담 채팅 메시지 목록 조회. */
+    @GetMapping("/{caseId}/messages")
+    public ResponseEntity<String> messages(HttpServletRequest request, @PathVariable String caseId,
+            @RequestParam(required = false) String limit,
+            @RequestParam(required = false) String beforeMessageId) {
+        return ok(queries.messages(principal(request), caseId, limit, beforeMessageId));
+    }
+
+    /** API-012 사건별 상담 채팅 메시지 전송. */
+    @PostMapping("/{caseId}/messages")
+    public ResponseEntity<String> sendMessage(HttpServletRequest request, @PathVariable String caseId,
+            @RequestBody SendMessageRequest payload) {
+        String message = messageCommands.send(request.getUserPrincipal(), caseId, payload.body());
+        return ResponseEntity.status(HttpStatus.CREATED).header("Cache-Control", "private, no-store").body(message);
+    }
+
     private ResponseEntity<String> ok(String json) {
         return ResponseEntity.ok().header("Cache-Control","private, no-store").body(json);
     }
@@ -61,9 +81,21 @@ public class CaseController {
         if (error instanceof ResponseStatusException ex) {
             status = ex.getStatusCode().value();
             code = ex.getReason();
+        } else if (error instanceof HttpMessageNotReadableException) {
+            status = 400;
+            code = "INVALID_MESSAGE_BODY";
+        } else if (error instanceof HttpMediaTypeNotSupportedException) {
+            status = 415;
+            code = "UNSUPPORTED_MEDIA_TYPE";
         }
         var body = ProblemDetail.forStatus(status);
-        body.setDetail(body.getTitle());
+        body.setDetail(switch (code) {
+            case "INVALID_MESSAGE_CURSOR" -> "이 사건에서 사용할 수 없는 이전 메시지 기준입니다.";
+            case "INVALID_MESSAGE_BODY" -> "비어 있지 않은 문자열 body 한 개를 입력해 주세요.";
+            case "CASE_CLOSED" -> "종료된 사건에는 메시지를 보낼 수 없습니다.";
+            case "UNSUPPORTED_MEDIA_TYPE" -> "JSON 형식으로 메시지를 보내 주세요.";
+            case null, default -> body.getTitle();
+        });
         body.setProperty("code",code);
         body.setProperty("traceId",UUID.randomUUID().toString());
         var response = ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON)
