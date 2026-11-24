@@ -99,6 +99,8 @@ export default function Cases() {
         <CaseDetailTabs
           key={detail.caseId}
           title={[detail.caseId, detail.booking.hotel.name].join(" · ")}
+          caseId={detail.caseId}
+          closed={detail.status === "CLOSED"}
           bookingId={detail.booking.bookingId}
           chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} />}
         >

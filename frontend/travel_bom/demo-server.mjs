@@ -19,13 +19,15 @@ function allowsCaseRead(req) {
   const allowedPage = listPage !== null && Number(listPage[1]) <= 2147483647
   return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
     req.headers['sec-fetch-site'] === 'same-origin' &&
-    (allowedPage || /^\/demo\/cases(?:\/C-[0-9]{3,})?$/.test(req.url) || allowsMessageList(req.url))
+    (allowedPage || /^\/demo\/cases(?:\/C-[0-9]{3,})?$/.test(req.url) ||
+      /^\/demo\/cases\/C-[0-9]{3,38}\/quotes$/.test(req.url) || allowsMessageList(req.url))
 }
 
-export function createDemoServer({ port, backendPort, token, chatWrites = false, handle, fetchUpstream = fetch }) {
+export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, handle, fetchUpstream = fetch }) {
   const authority = host + ':' + port
   const origin = 'http://' + authority
   const canSendMessages = chatWrites && port === 3100 && backendPort === 18082
+  const canSearchQuotes = quoteWrites && port === 3100 && backendPort === 18082
 
   return http.createServer(async (req, res) => {
     if (req.socket.remoteAddress !== host || req.headers.host !== authority ||
@@ -39,8 +41,9 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
     const headers = { Authorization: 'Bearer ' + token }
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
     if (req.method === 'POST') {
-      if (!canSendMessages || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin' ||
-          !/^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)) {
+      const message = canSendMessages && /^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)
+      const quoteSearch = canSearchQuotes && /^\/demo\/cases\/C-[0-9]{3,38}\/quote-searches$/.test(req.url)
+      if ((!message && !quoteSearch) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -48,6 +51,14 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       if (contentType?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
         res.writeHead(415).end()
         return
+      }
+      if (quoteSearch) {
+        const key = req.headers['idempotency-key']
+        if (typeof key !== 'string' || !/^[A-Za-z0-9._:-]{1,100}$/.test(key)) {
+          res.writeHead(400).end()
+          return
+        }
+        headers['Idempotency-Key'] = key
       }
       headers['Content-Type'] = contentType
       options.body = req
@@ -77,5 +88,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   createDemoServer({
     port, backendPort, token, handle: app.getRequestHandler(),
     chatWrites: process.env.CSRO_CHAT_DEMO_PROXY === 'true',
+    quoteWrites: process.env.CSRO_QUOTE_DEMO_PROXY === 'true',
   }).listen(port, host)
 }
