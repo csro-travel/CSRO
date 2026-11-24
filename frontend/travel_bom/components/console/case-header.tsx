@@ -2,7 +2,7 @@ import { Loader2, Play } from 'lucide-react'
 import { formatWon, type fetchBookingCase } from '@/lib/alternative-stays'
 
 type CaseHeaderProps = {
-  fetchBookingCase: Awaited<ReturnType<typeof fetchBookingCaseFn>>
+  fetchBookingCase: Awaited<ReturnType<typeof fetchBookingCase>>
   searching: boolean
   onSearch: () => void
 }
