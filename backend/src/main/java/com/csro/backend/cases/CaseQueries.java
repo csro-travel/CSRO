@@ -183,6 +183,10 @@ public class CaseQueries {
             )
             SELECT jsonb_build_object(
                 'caseId', CAST(:caseId AS text),
+                'latestReplacementBooking', (SELECT jsonb_build_object('replacementBookingId', r.request_code,
+                    'selectionId', s.selection_code) FROM replacement_requests r
+                    JOIN alternative_selections s ON s.id = r.selection_id AND s.case_id = r.case_id
+                    WHERE r.case_id = :caseKey ORDER BY r.id DESC LIMIT 1),
                 'activeOfferId', (SELECT o.offer_code FROM offers o
                     WHERE o.case_id = :caseKey AND o.status = 'ACTIVE'),
                 'currentSelection', (SELECT jsonb_build_object('selectionId', s.selection_code,

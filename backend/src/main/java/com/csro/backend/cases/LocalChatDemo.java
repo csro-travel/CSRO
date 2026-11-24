@@ -31,6 +31,8 @@ public final class LocalChatDemo {
     private static final Pattern QUOTE_SEARCH_PATH = Pattern.compile("/api/v1/cases/[^/]+/quote-searches");
     private static final Pattern OFFERS_PATH = Pattern.compile("/api/v1/cases/[^/]+/offers");
     private static final Pattern SELECTION_PATH = Pattern.compile("/api/v1/cases/[^/]+/selection");
+    private static final Pattern REPLACEMENT_REQUEST_PATH = Pattern.compile("/api/v1/cases/[^/]+/replacement-bookings");
+    private static final Pattern REPLACEMENT_READ_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+");
 
     private LocalChatDemo() {}
 
@@ -79,7 +81,7 @@ public final class LocalChatDemo {
 
     private static FilterRegistrationBean<OncePerRequestFilter> filterRegistration(String token, String customerToken) {
         var registration = new FilterRegistrationBean<OncePerRequestFilter>(new DemoFilter(token, customerToken));
-        registration.addUrlPatterns("/api/v1/cases/*");
+        registration.addUrlPatterns("/api/v1/cases/*", "/api/v1/replacement-bookings/*");
         return registration;
     }
 
@@ -96,9 +98,9 @@ public final class LocalChatDemo {
         protected boolean shouldNotFilter(HttpServletRequest request) {
             String path = request.getServletPath();
             return switch (request.getMethod()) {
-                case "GET" -> !CASE_READ_PATH.matcher(path).matches();
+                case "GET" -> !CASE_READ_PATH.matcher(path).matches() && !REPLACEMENT_READ_PATH.matcher(path).matches();
                 case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
-                        && !OFFERS_PATH.matcher(path).matches();
+                        && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches();
                 case "PUT" -> !SELECTION_PATH.matcher(path).matches();
                 default -> true;
             };
@@ -111,7 +113,8 @@ public final class LocalChatDemo {
             Principal principal = null;
             if (ADDRESS.equals(request.getLocalAddr()) && ADDRESS.equals(request.getRemoteAddr()) && header != null) {
                 byte[] supplied = header.getBytes(StandardCharsets.UTF_8);
-                boolean customerPath = ("GET".equals(request.getMethod()) && MESSAGES_PATH.matcher(request.getServletPath()).matches())
+                boolean customerPath = ("GET".equals(request.getMethod()) && (MESSAGES_PATH.matcher(request.getServletPath()).matches()
+                        || REPLACEMENT_READ_PATH.matcher(request.getServletPath()).matches()))
                         || ("PUT".equals(request.getMethod()) && SELECTION_PATH.matcher(request.getServletPath()).matches());
                 if (MessageDigest.isEqual(authorization, supplied)) principal = COUNSELOR;
                 else if (customerPath && customerAuthorization != null && MessageDigest.isEqual(customerAuthorization, supplied))
