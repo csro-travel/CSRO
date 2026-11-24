@@ -1,0 +1,15 @@
+{
+  "searchRequestId": "SEARCH-001",
+  "originPropertyId": "HOTEL-001",
+  "stay": {
+    "checkInDate": "2026-11-10",
+    "checkOutDate": "2026-11-13",
+    "adults": 2,
+    "rooms": 1
+  },
+  "filters": {
+    "radiusMeters": 3000,
+    "currency": "KRW",
+    "maxAverageNightlyAmount": 300000
+  }
+}

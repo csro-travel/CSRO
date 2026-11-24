@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API-028 Search Response 0.1",
+  "type": "object",
+  "properties": {
+    "searchRequestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "searchStatus": {
+      "type": "string",
+      "enum": [
+        "COMPLETED"
+      ]
+    },
+    "stay": {
+      "type": "object",
+      "properties": {
+        "checkInDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "checkOutDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "adults": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rooms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "checkInDate",
+        "checkOutDate",
+        "adults",
+        "rooms"
+      ],
+      "additionalProperties": false
+    },
+    "checkedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "KRW"
+      ]
+    },
+    "quotes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "SIMULATED_SUPPLIER"
+            ]
+          },
+          "propertyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "propertyName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "distanceMeters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "roomTypeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "roomName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ratePlanId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxAdults": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "breakfastIncluded": {
+            "type": "boolean"
+          },
+          "availableRoomCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "price": {
+            "type": "object",
+            "properties": {
+              "baseAmount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "mandatoryFeesAmount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalAmount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "KRW"
+                ]
+              }
+            },
+            "required": [
+              "baseAmount",
+              "mandatoryFeesAmount",
+              "totalAmount",
+              "currency"
+            ],
+            "additionalProperties": false
+          },
+          "cancellationPolicy": {
+            "type": "string",
+            "enum": [
+              "NON_REFUNDABLE",
+              "FREE_CANCELLATION",
+              "PARTIAL_REFUND"
+            ]
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "imageAssetKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amenityCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "WIFI",
+                "PARKING",
+                "POOL",
+                "BREAKFAST",
+                "SHUTTLE"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "quoteId",
+          "source",
+          "propertyId",
+          "propertyName",
+          "distanceMeters",
+          "roomTypeId",
+          "roomName",
+          "ratePlanId",
+          "maxAdults",
+          "breakfastIncluded",
+          "availableRoomCount",
+          "price",
+          "cancellationPolicy",
+          "checkedAt",
+          "expiresAt"
+        ],
+        "additionalProperties": true
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "searchRequestId",
+    "searchStatus",
+    "stay",
+    "checkedAt",
+    "currency",
+    "quotes"
+  ],
+  "additionalProperties": true
+}

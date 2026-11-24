@@ -1,6 +1,9 @@
 """Check an already-running Mock server. No database or Spring connection."""
 import argparse
+from copy import deepcopy
+import json
 import os
+from pathlib import Path
 import sys
 
 import httpx
@@ -30,6 +33,21 @@ def main():
                 else:
                     assert hotel.json()['status'] == hotel_status and hotel.headers['content-type'] == 'application/problem+json'
                 print(f'YB-{number:03d}: API-026={supplier.status_code}, API-027={hotel.status_code} PASS')
+            search_body = json.loads((Path(__file__).resolve().parents[1] /
+                                      'examples/availability-search.json').read_text(encoding='utf-8'))
+            search = client.post('/mock-supplier/v1/availability-searches', json=search_body)
+            assert search.status_code == 200, f'API-028 HTTP {search.status_code}'
+            result = search.json()
+            assert result['stay'] == search_body['stay']
+            assert [q['price']['totalAmount'] for q in result['quotes']] == [480000, 510000, 465000]
+            assert all(q['source'] == 'SIMULATED_SUPPLIER' for q in result['quotes'])
+            narrow_body = deepcopy(search_body)
+            narrow_body['filters']['radiusMeters'] = 700
+            empty = client.post('/mock-supplier/v1/availability-searches', json=narrow_body)
+            assert empty.status_code == 200 and empty.json()['quotes'] == []
+            repeated = client.post('/mock-supplier/v1/availability-searches', json=search_body)
+            assert repeated.status_code == 200 and repeated.json() == result
+            print('API-028: fixed three-night quotes, empty result, repeated search PASS')
         print('Running server checks: passed')
         return 0
     except (httpx.HTTPError, AssertionError, KeyError, ValueError) as exc:

@@ -1,4 +1,4 @@
-"""API-026/027 local development mock; JSON responses, zero database access."""
+"""API-026/027/028 local development mock; zero database access."""
 from __future__ import annotations
 
 import hmac
@@ -16,6 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .fixtures import STAY_DATES, hotel_response, lookup, supplier_response
 from .models import HotelPending, HotelReply, Problem, ReconfirmationRequest, SupplierBooking
+from .availability import AvailabilityResponse, AvailabilitySearch, InvalidSearch, search_quotes
 
 DEVELOPMENT_TOKEN = "csro-local-mock-token"  # Public local fixture credential, not a production secret.
 bearer = HTTPBearer(auto_error=False, scheme_name="InternalServiceBearer")
@@ -26,11 +27,11 @@ class ContractError(Exception):
         self.status, self.code, self.detail = status, code, detail
 
 
-def create_app(service_token: str | None = None) -> FastAPI:
+def create_app(service_token: str | None = None, *, availability_enabled: bool = True) -> FastAPI:
     token = service_token if service_token is not None else os.environ.get("MOCK_SERVICE_TOKEN", DEVELOPMENT_TOKEN)
     if not token or not token.strip():
         raise ValueError("MOCK_SERVICE_TOKEN must not be empty")
-    app = FastAPI(title="여행봄 Mock — API-026 / API-027", version="0.1.0",
+    app = FastAPI(title="여행봄 Mock — API-026 / API-027 / API-028", version="0.1.0",
                   description="고정 가상 시각의 개발용 JSON fixture. 공급사 계약과 호텔의 숙박일별 주장을 분리합니다.")
 
     def problem(request: Request, status: int, code: str, detail: str) -> JSONResponse:
@@ -56,6 +57,8 @@ def create_app(service_token: str | None = None) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
+        if request.url.path == "/mock-supplier/v1/availability-searches":
+            return problem(request, 400, "INVALID_SEARCH_REQUEST", "검색 JSON의 필수 필드·타입·날짜·필터를 확인하세요.")
         return problem(request, 400, "INVALID_REQUEST", "요청 JSON의 필수 필드·타입·날짜 배열을 확인하세요.")
 
     @app.exception_handler(StarletteHTTPException)
@@ -110,6 +113,17 @@ def create_app(service_token: str | None = None) -> FastAPI:
         if fixture["mode"] == "PENDING":
             return JSONResponse(status_code=202, content=HotelPending.model_validate(result).model_dump())
         return result
+
+    @app.post("/mock-supplier/v1/availability-searches", response_model=AvailabilityResponse,
+              responses={code: error_docs[code] for code in (400, 401, 422, 503, 500)},
+              dependencies=[Depends(authorize)], tags=["API-028"], operation_id="searchAvailability")
+    def availability_search(body: AvailabilitySearch):
+        if not availability_enabled:
+            raise ContractError(503, "SUPPLIER_UNAVAILABLE", "모의 공급사 검색 기능을 사용할 수 없습니다.")
+        try:
+            return search_quotes(body)
+        except InvalidSearch as error:
+            raise ContractError(422, error.code, error.detail) from error
 
     def contract_openapi():
         if app.openapi_schema is None:
