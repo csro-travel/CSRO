@@ -1,35 +1,19 @@
-'use client'
-
-import { useState } from 'react'
-import { CaseHeader } from '../../../../components/console/case-header'
-import { Brand, Sidebar } from '@/components/console/sidebar'
 import { AlternativeSearchPanel } from '@/components/console/alternative-search-panel'
 
-const AI_SEARCH_API_URL =
-  process.env.NEXT_PUBLIC_AI_SEARCH_API_URL ?? 'http://localhost:8000'
-
-export default function Page() {
+export default async function Page({ params }: {
+  params: Promise<{ caseId: string; bookingId: string }>
+}) {
+  const { caseId, bookingId } = await params
   return (
-    <div className="flex min-h-dvh bg-background">
-      <Sidebar />
-
-      <div className="min-w-0 flex-1 bg-muted/40">
-        <header className="border-b bg-background px-5 py-4 lg:hidden">
-          <Brand />
-        </header>
-
-        <main className="mx-auto max-w-6xl px-5 py-8 md:px-9 md:py-10">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">대체 숙소 자동 탐색</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            체실 제공이 불가하거나 확인된 첫날에 해당 공급사 API로 대체 숙소 후보를 자동
-            탐색합니다.
-          </p>
-
-          <div className="mt-7">
-            <AlternativeSearchPanel />
-          </div>
-        </main>
+    <main className="mx-auto max-w-6xl px-5 py-8 md:px-9 md:py-10">
+      <h1 className="text-2xl font-bold tracking-tight md:text-3xl">대체 숙소 후보 탐색</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        연결된 사건과 예약을 확인한 뒤 원예약 전체 기간의 후보를 검색합니다.
+        검색 결과는 검토용이며 고객 제안 발송이나 예약을 실행하지 않습니다.
+      </p>
+      <div className="mt-7">
+        <AlternativeSearchPanel key={`${caseId}/${bookingId}`} caseId={caseId} bookingId={bookingId} />
       </div>
-    </div>
+    </main>
   )
 }

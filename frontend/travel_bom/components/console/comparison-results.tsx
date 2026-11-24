@@ -92,7 +92,7 @@ export function ComparisonResults({
                   </td>
                   <td className="px-4 py-4">
                     <p className="text-xl font-bold text-primary">{formatWon(stay.totalPrice)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">1박 총액</p>
+                    <p className="mt-1 text-xs text-muted-foreground">검색 기간 전체 총액</p>
                   </td>
                   <td className="px-4 py-4">
                     <span className="inline-flex rounded-md bg-info/10 px-3 py-1 text-xs font-medium text-info">

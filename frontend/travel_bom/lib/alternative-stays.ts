@@ -38,24 +38,18 @@ type BookingDetailApiResponse = {
 }
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8081'
-const DEMO_SUBJECT =
-  process.env.NEXT_PUBLIC_DEMO_SUBJECT ?? 'demo-customer-001'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'
 
 function formatPeriod(checkIn: string, checkOut: string): string {
   return `${checkIn.replaceAll('-', '.')} ~ ${checkOut.replaceAll('-', '.')}`
 }
 
 export async function fetchBookingCase(
-  bookingId = 'YB-001',
+  bookingId: string,
+  signal?: AbortSignal,
 ): Promise<BookingCase> {
   const headers: HeadersInit = {
     Accept: 'application/json',
-  }
-
-  // 로컬 테스트용 헤더 주입 (실제 인증 연결 시 제거)
-  if (DEMO_SUBJECT) {
-    headers['X-Demo-Subject'] = DEMO_SUBJECT
   }
 
   const response = await fetch(
@@ -64,6 +58,7 @@ export async function fetchBookingCase(
       method: 'GET',
       headers,
       cache: 'no-store',
+      signal,
     },
   )
 
@@ -72,10 +67,17 @@ export async function fetchBookingCase(
   }
 
   const data: BookingDetailApiResponse = await response.json()
-  const nights = Math.max(data.stay.nights || 1, 1)
+  if (data.bookingId !== bookingId || !data.support.activeCaseId) {
+    throw new Error('이 예약에 연결된 상담 사건을 확인할 수 없습니다.')
+  }
+  const nights = data.stay.nights
+  if (!Number.isInteger(nights) || nights < 1 || data.originalPrice.currency !== 'KRW' ||
+      !Number.isSafeInteger(data.originalPrice.amount) || data.originalPrice.amount < 0) {
+    throw new Error('예약의 숙박 기간과 원화 금액을 확인할 수 없습니다.')
+  }
 
   return {
-    caseId: data.support.activeCaseId ?? `BOOKING-${data.bookingId}`,
+    caseId: data.support.activeCaseId,
     reservationNo: data.bookingId,
     hotel: data.hotel.name,
     period: formatPeriod(data.stay.checkInDate, data.stay.checkOutDate),
@@ -91,8 +93,8 @@ export async function fetchBookingCase(
 
 
 export const formatWon = (value?: number | null) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '0원'
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    return '금액 미확인'
   }
   return `${value.toLocaleString('ko-KR')}원`
 }
@@ -103,7 +105,7 @@ export type AlternativeStay = {
   image: string
   stay: string
   distanceKm: number
-  totalPrice: number
+  totalPrice: number | null
   availability: string
   checkedAt: string
 }
