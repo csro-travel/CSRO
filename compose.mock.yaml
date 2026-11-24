@@ -1,0 +1,21 @@
+name: csro-mock
+services:
+  mock-postgres:
+    image: postgres:18.7
+    environment:
+      POSTGRES_DB: yeohaengbom_mock
+      POSTGRES_USER: yb_mock
+      POSTGRES_PASSWORD: ${MOCK_DB_PASSWORD:?Set MOCK_DB_PASSWORD in the process or a private .env.mock file}
+    ports:
+      - "127.0.0.1:25442:5432"
+    volumes:
+      - mock_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yb_mock -d yeohaengbom_mock"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  mock_postgres_data:
