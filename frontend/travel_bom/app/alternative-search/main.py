@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .location_agent import HotelLocationError
+from .policy import SearchPolicyError
 from .schemas import AlternativeSearchResponse
 from .scoring_service import AlternativeSearchService
 
@@ -63,10 +64,11 @@ async def trigger_auto_search(
             check_in_date=payload.check_in_date,
             check_out_date=payload.check_out_date,
         )
-    except HotelLocationError as exc:
+    except (SearchPolicyError, HotelLocationError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("대체 숙소 자동 탐색 실패")
+        # Provider exceptions can contain request URLs and credentials.
+        logger.error("대체 숙소 자동 탐색 실패: %s", type(exc).__name__)
         raise HTTPException(
             status_code=502,
             detail="대체 숙소 탐색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",

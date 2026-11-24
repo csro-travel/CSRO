@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from .airbnb_agent import AirbnbAlternativeSearchAgent
 from .location_agent import GoogleMapsLocationAgent
@@ -16,7 +16,9 @@ class AlternativeSearchService:
             min_desired_candidates: int = 3,
             max_recommendations: int = 5,
     ) -> None:
-        self.location_agent = location_agent or GoogleMapsLocationAgent()
+        # Configuration is checked only when search is requested, after its
+        # booking period has been validated. Importing /health performs no I/O.
+        self.location_agent = location_agent
         self.airbnb_agent = airbnb_agent or AirbnbAlternativeSearchAgent()
         self.min_desired_candidates = max(1, min_desired_candidates)
         self.max_recommendations = max(1, min(max_recommendations, 5))
@@ -41,10 +43,11 @@ class AlternativeSearchService:
             adults=adults,
             raw_check_in=check_in_date,
             raw_check_out=check_out_date,
-            today=today or date.today(),
+            today=today or datetime.now(timezone(timedelta(hours=9))).date(),
         )
 
-        origin: HotelOrigin = await self.location_agent.resolve_hotel_origin(
+        location_agent = self.location_agent or GoogleMapsLocationAgent()
+        origin: HotelOrigin = await location_agent.resolve_hotel_origin(
             hotel_name=hotel_name,
             region_hint=region_hint,
         )

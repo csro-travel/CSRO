@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import asyncio
 import json
 import math
 import re
@@ -22,6 +23,10 @@ from .schemas import (
     SearchPolicy,
     VerificationStatus,
 )
+
+
+class SupplierResponseError(RuntimeError):
+    """A stable supplier failure; raw MCP content must not enter errors or logs."""
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -60,24 +65,42 @@ def _extract_json(result: Any) -> dict[str, Any]:
 
 
 def _parse_total_price_krw(item: dict[str, Any]) -> int | None:
-    price = item.get("structuredDisplayPrice") or {}
-    primary = ((price.get("primaryLine") or {}).get("accessibilityLabel")) or ""
-    details = ((price.get("explanationData") or {}).get("priceDetails")) or ""
+    """Read a reported whole-stay KRW total, never infer it from a nightly rate.
 
-    for text in (details, primary):
-        match = re.search(
-            r"(?:total|총액)[^0-9₩]*₩?\s*([0-9,]+)",
-            text,
-            re.IGNORECASE,
-        )
-        if match:
-            return int(match.group(1).replace(",", ""))
-
-        match = re.search(r"₩\s*([0-9,]+)", text)
-        if match:
-            return int(match.group(1).replace(",", ""))
-
-    return None
+    Missing currency, mixed amounts and excluded fees are unconfirmed. A number
+    scraped from the page is not enough evidence to call it a stay's KRW total.
+    """
+    price = item.get("structuredDisplayPrice")
+    if not isinstance(price, dict):
+        return None
+    primary = price.get("primaryLine")
+    explanation = price.get("explanationData")
+    texts = (
+        explanation.get("priceDetails") if isinstance(explanation, dict) else None,
+        primary.get("accessibilityLabel") if isinstance(primary, dict) else None,
+    )
+    amount = r"(?:[1-9][0-9]{0,2}(?:,[0-9]{3})+|0|[1-9][0-9]*)"
+    money = re.compile(
+        rf"(?<![0-9.,])(?:₩|\bKRW\s*)\s*({amount})(?![0-9.]|,[0-9])"
+        rf"|(?<![0-9.,])({amount})(?![0-9.]|,[0-9])\s*원",
+        re.IGNORECASE,
+    )
+    total_label = re.compile(r"\btotal\b|총액|총\s*금액|총\s*요금|합계|전체\s*(?:숙박\s*)?(?:금액|요금)", re.IGNORECASE)
+    not_total = re.compile(
+        r"per\s*night|/\s*night|nightly|박\s*당|1\s*박|"
+        r"excluding|before\s+(?:tax|fee)|plus\s+(?:tax|fee)|세금\s*별도|수수료\s*별도|"
+        r"(?:세금|수수료)[^.;\n]*불포함|[$€£¥]|\b(?:USD|EUR|GBP|JPY|CNY)\b",
+        re.IGNORECASE,
+    )
+    totals: set[int] = set()
+    for text in texts:
+        if not isinstance(text, str) or not total_label.search(text) or not_total.search(text):
+            continue
+        values = {int((match.group(1) or match.group(2)).replace(",", "")) for match in money.finditer(text)}
+        if len(values) != 1:
+            return None
+        totals.update(values)
+    return next(iter(totals)) if len(totals) == 1 else None
 
 
 def _extract_name(item: dict[str, Any]) -> str:
@@ -133,7 +156,7 @@ def _analyze_details(
             has_policy = True
 
     cancellation_summary = (
-        "취소 정책 섹션 확인됨" if has_policy else "취소 규정 미확인"
+        "정책 섹션 수신 · 취소 규정 미확인" if has_policy else "취소 규정 미확인"
     )
     # 그룹 수는 필수 편의시설 충족을 의미하지 않으므로 점수 근거로 사용하지 않는다.
     amenity_ratio = 0.0
@@ -141,6 +164,11 @@ def _analyze_details(
 
 def _extract_json_from_mcp_result(result: Any) -> dict[str, Any]:
     """MCP 응답의 text 콘텐츠에서 JSON 객체를 추출한다."""
+    if getattr(result, "isError", False):
+        raise SupplierResponseError("SUPPLIER_TOOL_ERROR")
+    structured = getattr(result, "structuredContent", None)
+    if isinstance(structured, dict) and structured:
+        return structured
     for item in getattr(result, "content", []) or []:
         text = getattr(item, "text", None)
         if not text:
@@ -162,7 +190,7 @@ def _extract_json_from_mcp_result(result: Any) -> dict[str, Any]:
                 except json.JSONDecodeError:
                     continue
 
-    return {}
+    raise SupplierResponseError("SUPPLIER_RESPONSE_INVALID")
 
 
 
@@ -172,7 +200,11 @@ class AirbnbMcpClient:
             *,
             command: str = "npx",
             args: list[str] | None = None,
+            timeout_seconds: float = 60.0,
     ) -> None:
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            raise ValueError("A positive supplier timeout is required")
+        self.timeout_seconds = timeout_seconds
         self.server_params = StdioServerParameters(
             command=command,
             args=args
@@ -182,10 +214,26 @@ class AirbnbMcpClient:
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[ClientSession]:
-        async with stdio_client(self.server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
+        try:
+            async with asyncio.timeout(self.timeout_seconds):
+                async with stdio_client(self.server_params) as (read, write):
+                    async with ClientSession(
+                        read, write, read_timeout_seconds=timedelta(seconds=self.timeout_seconds),
+                    ) as session:
+                        await session.initialize()
+                        yield session
+        except TimeoutError:
+            raise SupplierResponseError("SUPPLIER_TIMEOUT") from None
+
+    async def _call_tool(self, session: ClientSession, name: str, arguments: dict[str, Any]) -> Any:
+        try:
+            return await asyncio.wait_for(
+                session.call_tool(name, arguments=arguments), timeout=self.timeout_seconds,
+            )
+        except TimeoutError:
+            raise SupplierResponseError("SUPPLIER_TIMEOUT") from None
+        except Exception:
+            raise SupplierResponseError("SUPPLIER_CALL_FAILED") from None
 
 
     async def search_listings(
@@ -211,29 +259,12 @@ class AirbnbMcpClient:
         if cursor:
             arguments["cursor"] = cursor
 
-        result = await session.call_tool(
-            "airbnb_search",
-            arguments=arguments,
-        )
-
-        # 임시 진단 로그
-        print("MCP isError:", getattr(result, "isError", None))
-        for index, item in enumerate(getattr(result, "content", []) or []):
-            print(
-                f"MCP content[{index}]:",
-                getattr(item, "text", None),
-            )
-
+        result = await self._call_tool(session, "airbnb_search", arguments)
         parsed = _extract_json_from_mcp_result(result)
-        print("Parsed response keys:", list(parsed.keys()))
-
         results = parsed.get("searchResults")
-        print(
-            "searchResults count:",
-            len(results) if isinstance(results, list) else "not a list",
-        )
-
-        return results if isinstance(results, list) else []
+        if not isinstance(results, list) or any(not isinstance(item, dict) for item in results):
+            raise SupplierResponseError("SUPPLIER_SEARCH_RESPONSE_INVALID")
+        return results
     
     async def get_listing_details(
         self,
@@ -250,18 +281,11 @@ class AirbnbMcpClient:
             "ignoreRobotsText": True,
         }
 
-        result = await session.call_tool(
-            "airbnb_listing_details",
-            arguments=arguments,
-        )
-
-        if getattr(result, "isError", False):
-            raise RuntimeError(
-                f"airbnb_listing_details 호출 실패: "
-                f"{getattr(result, 'content', None)}"
-            )
-
-        return _extract_json_from_mcp_result(result)
+        result = await self._call_tool(session, "airbnb_listing_details", arguments)
+        parsed = _extract_json_from_mcp_result(result)
+        if not isinstance(parsed.get("details"), list):
+            raise SupplierResponseError("SUPPLIER_DETAIL_RESPONSE_INVALID")
+        return parsed
 
 
 
@@ -324,22 +348,16 @@ class AirbnbAlternativeSearchAgent:
                 checks = CandidateChecks(
                     full_stay_available=VerificationStatus.UNCONFIRMED,
                     guest_capacity_ok=VerificationStatus.UNCONFIRMED,
-                    address_and_listing_verified=(
-                        VerificationStatus.CONFIRMED
-                        if listing_url
-                        else VerificationStatus.UNCONFIRMED
-                    ),
+                    # A URL alone verifies neither the address nor the listing identity.
+                    address_and_listing_verified=VerificationStatus.UNCONFIRMED,
                     room_and_checkin_verified=VerificationStatus.UNCONFIRMED,
                     accessibility_and_amenities_ok=(
                         VerificationStatus.UNCONFIRMED
                         if has_amenities
                         else VerificationStatus.UNCONFIRMED
                     ),
-                    cancellation_policy_verified=(
-                        VerificationStatus.CONFIRMED
-                        if has_policy
-                        else VerificationStatus.UNCONFIRMED
-                    ),
+                    # A generic policies section may contain only house/check-in rules.
+                    cancellation_policy_verified=VerificationStatus.UNCONFIRMED,
                 )
 
                 unconfirmed = collect_unconfirmed_items(checks)

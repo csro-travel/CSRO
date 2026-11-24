@@ -34,27 +34,18 @@ def _verify_candidate_match(
         candidate_address: str,
         region_hint: str | None,
 ) -> tuple[bool, str]:
-    normalized_hotel = re.sub(r"\s+", "", hotel_name.casefold())
-    normalized_name = re.sub(r"\s+", "", candidate_name.casefold())
+    normalized_hotel = re.sub(r"[^\w가-힣]", "", hotel_name.casefold())
+    normalized_name = re.sub(r"[^\w가-힣]", "", candidate_name.casefold())
     normalized_address = candidate_address.casefold()
 
-    exact_match = (
-            normalized_hotel in normalized_name or normalized_name in normalized_hotel
-    )
-    tokens = _tokenize(hotel_name)
-    matched_tokens = [
-        token
-        for token in tokens
-        if token in normalized_name or token in normalized_address
-    ]
-    token_match = bool(tokens) and len(matched_tokens) >= max(1, len(tokens) // 2)
-
-    if not (exact_match or token_match):
+    # A matching region or address token does not identify the same property.
+    # Ambiguous names stay unverified rather than silently changing the origin.
+    if not normalized_hotel or normalized_hotel != normalized_name:
         return False, f"숙소명 불일치: {candidate_name}"
 
     if region_hint:
         hint_tokens = _tokenize(region_hint)
-        if hint_tokens and not any(
+        if hint_tokens and not all(
                 token in normalized_address or token in normalized_name
                 for token in hint_tokens
         ):

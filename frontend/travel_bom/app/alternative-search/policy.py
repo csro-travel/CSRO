@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from .schemas import (
     AlternativeCandidate,
@@ -7,6 +7,10 @@ from .schemas import (
     SearchPolicy,
     VerificationStatus,
 )
+
+
+class SearchPolicyError(ValueError):
+    """The requested booking period cannot be used without changing its meaning."""
 
 
 def resolve_search_policy(
@@ -19,43 +23,28 @@ def resolve_search_policy(
         today: date,
 ) -> SearchPolicy:
     if nightly_price < 0 or nights < 1 or adults < 1:
-        raise ValueError("가격, 숙박일수 또는 투숙 인원 값이 올바르지 않습니다.")
-
-    used_fallback = False
-    search_note = None
-
-    dates_are_valid = (
-            raw_check_in is not None
-            and raw_check_out is not None
-            and raw_check_in >= today
-            and raw_check_out > raw_check_in
-    )
-
-    if dates_are_valid:
-        check_in = raw_check_in
-        check_out = raw_check_out
-        safe_nights = (check_out - check_in).days
-    else:
-        safe_nights = nights
-        check_in = today + timedelta(days=14)
-        check_out = check_in + timedelta(days=safe_nights)
-        used_fallback = True
-        search_note = (
-            f"요청 일정을 사용할 수 없어 미래 일정 "
-            f"({check_in} ~ {check_out}, {safe_nights}박)으로 검색했습니다."
-        )
+        raise SearchPolicyError("가격, 숙박일수 또는 투숙 인원 값이 올바르지 않습니다.")
+    if raw_check_in is None or raw_check_out is None:
+        raise SearchPolicyError("원예약의 체크인 날짜와 체크아웃 날짜가 필요합니다.")
+    if raw_check_out <= raw_check_in:
+        raise SearchPolicyError("체크아웃 날짜는 체크인 날짜 이후여야 합니다.")
+    if raw_check_in < today:
+        raise SearchPolicyError("이미 시작한 원예약 기간은 이 검색으로 조회할 수 없습니다. 날짜를 임의로 변경하지 않았습니다.")
+    safe_nights = (raw_check_out - raw_check_in).days
+    if safe_nights != nights:
+        raise SearchPolicyError("숙박일수가 원예약의 체크인·체크아웃 기간과 일치하지 않습니다.")
 
     original_total = nightly_price * safe_nights
 
     return SearchPolicy(
-        check_in_date=check_in,
-        check_out_date=check_out,
+        check_in_date=raw_check_in,
+        check_out_date=raw_check_out,
         nights=safe_nights,
         adults=adults,
         original_total_amount=original_total,
         preferred_max_amount=round(original_total * 1.2),
-        used_future_fallback_dates=used_fallback,
-        search_note=search_note,
+        used_future_fallback_dates=False,
+        search_note=None,
     )
 
 
