@@ -161,10 +161,11 @@ export function AlternativeSearchPanel({ caseId, bookingId }: { caseId?: string;
         </section>
       )}
       {searchError && <p className="text-sm text-red-600" role="alert">{searchError}</p>}
-      <SearchStatus searching={searching} candidateCount={stays.length} updatedAt={updatedAt}
+      <SearchStatus state={searching ? 'loading' : searchError ? 'error' : searchResult ? 'success' : 'idle'}
+        candidateCount={stays.length} updatedAt={updatedAt}
         expanded={expanded} onToggle={() => setExpanded(value => !value)} />
       {searchResult && stays.length === 0 && <p role="status">검색 조건에 맞는 후보가 없습니다.</p>}
-      {expanded && <ComparisonResults stays={stays} summary={summary} selectedId={selectedId}
+      {expanded && searchResult && <ComparisonResults stays={stays} summary={summary} selectedId={selectedId}
         onSelect={setSelectedId} footer={selected ? <HandoffBar selectedName={selected.name} /> : null} />}
     </div>
   )

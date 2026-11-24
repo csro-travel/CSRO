@@ -57,6 +57,15 @@ def assert_search_payload(payload):
     }, "Search must use the routed reservation, full period, and no invented region hint"
 
 
+async def assert_search_status(page, label):
+    region = page.get_by_role("region", name="검색 상태", exact=True)
+    await expect(region.get_by_text(label, exact=True)).to_be_visible()
+    await expect(page.get_by_text("3개 공급사", exact=False)).to_have_count(0)
+    if not label.startswith("탐색 완료"):
+        await expect(page.get_by_text("탐색 완료", exact=False)).to_have_count(0)
+        await expect(region.get_by_text(re.compile("공급사.*조회 완료"))).to_have_count(0)
+
+
 async def check_search_screen(browser):
     context = await browser.new_context(viewport={"width": 1440, "height": 1000})
     page = await context.new_page()
@@ -105,21 +114,25 @@ async def check_search_screen(browser):
         await asyncio.wait_for(booking_seen.wait(), timeout=20)
         button = page.get_by_role("button", name=SEARCH_BUTTON)
         await expect(button).to_be_disabled()
+        await assert_search_status(page, "검색 대기")
         assert len(booking_requests) == 1
         assert urlsplit(booking_requests[0].url).path == "/api/v1/bookings/YB-002"
         assert "x-demo-subject" not in booking_requests[0].headers
         release_booking.set()
         await expect(button).to_be_enabled()
         await expect(page.get_by_text("예약번호 YB-002", exact=True)).to_be_visible()
+        await assert_search_status(page, "검색 대기")
 
         await button.click()
         await asyncio.wait_for(search_seen.wait(), timeout=20)
         await expect(button).to_be_disabled()
+        await assert_search_status(page, "후보 검색 중")
         release_search.set()
         table = page.get_by_role("table")
         await expect(table.get_by_text("가상 후보 A", exact=True)).to_be_visible()
         await expect(table.get_by_text("금액 미확인", exact=True)).to_have_count(1)
         await expect(table.get_by_text("0원", exact=True)).to_have_count(0)
+        await assert_search_status(page, "탐색 완료 · 후보 1곳")
         comparison = page.get_by_role("heading", name="대체 숙소 비교 결과", exact=True).locator("..")
         summary = comparison.locator("dl")
         await expect(summary.get_by_text("2099-12-10 ~ 2099-12-13 · 3박", exact=True)).to_be_visible()
@@ -131,15 +144,18 @@ async def check_search_screen(browser):
         await asyncio.wait_for(failure_seen.wait(), timeout=20)
         await expect(button).to_be_disabled()
         await expect(table.get_by_text("가상 후보 A", exact=True)).to_have_count(0)
+        await assert_search_status(page, "후보 검색 중")
         release_failure.set()
         await expect(page.get_by_role("alert").filter(has_text="[합성 검사] 공급사 응답을 확인할 수 없습니다.")).to_be_visible()
         await expect(button).to_be_enabled()
+        await assert_search_status(page, "검색 실패")
 
         for _ in range(2):
             await button.click()
             await expect(page.get_by_role("alert").filter(has_text="검색 결과의 예약·기간·금액을 확인할 수 없습니다.")).to_be_visible()
             await expect(button).to_be_enabled()
             await expect(table.get_by_text("가상 후보 A", exact=True)).to_have_count(0)
+            await assert_search_status(page, "검색 실패")
         assert len(searches) == 4
     except Exception:
         await page.screenshot(path=str(Path(tempfile.gettempdir()) / "csro-alternative-search-safety-failure.png"),
@@ -173,6 +189,7 @@ async def check_mismatched_case(browser):
         await page.goto(BASE + ROUTE, wait_until="domcontentloaded")
         await expect(page.get_by_role("alert").filter(has_text="사건과 예약의 연결이 일치하지 않습니다.")).to_be_visible()
         await expect(page.get_by_role("button", name=SEARCH_BUTTON)).to_be_disabled()
+        await expect(page.get_by_text(re.compile("탐색 완료|3개 공급사"))).to_have_count(0)
         assert searches == [], "A mismatched case must not reach the search API"
     finally:
         await context.close()
@@ -198,7 +215,7 @@ async def main():
             await browser.close()
     print(json.dumps({"status": "passed", "syntheticApiFixtures": True,
                       "bookingId": "YB-002", "caseId": "C-002", "searchRequests": 4,
-                      "checks": ["route identity", "loading guards", "no subject spoof header", "full stay",
+                      "checks": ["route identity", "loading guards", "truthful search status", "no subject spoof header", "full stay",
                                  "unknown price", "actual search summary", "no fake handoff",
                                  "visible failure and stale-result removal", "mismatched response rejection",
                                  "mismatched case blocked"]}, ensure_ascii=False))
