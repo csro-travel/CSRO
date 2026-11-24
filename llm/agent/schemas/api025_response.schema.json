@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API-025 Alternative Ranking Response 0.1",
+  "type": "object",
+  "properties": {
+    "caseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rankingVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rankedQuoteIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reasonCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "NEAREST",
+                "LOWEST_PRICE",
+                "ALTERNATIVE"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "quoteId",
+          "reasonCodes",
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "caseId",
+    "rankingVersion",
+    "rankedQuoteIds",
+    "reasons",
+    "warnings"
+  ],
+  "additionalProperties": false
+}
