@@ -83,10 +83,10 @@ class AvailabilityTests(unittest.TestCase):
     def test_radius_and_average_price_limits_use_whole_stay_total(self):
         body = deepcopy(REQUEST)
         body["filters"]["radiusMeters"] = 800
-        self.assertEqual([q["quoteId"] for q in self.search(body).json()["quotes"]], ["QUOTE-A"])
+        self.assertEqual([q["propertyId"] for q in self.search(body).json()["quotes"]], ["HOTEL-A"])
         body["filters"]["radiusMeters"] = 3000
         body["filters"]["maxAverageNightlyAmount"] = 155000
-        self.assertEqual([q["quoteId"] for q in self.search(body).json()["quotes"]], ["QUOTE-C"])
+        self.assertEqual([q["propertyId"] for q in self.search(body).json()["quotes"]], ["HOTEL-C"])
         body["filters"]["maxAverageNightlyAmount"] = 154999
         response = self.search(body)
         self.assertEqual(response.status_code, 200)
@@ -113,9 +113,10 @@ class AvailabilityTests(unittest.TestCase):
         self.assertEqual(first["stay"], body["stay"])
         self.assertEqual([q["price"]["totalAmount"] for q in first["quotes"]], [160000, 170000, 155000])
         self.assertFalse({q["quoteId"] for q in first["quotes"]} & {"QUOTE-A", "QUOTE-B", "QUOTE-C"})
+        self.assertEqual(self.search(body).json(), first)
         body["searchRequestId"] = "ANOTHER-TRACE-ID"
-        self.assertEqual([q["quoteId"] for q in first["quotes"]],
-                         [q["quoteId"] for q in self.search(body).json()["quotes"]])
+        self.assertFalse({q["quoteId"] for q in first["quotes"]} &
+                         {q["quoteId"] for q in self.search(body).json()["quotes"]})
         body["stay"].update(checkInDate="2026-11-11", checkOutDate="2026-11-12")
         self.assertFalse({q["quoteId"] for q in first["quotes"]} &
                          {q["quoteId"] for q in self.search(body).json()["quotes"]})
@@ -146,6 +147,34 @@ class AvailabilityTests(unittest.TestCase):
         self.assertEqual(self.search().json(), original)
         supplier = self.client.get("/mock-supplier/v1/bookings/SUP-BOOK-001", headers=AUTH).json()
         self.assertEqual(supplier["contractStatus"], "CONFIRMED")
+
+    def test_search_and_snapshot_changes_do_not_reuse_globally_unique_quote_ids(self):
+        original = self.search().json()
+        reference_ids = {q["quoteId"] for q in original["quotes"]}
+        for mutate in (
+                lambda body: body.update(searchRequestId="SEARCH-OTHER-CASE"),
+                lambda body: body["stay"].update(adults=1),
+                lambda body: body["stay"].update(checkOutDate="2026-11-11"),
+                lambda body: body["filters"].update(radiusMeters=2999)):
+            body = deepcopy(REQUEST)
+            mutate(body)
+            response = self.search(body).json()
+            self.assertFalse(reference_ids & {q["quoteId"] for q in response["quotes"]})
+            self.assertEqual(self.search(body).json(), response)
+            self.assertTrue(all(len(q["quoteId"]) <= 80 for q in response["quotes"]))
+
+        for changed in (
+                replace(PRODUCTS[0], daily_base=150001),
+                replace(PRODUCTS[0], room_type="OTHER-DOUBLE"),
+                replace(PRODUCTS[0], rate_plan="OTHER-PLAN"),
+                replace(PRODUCTS[0], night_stock=(2, 2, 2))):
+            result = search_quotes(AvailabilitySearch.model_validate(REQUEST), (changed,))
+            self.assertNotIn(result.quotes[0].quoteId, reference_ids)
+            self.assertEqual(search_quotes(AvailabilitySearch.model_validate(REQUEST), (changed,)), result)
+        with patch("app.availability.CHECKED_AT", "2026-11-09T10:16:00+09:00"):
+            changed_time = self.search().json()
+            self.assertFalse(reference_ids & {q["quoteId"] for q in changed_time["quotes"]})
+        self.assertEqual(self.search().json(), original)
 
     def test_invalid_date_order_and_nonpositive_occupancy_are_semantic_422(self):
         for checkin, checkout in (("2026-11-10", "2026-11-10"), ("2026-11-13", "2026-11-10")):

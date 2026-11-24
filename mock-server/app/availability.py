@@ -6,15 +6,18 @@ uses the same per-room daily base/fee and all nights must have stock.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date, datetime, timedelta
 import hashlib
+import json
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_validator, model_validator
 
-CHECKED_AT = "2026-11-09T10:15:00+09:00"
-EXPIRES_AT = "2026-11-09T10:25:00+09:00"
+_REFERENCE_CHECKED_AT = "2026-11-09T10:15:00+09:00"
+_REFERENCE_EXPIRES_AT = "2026-11-09T10:25:00+09:00"
+CHECKED_AT = _REFERENCE_CHECKED_AT
+EXPIRES_AT = _REFERENCE_EXPIRES_AT
 FIRST_NIGHT = date(2026, 11, 10)
 CHECK_OUT = date(2026, 11, 13)
 
@@ -145,6 +148,35 @@ PRODUCTS = (
     Product("B", 1400, "TWIN", "스탠다드 트윈", "STANDARD", False, 155000, 15000, (2, 2, 2)),
     Product("C", 2600, "DOUBLE", "스탠다드 더블", "STANDARD", False, 145000, 10000, (1, 1, 1)),
 )
+_REFERENCE_PRODUCTS = PRODUCTS
+
+
+def _snapshot_quote_id(body: AvailabilitySearch, product: Product, base: int, fees: int, available: int) -> str:
+    """A read-only snapshot identity, not a reservation request/idempotency store.
+
+    Keep the exact Notion SEARCH-001 fixture; all other searches/conditions or
+    changed product snapshots get distinct stable IDs for the global business
+    quote-code constraint. No previous snapshot is overwritten or mutated.
+    """
+    reference = (body.searchRequestId == "SEARCH-001" and body.originPropertyId == "HOTEL-001"
+                 and body.stay.checkInDate == FIRST_NIGHT and body.stay.checkOutDate == CHECK_OUT
+                 and body.stay.adults == 2 and body.stay.rooms == 1
+                 and body.filters.radiusMeters == 3000 and body.filters.currency == "KRW"
+                 and body.filters.maxAverageNightlyAmount == 300000
+                 and product in _REFERENCE_PRODUCTS
+                 and CHECKED_AT == _REFERENCE_CHECKED_AT and EXPIRES_AT == _REFERENCE_EXPIRES_AT)
+    if reference:
+        return f"QUOTE-{product.letter}"
+    identity = {
+        "search": body.model_dump(mode="json", exclude_none=True),
+        "product": asdict(product),
+        "price": {"baseAmount": base, "mandatoryFeesAmount": fees, "totalAmount": base + fees, "currency": "KRW"},
+        "availableRoomCount": available,
+        "checkedAt": CHECKED_AT,
+        "expiresAt": EXPIRES_AT,
+    }
+    digest = hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return f"QUOTE-{product.letter}-{digest}"
 
 
 class InvalidSearch(Exception):
@@ -176,12 +208,8 @@ def search_quotes(body: AvailabilitySearch, products: tuple[Product, ...] = PROD
             limit = body.filters.maxAverageNightlyAmount
             if limit is not None and base + fees > limit * nights:
                 continue
-            canonical = (stay.checkInDate == FIRST_NIGHT and stay.checkOutDate == CHECK_OUT
-                         and stay.adults == 2 and stay.rooms == 1)
-            identity = f"{stay.checkInDate}|{stay.checkOutDate}|{stay.adults}|{stay.rooms}"
-            suffix = "" if canonical else "-" + hashlib.sha256(identity.encode()).hexdigest()[:16]
             quotes.append(AvailabilityQuote(
-                quoteId=f"QUOTE-{product.letter}{suffix}", source="SIMULATED_SUPPLIER",
+                quoteId=_snapshot_quote_id(body, product, base, fees, available), source="SIMULATED_SUPPLIER",
                 propertyId=f"HOTEL-{product.letter}", propertyName=f"{product.letter}호텔",
                 distanceMeters=product.distance, roomTypeId=f"ROOM-{product.letter}-{product.room_type}",
                 roomName=product.room_name, ratePlanId=f"RATE-{product.letter}-{product.rate_plan}",
