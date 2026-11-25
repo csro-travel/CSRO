@@ -354,6 +354,44 @@ jobs:
           bash ./gradlew --no-daemon --console=plain test
           --tests 'com.csro.backend.incidents.*IntegrationTest'
 
+  hotel-analysis:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      analysis-db:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: yb_hotel_analysis_test
+          POSTGRES_DB: yeohaengbom_hotel_analysis_test
+          POSTGRES_PASSWORD: ci-isolated-hotel-analysis-db-only
+        ports:
+          - 127.0.0.1:25447:5432
+        options: >-
+          --health-cmd "pg_isready -U yb_hotel_analysis_test -d yeohaengbom_hotel_analysis_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: backend/**/*.gradle*
+      - name: 호텔 원문 분석·수동 확인 격리 DB 검사
+        working-directory: backend
+        env:
+          HOTEL_ANALYSIS_TEST: 'true'
+          HOTEL_ANALYSIS_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25447/yeohaengbom_hotel_analysis_test
+          HOTEL_ANALYSIS_TEST_DB_USER: yb_hotel_analysis_test
+          HOTEL_ANALYSIS_TEST_DB_PASSWORD: ci-isolated-hotel-analysis-db-only
+        run: >-
+          bash ./gradlew --no-daemon --console=plain test
+          --tests 'com.csro.backend.hotelanalysis.*IntegrationTest'
+
   replacements:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.mock == 'true'
@@ -513,7 +551,7 @@ jobs:
 
   ci-gate:
     if: always()
-    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes, offers, replacements, incidents]
+    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes, offers, replacements, incidents, hotel-analysis]
     runs-on: ubuntu-latest
     steps:
       - name: 필수 테스트 결과 확인
@@ -526,10 +564,10 @@ jobs:
           if jobs['changes']['result'] != 'success':
               sys.exit('변경 영역 판단 실패')
           outputs = jobs['changes']['outputs']
-          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes', 'offers', 'replacements', 'incidents'):
+          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes', 'offers', 'replacements', 'incidents', 'hotel-analysis'):
               selected = (outputs.get(name) == 'true'
                   or (name == 'backend' and outputs.get('postgres') == 'true')
-                  or (name in ('quotes', 'offers', 'incidents') and outputs.get('backend') == 'true')
+                  or (name in ('quotes', 'offers', 'incidents', 'hotel-analysis') and outputs.get('backend') == 'true')
                   or (name == 'replacements' and (outputs.get('backend') == 'true' or outputs.get('mock') == 'true')))
               if selected and jobs[name]['result'] != 'success':
                   sys.exit(f'{name}: {jobs[name]["result"]}')

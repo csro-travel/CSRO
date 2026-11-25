@@ -5,7 +5,7 @@
 | API | 기능 | 경로 | 작업 범위·브랜치 | 현재 범위 | 구현 문서 |
 | --- | --- | --- | --- | --- | --- |
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
-| API-002 | 고객 체크인 문제 신고 | `POST /api/v1/bookings/{bookingId}/incident-reports` | A팀 · `1124cy-core-flow` | 소유권·멱등 스냅샷·원자 접수·활성 사건 재사용·재확인 작업, 별도 고객 시연. 운영 인증·024 연결은 후속 | [계약·시연·검증](API-002.md) |
+| API-002 | 고객 체크인 문제 신고 | `POST /api/v1/bookings/{bookingId}/incident-reports` | A팀 · `1124cy-core-flow` | 소유권·멱등 스냅샷·원자 접수·활성 사건 재사용·정형 재확인 작업, 별도 고객 시연. 운영 인증·자연어 자동 수집은 후속 | [계약·시연·검증](API-002.md) |
 | API-009 | 사건의 대체 견적 조회 | `GET /api/v1/cases/{caseId}/quotes` | `1124cy-core-flow` | 저장 견적·검색 상태·기간별 그룹·비교 결과 조회. 조회 자체는 검색하지 않음 | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-010 | 대체 견적 검색 접수 | `POST /api/v1/cases/{caseId}/quote-searches` | `1124cy-core-flow` | 202 접수, 동일 키 재사용, QUOTE_SEARCH·견적 저장·025 비교, 격리 시연 Worker | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 · `1124cy-core-flow` 확장 | 소유 사건·상담사 큐 조회, 이전 페이지·제안 카드·현재 제안/선택·서버 판단 시각 | [API-011 구현 메모](#api-011-구현-메모) · [제안·선택 연결](OFFERS-DEMO.md) |
@@ -14,6 +14,7 @@
 | API-014 | 고객 선택 저장 | `PUT /api/v1/cases/{caseId}/selection` | `1124cy-core-flow` | 예약 소유 고객이 현재 발송 항목 선택, 이력·SYSTEM 알림·현재 선택 조회. 예약 접수는 API-015 별도 | [사용자 승인 최소 계약](API-013-014-PROPOSAL.md) · [실행·경계](OFFERS-DEMO.md) |
 | API-015 | 상담사 대체 예약 접수 | `POST /api/v1/cases/{caseId}/replacement-bookings` | `1124cy-core-flow` | 현재 선택·가격 동결 후 202 접수, 같은 BRQ의 가상 공급사 실행·복구 Worker. 입실·종료는 후속 | [사용자 승인 최소 계약](API-015-016-PROPOSAL.md) · [실행·검증 범위](REPLACEMENT-DEMO.md) |
 | API-016 | 대체 예약 처리 상태 조회 | `GET /api/v1/replacement-bookings/{replacementBookingId}` | `1124cy-core-flow` | 상담사·예약 소유 고객의 저장 상태 읽기. 공급사 호출·예약 실행·재시도 한도 초기화 없음 | [사용자 승인 최소 계약](API-015-016-PROPOSAL.md) · [실행·검증 범위](REPLACEMENT-DEMO.md) |
+| API-024 | 호텔 자연어 회신 주장 추출 | `POST /internal/v1/hotel-reply-extractions` | B팀 제공자 · A팀 `1125cy-api024` 호출·저장 | 저장 자연어 원문 한 건의 입력·응답 검증·분석 저장·필수 수동 확인. 정형 JSON 자동 분석·자동 사실 채택·화면 표시는 후속 | [Spring 연결·시연·범위](API-024-SPRING.md) · [기존 제공자](../../../llm/agent/README.md) |
 | API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | Spring에 저장한 견적 ID의 규칙 기반 순서·근거 반환, 유효 결과 저장. 고객 발송은 Spring API-013 책임 | [구현 범위](../../../llm/agent/docs/API-025.md) |
 | API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색별 스냅샷 ID, Spring 검증·저장 연결. 예약·재고 차감은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
 | API-029/030 | 가상 공급사 예약·결과 조회 | `POST /mock-supplier/v1/replacement-bookings`, `GET /mock-supplier/v1/replacement-booking-requests/{requestId}` | `mock-server` 선택적 PostgreSQL 모드 | 공급사 전용 DB의 전일 재고·요청 결과 원자 저장·동일 키 재생·최종 결과 조회. 기존 stateless 모드 유지 | [별도 DB·HTTP·검사](../../../mock-server/docs/API-029-030.md) |
