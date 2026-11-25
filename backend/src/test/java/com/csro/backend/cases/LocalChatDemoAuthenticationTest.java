@@ -46,6 +46,22 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("PUT", result, "customer-test-token", "127.0.0.1"));
     }
 
+    @Test
+    void incidentPostAuthenticatesEachEstablishedRoleWithoutOpeningOtherBookingRoutes() throws Exception {
+        String incident = "/api/v1/bookings/YB-001/incident-reports";
+        assertEquals("demo-customer-001", subject("POST", incident, "customer-test-token", "127.0.0.1"));
+        // Controller/service must see the counselor subject and reject its customer-only command.
+        assertEquals("demo-counselor-001", subject("POST", incident, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", incident, "customer-test-token", "192.0.2.4"));
+        assertNull(subject("POST", incident, "wrong-token", "127.0.0.1"));
+        for (String path : new String[]{"/api/v1/bookings/YB-001", incident + "/extra", incident + "/"}) {
+            assertNull(subject("POST", path, "customer-test-token", "127.0.0.1"));
+            assertNull(subject("GET", path, "customer-test-token", "127.0.0.1"));
+        }
+        assertNull(subject("GET", incident, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("PUT", incident, "customer-test-token", "127.0.0.1"));
+    }
+
     private String subject(String method, String path, String token, String remote) throws Exception {
         var request = new MockHttpServletRequest(method, path);
         request.setServletPath(path);
