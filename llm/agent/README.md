@@ -1,5 +1,7 @@
 # API-024 호텔 회신 추출기
 
+같은 서버에서 API-025 `POST /internal/v1/alternative-rankings`도 제공합니다. [가상 견적 비교의 입력·규칙·구현 경계](docs/API-025.md)를 참고하세요. API-024 실행 주소·인증·추출 계약은 그대로 유지합니다.
+
 Agent는 호텔 회신에서 숙박일별 객실 제공 여부에 관한 주장과 원문 인용을 추출한다. Spring은 반환된 주장과 근거를 검증하고 업무 DB에 저장한다. [Notion API-024 상세 명세](https://app.notion.com/p/f366adbd23b38282abc181a14575ff95)
 
 ## Windows PowerShell에서 실행

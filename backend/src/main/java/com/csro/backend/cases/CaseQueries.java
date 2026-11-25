@@ -1,5 +1,6 @@
 package com.csro.backend.cases;
 
+import com.csro.backend.quotes.QuoteSearchRuntime;
 import java.security.Principal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -15,10 +16,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class CaseQueries {
     private final JdbcClient jdbc;
     private final CaseAccess access;
+    private final QuoteSearchRuntime quoteRuntime;
 
-    CaseQueries(JdbcClient jdbc, CaseAccess access) {
+    CaseQueries(JdbcClient jdbc, CaseAccess access, QuoteSearchRuntime quoteRuntime) {
         this.jdbc = jdbc;
         this.access = access;
+        this.quoteRuntime = quoteRuntime;
     }
 
     private static final String FROM = """
@@ -127,6 +130,8 @@ public class CaseQueries {
         var statement = jdbc.sql(MESSAGE_PAGE_SQL.formatted(cursorPredicate))
                 .param("caseId", caseId)
                 .param("caseKey", caseKey)
+                .param("effectiveAt", quoteRuntime.effectiveAt())
+                .param("clockMode", quoteRuntime.syntheticDemo() ? "SYNTHETIC_DEMO" : "REAL_TIME")
                 .param("limit", limit)
                 .param("lookaheadLimit", limit + 1);
         if (cursor != null) {
@@ -164,7 +169,7 @@ public class CaseQueries {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE_CURSOR");
     }
 
-    // 발송 당시 비교 기준액을 복원하는 계약은 API-013에서 정한다. V1의 현재 예약 금액은 사용하지 않는다.
+    // API-013의 불변 발송 스냅샷만 비교 기준으로 사용한다. 과거 제안·부분 기간은 차액이 없다.
     private static final String MESSAGE_PAGE_SQL = """
             WITH candidates AS (
                 SELECT m.id, m.case_id, m.message_code, m.sender_type, m.message_type, m.body, m.sent_at, m.offer_id
@@ -178,6 +183,20 @@ public class CaseQueries {
             )
             SELECT jsonb_build_object(
                 'caseId', CAST(:caseId AS text),
+                'latestReplacementBooking', (SELECT jsonb_build_object('replacementBookingId', r.request_code,
+                    'selectionId', s.selection_code) FROM replacement_requests r
+                    JOIN alternative_selections s ON s.id = r.selection_id AND s.case_id = r.case_id
+                    WHERE r.case_id = :caseKey ORDER BY r.id DESC LIMIT 1),
+                'activeOfferId', (SELECT o.offer_code FROM offers o
+                    WHERE o.case_id = :caseKey AND o.status = 'ACTIVE'),
+                'currentSelection', (SELECT jsonb_build_object('selectionId', s.selection_code,
+                    'offerId', o.offer_code, 'quoteId', q.quote_code, 'selectedAt', s.selected_at)
+                    FROM alternative_selections s
+                    JOIN offers o ON o.id = s.offer_id AND o.case_id = s.case_id
+                    JOIN alternative_quotes q ON q.id = s.quote_id AND q.case_id = s.case_id
+                    WHERE s.case_id = :caseKey AND s.superseded_at IS NULL),
+                'effectiveAt', CAST(:effectiveAt AS timestamptz),
+                'clockMode', CAST(:clockMode AS text),
                 'items', coalesce((
                     SELECT jsonb_agg(jsonb_build_object(
                         'messageId', m.message_code, 'senderType', m.sender_type,
@@ -189,13 +208,28 @@ public class CaseQueries {
                                     'propertyName', q.property_name, 'distanceMeters', q.distance_meters,
                                     'checkInDate', q.check_in_date, 'checkOutDate', q.check_out_date,
                                     'adults', q.adults, 'rooms', q.rooms, 'totalAmount', q.total_amount,
-                                    'currency', q.currency, 'priceDifference', NULL::bigint,
+                                    'currency', q.currency, 'priceDifference', CASE
+                                        WHEN comparison.original_amount IS NOT NULL AND q.currency = 'KRW'
+                                        THEN q.total_amount - comparison.original_amount END,
                                     'checkedAt', q.checked_at, 'expiresAt', q.expires_at
                                 ) ORDER BY i.display_order)
                                 FROM offer_items i JOIN alternative_quotes q ON q.id = i.quote_id AND q.case_id = i.case_id
                                 WHERE i.offer_id = o.id AND i.case_id = o.case_id
                             ), '[]'::jsonb))
-                            FROM offers o WHERE o.id = m.offer_id AND o.case_id = m.case_id
+                            FROM offers o
+                            LEFT JOIN LATERAL (
+                                SELECT CASE WHEN jsonb_typeof(a.details -> 'originalAmount') = 'number'
+                                    AND (a.details ->> 'originalAmount') ~ '^[0-9]{1,19}$'
+                                    THEN CASE WHEN (a.details ->> 'originalAmount')::numeric <= 9223372036854775807
+                                        THEN (a.details ->> 'originalAmount')::bigint END END AS original_amount
+                                FROM case_actions a
+                                WHERE a.case_id = o.case_id AND a.action_type = 'OFFER_SENT'
+                                    AND a.details ->> 'protocol' = 'offer-selection-v1'
+                                    AND a.details ->> 'offerId' = o.offer_code
+                                    AND a.details ->> 'coverageMode' = 'FULL_STAY'
+                                ORDER BY a.id LIMIT 1
+                            ) comparison ON true
+                            WHERE o.id = m.offer_id AND o.case_id = m.case_id
                         )
                     ) ORDER BY m.sent_at, m.id) FROM page m
                 ), '[]'::jsonb),

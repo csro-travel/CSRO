@@ -25,8 +25,15 @@ public final class LocalChatDemo {
     private static final String DATABASE_URL = "jdbc:postgresql://127.0.0.1:25434/" + DATABASE;
     private static final String FLYWAY_LOCATIONS = "classpath:db/migration,classpath:db/local";
     private static final Principal COUNSELOR = () -> "demo-counselor-001";
-    private static final Pattern CASE_READ_PATH = Pattern.compile("/api/v1/cases(?:/[^/]+(?:/messages)?)?");
+    private static final Principal CUSTOMER = () -> "demo-customer-001";
+    private static final Pattern CASE_READ_PATH = Pattern.compile("/api/v1/cases(?:/[^/]+(?:/(?:messages|quotes))?)?");
     private static final Pattern MESSAGES_PATH = Pattern.compile("/api/v1/cases/[^/]+/messages");
+    private static final Pattern QUOTE_SEARCH_PATH = Pattern.compile("/api/v1/cases/[^/]+/quote-searches");
+    private static final Pattern OFFERS_PATH = Pattern.compile("/api/v1/cases/[^/]+/offers");
+    private static final Pattern SELECTION_PATH = Pattern.compile("/api/v1/cases/[^/]+/selection");
+    private static final Pattern REPLACEMENT_REQUEST_PATH = Pattern.compile("/api/v1/cases/[^/]+/replacement-bookings");
+    private static final Pattern INCIDENT_REPORT_PATH = Pattern.compile("/api/v1/bookings/[^/]+/incident-reports");
+    private static final Pattern REPLACEMENT_READ_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+");
 
     private LocalChatDemo() {}
 
@@ -48,14 +55,17 @@ public final class LocalChatDemo {
         }
         String password = environment.getProperty("CSRO_CHAT_DEMO_DB_PASSWORD", "");
         String token = environment.getProperty("CSRO_CHAT_DEMO_TOKEN", "");
+        String customerToken = environment.getProperty("CSRO_CUSTOMER_DEMO_TOKEN", "");
         if (password.isBlank() || token.length() < 32
-                || token.equals(environment.getProperty("CSRO_DEMO_TOKEN"))) {
+                || token.equals(environment.getProperty("CSRO_DEMO_TOKEN"))
+                || (!customerToken.isEmpty() && (customerToken.length() < 32 || customerToken.equals(token)
+                    || customerToken.equals(environment.getProperty("CSRO_DEMO_TOKEN"))))) {
             throw new IllegalStateException("local-chat-demo requires a database password and a separate demo token");
         }
         var dataSource = new DriverManagerDataSource(DATABASE_URL, USER, password);
         verifyDatabaseIdentity(dataSource);
         context.getBeanFactory().registerSingleton("dataSource", dataSource);
-        context.getBeanFactory().registerSingleton("localChatDemoAuthentication", filterRegistration(token));
+        context.getBeanFactory().registerSingleton("localChatDemoAuthentication", filterRegistration(token, customerToken));
     }
 
     private static void verifyDatabaseIdentity(DriverManagerDataSource dataSource) {
@@ -70,25 +80,30 @@ public final class LocalChatDemo {
         }
     }
 
-    private static FilterRegistrationBean<OncePerRequestFilter> filterRegistration(String token) {
-        var registration = new FilterRegistrationBean<OncePerRequestFilter>(new CounselorFilter(token));
-        registration.addUrlPatterns("/api/v1/cases/*");
+    private static FilterRegistrationBean<OncePerRequestFilter> filterRegistration(String token, String customerToken) {
+        var registration = new FilterRegistrationBean<OncePerRequestFilter>(new DemoFilter(token, customerToken));
+        registration.addUrlPatterns("/api/v1/cases/*", "/api/v1/replacement-bookings/*", "/api/v1/bookings/*");
         return registration;
     }
 
-    private static final class CounselorFilter extends OncePerRequestFilter {
+    static final class DemoFilter extends OncePerRequestFilter {
         private final byte[] authorization;
+        private final byte[] customerAuthorization;
 
-        CounselorFilter(String token) {
+        DemoFilter(String token, String customerToken) {
             authorization = ("Bearer " + token).getBytes(StandardCharsets.UTF_8);
+            customerAuthorization = customerToken.isEmpty() ? null : ("Bearer " + customerToken).getBytes(StandardCharsets.UTF_8);
         }
 
         @Override
         protected boolean shouldNotFilter(HttpServletRequest request) {
             String path = request.getServletPath();
             return switch (request.getMethod()) {
-                case "GET" -> !CASE_READ_PATH.matcher(path).matches();
-                case "POST" -> !MESSAGES_PATH.matcher(path).matches();
+                case "GET" -> !CASE_READ_PATH.matcher(path).matches() && !REPLACEMENT_READ_PATH.matcher(path).matches();
+                case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
+                        && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches()
+                        && !INCIDENT_REPORT_PATH.matcher(path).matches();
+                case "PUT" -> !SELECTION_PATH.matcher(path).matches();
                 default -> true;
             };
         }
@@ -97,12 +112,23 @@ public final class LocalChatDemo {
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
             String header = request.getHeader("Authorization");
-            if (ADDRESS.equals(request.getLocalAddr()) && ADDRESS.equals(request.getRemoteAddr())
-                    && header != null && MessageDigest.isEqual(authorization, header.getBytes(StandardCharsets.UTF_8))) {
+            Principal principal = null;
+            if (ADDRESS.equals(request.getLocalAddr()) && ADDRESS.equals(request.getRemoteAddr()) && header != null) {
+                byte[] supplied = header.getBytes(StandardCharsets.UTF_8);
+                boolean customerPath = ("GET".equals(request.getMethod()) && (MESSAGES_PATH.matcher(request.getServletPath()).matches()
+                        || REPLACEMENT_READ_PATH.matcher(request.getServletPath()).matches()))
+                        || ("PUT".equals(request.getMethod()) && SELECTION_PATH.matcher(request.getServletPath()).matches())
+                        || ("POST".equals(request.getMethod()) && INCIDENT_REPORT_PATH.matcher(request.getServletPath()).matches());
+                if (MessageDigest.isEqual(authorization, supplied)) principal = COUNSELOR;
+                else if (customerPath && customerAuthorization != null && MessageDigest.isEqual(customerAuthorization, supplied))
+                    principal = CUSTOMER;
+            }
+            if (principal != null) {
+                Principal authenticated = principal;
                 request = new HttpServletRequestWrapper(request) {
                     @Override
                     public Principal getUserPrincipal() {
-                        return COUNSELOR;
+                        return authenticated;
                     }
                 };
             }

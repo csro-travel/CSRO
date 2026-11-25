@@ -46,20 +46,21 @@ const navItems: NavItem[] = [
   { label: '기준정보 관리', icon: Settings, href: '#' },
 ]
 
-function Brand() {
+function Brand({ customer = false }: { customer?: boolean }) {
   return (
     <div>
       <p className="flex items-center gap-1.5 text-2xl font-bold text-primary">
         <Flower2 className="size-6" aria-hidden="true" />
         여행봄
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">여행 예약 운영 · 상담사</p>
+      <p className="mt-1 text-xs text-muted-foreground">{customer ? '고객 전용 · 내 예약 상담' : '여행 예약 운영 · 상담사'}</p>
     </div>
   )
 }
 
 export function ConsoleHeader() {
   const pathname = usePathname()
+  if (pathname.startsWith('/customer/')) return <header className="border-b bg-background px-5 py-4"><Brand customer /></header>
 
   return (
     <header className="border-b bg-background px-5 py-4 lg:hidden">
@@ -82,6 +83,7 @@ export function ConsoleHeader() {
 
 export function Sidebar() {
   const pathname = usePathname()
+  if (pathname.startsWith('/customer/')) return null
 
   return (
     <aside className="hidden w-60 shrink-0 border-r bg-background lg:block">

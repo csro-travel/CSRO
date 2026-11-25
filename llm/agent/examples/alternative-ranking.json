@@ -1,0 +1,48 @@
+{
+  "caseId": "C-001",
+  "bookingId": "YB-001",
+  "requestedStay": {
+    "checkInDate": "2026-11-10",
+    "checkOutDate": "2026-11-13",
+    "adults": 2
+  },
+  "originalStayTotal": {
+    "amount": 450000,
+    "currency": "KRW"
+  },
+  "quotes": [
+    {
+      "quoteId": "QUOTE-A",
+      "hotelName": "A호텔",
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-13",
+      "adults": 2,
+      "distanceMeters": 800,
+      "totalAmount": 480000,
+      "currency": "KRW",
+      "checkedAt": "2026-11-09T10:15:00+09:00"
+    },
+    {
+      "quoteId": "QUOTE-B",
+      "hotelName": "B호텔",
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-13",
+      "adults": 2,
+      "distanceMeters": 1400,
+      "totalAmount": 510000,
+      "currency": "KRW",
+      "checkedAt": "2026-11-09T10:15:00+09:00"
+    },
+    {
+      "quoteId": "QUOTE-C",
+      "hotelName": "C호텔",
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-13",
+      "adults": 2,
+      "distanceMeters": 2600,
+      "totalAmount": 465000,
+      "currency": "KRW",
+      "checkedAt": "2026-11-09T10:15:00+09:00"
+    }
+  ]
+}

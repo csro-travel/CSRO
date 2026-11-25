@@ -4,7 +4,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { Button } from "@/components/ui/button";
 import { formatWon } from "@/lib/alternative-stays";
 import { CaseMessageSendError, getCaseMessages, sendCaseMessage } from "../_api/cases";
-import type { CaseChatMessage } from "../_types/message";
+import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, selectCaseOffer, type PendingIntent, type SelectionBody } from "../_api/offers";
+import { replacementPointer } from "../_api/replacements";
+import { CaseReplacementPanel, replacementStatusText, useCaseReplacement } from "./case-replacement-panel";
+import type { CaseChatMessage, CaseChatState, CaseMessageList } from "../_types/message";
 
 const senderLabels = {
   CUSTOMER: "고객",
@@ -50,8 +53,12 @@ function groupMessagesByDate(messages: CaseChatMessage[]) {
   return groups;
 }
 
-function MessageItem({ message }: { message: CaseChatMessage }) {
+function MessageItem({ message, state, customer, selecting, selectionBlocked, onSelect }: {
+  message: CaseChatMessage; state: CaseChatState | null; customer: boolean; selecting: boolean;
+  selectionBlocked: boolean; onSelect: (offerId: string, quoteId: string) => void;
+}) {
   const { body, offer, senderType, sentAt } = message;
+  const active = offer !== null && (state ? state.activeOfferId === offer.offerId : offer.status === "ACTIVE");
 
   return (
     <li
@@ -72,7 +79,7 @@ function MessageItem({ message }: { message: CaseChatMessage }) {
       {offer && (
         <div className="space-y-2">
           <p className="text-sm font-semibold">
-            {offer.status === "SUPERSEDED" ? "이전 대체 숙소 제안" : "대체 숙소 제안"}
+            {active ? "대체 숙소 제안" : "이전 대체 숙소 제안"}
           </p>
           <ul className="space-y-2">
             {offer.items.map((item) => (
@@ -84,12 +91,22 @@ function MessageItem({ message }: { message: CaseChatMessage }) {
                 <p className="text-xs text-muted-foreground">
                   {item.checkInDate} ~ {item.checkOutDate} · 성인 {item.adults}명 · 객실 {item.rooms}개
                 </p>
+                <p className="text-xs text-muted-foreground">기존 호텔에서 {(item.distanceMeters / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}km</p>
+                <p className="text-xs text-muted-foreground">{item.priceDifference === null ? "동일 기간 원예약 차액 비교 없음" : `동일 기간 원예약 대비 견적 차이: ${item.priceDifference > 0 ? "+" : ""}${formatWon(item.priceDifference)} (추가 부담·환급 확정 금액 아님)`}</p>
+                <p className="text-xs text-muted-foreground">조회 <time dateTime={item.checkedAt}>{formatTimestamp(item.checkedAt, offerExpiryFormat) ?? item.checkedAt}</time></p>
                 <p className="text-xs text-muted-foreground">
                   견적 기한{" "}
                   <time dateTime={item.expiresAt}>
                     {formatTimestamp(item.expiresAt, offerExpiryFormat) ?? item.expiresAt}
                   </time>
                 </p>
+                {customer && (
+                  <Button type="button" size="sm"
+                    disabled={!state || !active || selecting || selectionBlocked || (state.currentSelection?.offerId === offer.offerId && state.currentSelection.quoteId === item.quoteId) || Date.parse(item.expiresAt) <= Date.parse(state.effectiveAt)}
+                    onClick={() => onSelect(offer.offerId, item.quoteId)}>
+                    {state?.currentSelection?.offerId === offer.offerId && state.currentSelection.quoteId === item.quoteId ? "현재 선택한 숙소" : !active ? "이전 제안 · 선택 불가" : state && Date.parse(item.expiresAt) <= Date.parse(state.effectiveAt) ? "견적 기한 경과" : `${item.propertyName} 선택`}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -103,6 +120,17 @@ type HistoryResult = {
   items: CaseChatMessage[];
   beforeMessageId: string | null;
 };
+
+function readChatState(response: CaseMessageList): CaseChatState | null {
+  const isText = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+  const isTime = (value: unknown): value is string => isText(value) && /(Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value));
+  if (!(response.activeOfferId === null || isText(response.activeOfferId)) || !isTime(response.effectiveAt) ||
+      !(response.clockMode === "REAL_TIME" || response.clockMode === "SYNTHETIC_DEMO")) return null;
+  const choice = response.currentSelection;
+  if (choice !== null && (!choice || !isText(choice.selectionId) || !isText(choice.offerId) || !isText(choice.quoteId) || !isTime(choice.selectedAt) || choice.offerId !== response.activeOfferId)) return null;
+  if (!(response.latestReplacementBooking === undefined || response.latestReplacementBooking === null || replacementPointer(response.latestReplacementBooking))) return null;
+  return { activeOfferId: response.activeOfferId, currentSelection: choice, effectiveAt: response.effectiveAt, clockMode: response.clockMode, latestReplacementBooking: response.latestReplacementBooking };
+}
 
 type HistoryDirection = "latest" | "older";
 type ScrollPosition = { target: "latest" } | { target: "message"; id: string; offset: number };
@@ -123,7 +151,9 @@ function captureScrollPosition(view: HTMLDivElement, direction: HistoryDirection
   return { target: "message", id: anchor.dataset.chatMessageId, offset: anchor.getBoundingClientRect().top - top };
 }
 
-export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: boolean }) {
+export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion = 0 }: {
+  caseId: string; closed: boolean; customer?: boolean; refreshVersion?: number;
+}) {
   const [history, setHistory] = useState<HistoryResult | null>(null);
   const [historyLoading, setHistoryLoading] = useState<HistoryDirection | null>("latest");
   const [historyError, setHistoryError] = useState<HistoryDirection | null>(null);
@@ -136,6 +166,18 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
   const mounted = useRef(false);
   const transcript = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<ScrollPosition | null>(null);
+  const [chatState, setChatState] = useState<CaseChatState | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<PendingIntent<SelectionBody>>();
+  const [selecting, setSelecting] = useState(false);
+  const [selectionError, setSelectionError] = useState("");
+  const [selectionNotice, setSelectionNotice] = useState("");
+  const [selectionStorageReady, setSelectionStorageReady] = useState(false);
+  const selectionRequest = useRef<AbortController | null>(null);
+  const textRequest = useRef<AbortController | null>(null);
+  const selectingNow = useRef(false);
+  const currentCase = useRef(caseId);
+  currentCase.current = caseId;
+  const previousRefresh = useRef(refreshVersion);
 
   const loadHistory = useCallback(async (beforeMessageId?: string, replacePending = false) => {
     if (historyRequest.current && !replacePending) return;
@@ -154,12 +196,14 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
         return;
       }
       const { items, pagination } = response;
+      const state = readChatState(response);
+      setChatState(state);
       const nextBeforeMessageId = pagination?.hasMoreBefore ? pagination.nextBeforeMessageId : null;
       if (transcript.current) pendingScroll.current = captureScrollPosition(transcript.current, direction);
       setHistory((current) => {
         if (!current) return { items, beforeMessageId: nextBeforeMessageId };
         if (direction === "older") {
-          return { items: mergeMessages(items, current.items), beforeMessageId: nextBeforeMessageId };
+          return { items: mergeMessages(current.items, items), beforeMessageId: nextBeforeMessageId };
         }
         const knownIds = new Set(current.items.map((message) => message.messageId));
         const overlaps = items.some((message) => knownIds.has(message.messageId));
@@ -169,6 +213,7 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
           beforeMessageId: overlaps ? current.beforeMessageId : nextBeforeMessageId,
         };
       });
+      return state;
     } catch {
       if (!request.signal.aborted) setHistoryError(direction);
     } finally {
@@ -179,19 +224,37 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
     }
   }, [caseId]);
 
+  const refreshChat = useCallback(async () => !!(await loadHistory(undefined, true)), [loadHistory]);
+  const replacement = useCaseReplacement({ caseId, customer, closed, selection: chatState?.currentSelection ?? null,
+    activeOfferId: chatState?.activeOfferId ?? null, pointer: chatState?.latestReplacementBooking, refreshChat });
+
   useEffect(() => {
     mounted.current = true;
+    setHistory(null); setChatState(null); setSentMessages([]); setDraft(""); setSendError(""); setSending(false);
+    setPendingSelection(undefined); setSelecting(false); setSelectionError(""); setSelectionNotice(""); setSelectionStorageReady(false);
+    if (customer) {
+      try { setPendingSelection(loadPendingIntent<SelectionBody>("selection", caseId)); setSelectionStorageReady(true); }
+      catch { setSelectionError("보관된 선택 요청을 확인할 수 없습니다. 새 요청 전에 담당자에게 확인해 주세요."); }
+    }
     void loadHistory();
     return () => {
       mounted.current = false;
       historyRequest.current?.abort();
       historyRequest.current = null;
+      selectionRequest.current?.abort(); textRequest.current?.abort();
     };
-  }, [loadHistory]);
+  }, [caseId, customer, loadHistory]);
 
-  const messages = useMemo(() => mergeMessages(history?.items ?? [], sentMessages), [history, sentMessages]);
+  useEffect(() => {
+    if (previousRefresh.current === refreshVersion) return;
+    previousRefresh.current = refreshVersion;
+    void loadHistory(undefined, true);
+  }, [refreshVersion, loadHistory]);
+
+  const messages = useMemo(() => mergeMessages(sentMessages, history?.items ?? []), [history, sentMessages]);
   const dateGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
-  const canSend = !closed && !sending && draft.trim().length > 0;
+  const canSend = !customer && !closed && !sending && draft.trim().length > 0;
+  const hasReplacementMetadata = chatState?.latestReplacementBooking !== undefined;
 
   useLayoutEffect(() => {
     const view = transcript.current;
@@ -211,32 +274,68 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
     if (!canSend || sendingRequest.current) return;
 
     sendingRequest.current = true;
+    const controller = new AbortController(); textRequest.current = controller;
     setSending(true);
     setSendError("");
     try {
-      const sent = await sendCaseMessage(caseId, draft);
-      if (!mounted.current) return;
+      const sent = await sendCaseMessage(caseId, draft, controller.signal);
+      if (!mounted.current || controller.signal.aborted || currentCase.current !== caseId) return;
       pendingScroll.current = { target: "latest" };
       setSentMessages((messages) => [...messages, sent]);
       setDraft("");
     } catch (error) {
-      if (!mounted.current) return;
+      if (!mounted.current || controller.signal.aborted || currentCase.current !== caseId) return;
       setSendError(error instanceof Error ? error.message : "메시지를 전송하지 못했습니다.");
       if (error instanceof CaseMessageSendError && error.outcomeUnknown) {
         await loadHistory(undefined, true);
       }
     } finally {
       sendingRequest.current = false;
-      if (mounted.current) setSending(false);
+      if (mounted.current && !controller.signal.aborted && currentCase.current === caseId) setSending(false);
     }
+  }
+
+  async function choose(offerId?: string, quoteId?: string) {
+    if (!customer || selectingNow.current || !selectionStorageReady || (!pendingSelection && (!offerId || !quoteId || !chatState || replacement.selectionBlocked))) return;
+    const intent: PendingIntent<SelectionBody> = pendingSelection ?? { version: 1, key: crypto.randomUUID(), body: { offerId: offerId!, quoteId: quoteId! } };
+    try { persistIntent("selection", caseId, intent); }
+    catch { setSelectionError("요청을 안전하게 보관하지 못해 선택하지 않았습니다. 브라우저 저장소를 확인해 주세요."); return; }
+    setPendingSelection(intent); setSelecting(true); setSelectionError(""); setSelectionNotice(""); selectingNow.current = true;
+    const controller = new AbortController(); selectionRequest.current = controller;
+    try {
+      await selectCaseOffer(caseId, intent, controller.signal);
+      if (controller.signal.aborted || currentCase.current !== caseId) return;
+      clearIntent("selection", caseId); setPendingSelection(undefined); setChatState(null);
+      setSelectionNotice("선택 처리 응답을 확인했습니다. 아래 현재 선택은 서버에서 다시 조회합니다. 예약 확정은 별도입니다.");
+      await loadHistory(undefined, true);
+    } catch (error) {
+      if (controller.signal.aborted || currentCase.current !== caseId) return;
+      if (error instanceof OfferMutationError && !error.outcomeUnknown) {
+        clearIntent("selection", caseId); setPendingSelection(undefined);
+        await loadHistory(undefined, true);
+      }
+      setSelectionError(error instanceof Error ? error.message : "선택 요청 실패");
+    } finally { selectingNow.current = false; if (!controller.signal.aborted && currentCase.current === caseId) setSelecting(false); }
   }
 
   // Leave space for the shared case header, navigation and page padding.
   return (
     <section
       aria-label="채팅"
-      className="flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_17rem)] lg:min-h-[21rem]"
+      className={`flex min-h-[26rem] min-w-0 flex-col overflow-hidden rounded-xl border bg-card text-card-foreground lg:min-h-[21rem] ${hasReplacementMetadata ? "" : "lg:sticky lg:top-6 lg:max-h-[calc(100dvh_-_17rem)]"}`}
     >
+      {chatState && <div className="space-y-1 border-b px-5 py-3 text-sm">
+        <p className="text-xs text-muted-foreground">{chatState.clockMode === "SYNTHETIC_DEMO" ? "시연용 합성 데이터 · 가상 판단 시각" : "서버 판단 시각"}: <time dateTime={chatState.effectiveAt}>{formatTimestamp(chatState.effectiveAt, offerExpiryFormat)}</time></p>
+        <p role="status">{chatState.currentSelection ? `현재 선택: ${messages.flatMap(message => message.offer?.items ?? []).find(item => item.quoteId === chatState.currentSelection?.quoteId)?.propertyName ?? chatState.currentSelection.quoteId} · ${replacement.booking?.selectionId === chatState.currentSelection.selectionId ? replacementStatusText[replacement.booking.status] : replacement.target && !replacement.booking ? "예약 처리 상태 확인 필요" : "선택 완료 · 예약 진행 전"}` : "현재 선택 없음 · 고객 선택은 예약 확정이 아닙니다."}</p>
+      </div>}
+      <CaseReplacementPanel state={replacement} customer={customer} />
+      {customer && !chatState && history && <p className="border-b px-5 py-3 text-sm">현재 제안·선택과 서버 판단 시각을 확인해야 선택할 수 있습니다. 새 메시지 확인을 눌러 주세요.</p>}
+      {customer && <div className="space-y-2 border-b px-5 py-3 text-sm">
+        <p>고객 본인에게 전송된 현재 제안에서 숙소를 선택할 수 있습니다. 일반 메시지 전송은 이 시연에 포함되지 않습니다.</p>
+        {selectionError && <p role="alert" className="text-destructive">{selectionError}</p>}
+        {selectionNotice && <p role="status">{selectionNotice}</p>}
+        {pendingSelection && <><p>이전 선택의 결과가 확인되지 않았습니다. 다른 선택 전에 보관된 같은 요청으로 확인해 주세요.</p><Button type="button" disabled={selecting || !selectionStorageReady} onClick={() => void choose()}>{selecting ? "선택 처리 확인 중…" : "같은 요청으로 선택 결과 확인"}</Button></>}
+      </div>}
       <div className="flex shrink-0 flex-wrap justify-end gap-1 border-b px-3 py-1.5">
         {history?.beforeMessageId && (
           <Button
@@ -263,7 +362,7 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
         role="region"
         aria-label="대화 내역"
         aria-busy={historyLoading !== null}
-        className="flex max-h-[28rem] min-h-40 flex-1 flex-col overflow-y-auto bg-muted/50 px-5 py-4 [overflow-anchor:none] lg:max-h-none lg:min-h-0 lg:overscroll-y-contain"
+        className={`flex max-h-[28rem] min-h-40 flex-1 flex-col overflow-y-auto bg-muted/50 px-5 py-4 [overflow-anchor:none] lg:overscroll-y-contain ${hasReplacementMetadata ? "lg:max-h-[28rem] lg:min-h-64" : "lg:max-h-none lg:min-h-0"}`}
       >
         {messages.length > 0 && (
           <div className="space-y-5">
@@ -278,7 +377,8 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
                 )}
                 <ol className="space-y-3">
                   {dayMessages.map((message) => (
-                    <MessageItem key={message.messageId} message={message} />
+                    <MessageItem key={message.messageId} message={message} state={chatState} customer={customer} selecting={selecting}
+                      selectionBlocked={closed || !!pendingSelection || !selectionStorageReady || replacement.selectionBlocked} onSelect={(offerId, quoteId) => void choose(offerId, quoteId)} />
                   ))}
                 </ol>
               </div>
@@ -299,7 +399,7 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
         )}
       </div>
 
-      <form onSubmit={submitMessage} className="shrink-0 space-y-3 border-t px-5 py-4">
+      {!customer && <form onSubmit={submitMessage} className="shrink-0 space-y-3 border-t px-5 py-4">
         <label className="block space-y-2 text-sm font-medium">
           <span className="block">메시지</span>
           <textarea
@@ -319,7 +419,7 @@ export function CaseChatPanel({ caseId, closed }: { caseId: string; closed: bool
             {sending ? "전송 중…" : "전송"}
           </Button>
         </div>
-      </form>
+      </form>}
     </section>
   );
 }

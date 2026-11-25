@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API-025 Alternative Ranking Request 0.1",
+  "type": "object",
+  "properties": {
+    "caseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bookingId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requestedStay": {
+      "type": "object",
+      "properties": {
+        "checkInDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "checkOutDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "adults": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "checkInDate",
+        "checkOutDate",
+        "adults"
+      ],
+      "additionalProperties": false
+    },
+    "originalStayTotal": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "KRW"
+          ]
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "additionalProperties": false
+    },
+    "quotes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hotelName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checkInDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "checkOutDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "adults": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "distanceMeters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalAmount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KRW"
+            ]
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "quoteId",
+          "hotelName",
+          "checkInDate",
+          "checkOutDate",
+          "adults",
+          "distanceMeters",
+          "totalAmount",
+          "currency",
+          "checkedAt"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 20
+    }
+  },
+  "required": [
+    "caseId",
+    "bookingId",
+    "requestedStay",
+    "quotes"
+  ],
+  "additionalProperties": true
+}

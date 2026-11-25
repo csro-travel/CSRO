@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API-028 Search Request 0.1",
+  "type": "object",
+  "properties": {
+    "searchRequestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "originPropertyId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stay": {
+      "type": "object",
+      "properties": {
+        "checkInDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "checkOutDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "adults": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rooms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "checkInDate",
+        "checkOutDate",
+        "adults",
+        "rooms"
+      ],
+      "additionalProperties": false
+    },
+    "filters": {
+      "type": "object",
+      "properties": {
+        "radiusMeters": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "KRW"
+          ]
+        },
+        "maxAverageNightlyAmount": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "radiusMeters",
+        "currency"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "searchRequestId",
+    "originPropertyId",
+    "stay",
+    "filters"
+  ],
+  "additionalProperties": false
+}

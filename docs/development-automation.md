@@ -23,10 +23,12 @@ GitHub Actions, 빌드 설정, API 구현 진입점, 환경설정, DB·Flyway, M
 | Spring 예약·상담 사건·재확인 코드, Spring 설정, DB·Flyway, Gradle, 통합 테스트 또는 Mock 계약 | `ciPostgresTest`로 API-001과 예약 재확인·증빙 처리 검증 |
 | `frontend/travel_bom/**` | 잠금 파일 기준 설치, Next.js 빌드, 별도 TypeScript 검사 |
 | `ml/**` | 저장된 모델의 API-023·런타임 핵심 테스트 |
-| `llm/agent/**` | 호텔 회신 추출 HTTP 테스트 |
+| `llm/agent/**` | 호텔 회신 추출·견적 비교 HTTP 테스트 |
 | Mock 구현·의존성·계약·테스트 | 가상 공급사·호텔 계약 테스트. 구현·의존성·OpenAPI 변경은 Spring 연동도 검증 |
 
 일반 백엔드 단위 테스트는 `ciUnitTest`가 자동으로 찾는다. DB나 외부 서비스가 필요한 테스트 클래스는 `*IntegrationTest`, `*IntegrationTests`, `*LiveTest` 이름으로 분류한다. CI의 PostgreSQL 작업에는 격리 DB 설정이 확인된 핵심 통합 테스트를 지정한다.
+
+백엔드 변경에서는 별도 `quotes` 작업도 실행한다. `127.0.0.1:25440/yeohaengbom_quotes_test`와 사용자 `yb_quote_test`를 검증한 뒤 견적 저장·동시 요청·중단 복구·실제/가상 시계 분리 통합 검사를 수행한다. 프런트 빌드 후에는 견적·메시지 프록시의 명시적 쓰기 옵션과 같은 출처 경계도 검사한다. 실제 브라우저·ML/Mock/Agent를 포함한 시연은 이 CI DB 검사와 구분한다.
 
 PostgreSQL은 해당 범위에서만 시작한다. Actions는 `127.0.0.1:25433`에서 재확인용 `yeohaengbom_reconfirmation_test`와 API 계약용 `yeohaengbom_api_contract_test`의 접속과 DB·사용자를 검증한 뒤 Gradle을 실행한다. 두 테스트에 별도 DB를 배정해 롤백 이후에도 전진하는 PostgreSQL 시퀀스의 영향을 막는다. Gradle은 두 주소를 다시 검사하며, 재확인 테스트의 기존 Loader와 API 테스트의 CI 설정이 각 DB를 Spring DataSource와 Flyway에 지정한다.
 

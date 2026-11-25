@@ -52,12 +52,14 @@ export class CaseMessageSendError extends Error {
 export async function sendCaseMessage(
   caseId: string,
   body: string,
+  signal?: AbortSignal,
 ): Promise<CaseChatMessage> {
   const unconfirmed = "전송 결과를 확인하지 못했습니다. 대화 내역을 확인해 주세요.";
   const response = await fetch(`/demo/cases/${encodeURIComponent(caseId)}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ body }),
+    signal,
   }).catch(() => {
     throw new CaseMessageSendError(unconfirmed, true);
   });

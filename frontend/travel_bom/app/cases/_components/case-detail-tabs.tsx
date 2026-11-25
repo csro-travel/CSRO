@@ -1,23 +1,29 @@
 "use client";
 
 import { Tabs } from "@base-ui/react/tabs";
-import { ArrowUpRight, BedDouble, FileText } from "lucide-react";
-import Link from "next/link";
+import { BedDouble, FileText } from "lucide-react";
 import type { ReactNode } from "react";
+import { CaseQuotesPanel } from "./case-quotes-panel";
 
 const tabClassName =
   "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring data-[active]:bg-accent data-[active]:text-accent-foreground sm:px-4";
 
 export function CaseDetailTabs({
   title,
+  caseId,
+  closed,
   bookingId,
   children,
   chat,
+  onOfferSent,
 }: {
   title: string;
+  caseId: string;
+  closed: boolean;
   bookingId: string;
   children: ReactNode;
   chat: ReactNode;
+  onOfferSent?: () => void;
 }) {
   return (
     <Tabs.Root defaultValue="case" className="min-w-0 space-y-4">
@@ -41,20 +47,8 @@ export function CaseDetailTabs({
             {children}
           </Tabs.Panel>
           <Tabs.Panel value="alternatives">
-            <section className="space-y-3 rounded-xl border bg-card p-6">
-              <p className="text-sm text-muted-foreground">예약번호 <span className="font-medium text-foreground">{bookingId}</span></p>
-              <p className="font-semibold">견적 조회 기능 미연결</p>
-              <Link
-                href="/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="별도 대체 숙소 탐색 시연 보기 (새 탭)"
-                className="inline-flex items-center gap-2 rounded-md text-sm font-medium text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                별도 대체 숙소 탐색 시연 보기
-                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
-              </Link>
-            </section>
+            <p className="mb-3 text-sm text-muted-foreground">예약번호 <span className="font-medium text-foreground">{bookingId}</span></p>
+            <CaseQuotesPanel key={caseId} caseId={caseId} closed={closed} onOfferSent={onOfferSent} />
           </Tabs.Panel>
         </div>
         {chat}
