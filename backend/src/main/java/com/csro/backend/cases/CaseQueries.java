@@ -1,6 +1,7 @@
 package com.csro.backend.cases;
 
 import com.csro.backend.quotes.QuoteSearchRuntime;
+import com.csro.backend.resolution.CaseResolutionService;
 import java.security.Principal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -17,11 +18,14 @@ public class CaseQueries {
     private final JdbcClient jdbc;
     private final CaseAccess access;
     private final QuoteSearchRuntime quoteRuntime;
+    private final CaseResolutionService resolutions;
 
-    CaseQueries(JdbcClient jdbc, CaseAccess access, QuoteSearchRuntime quoteRuntime) {
+    CaseQueries(JdbcClient jdbc, CaseAccess access, QuoteSearchRuntime quoteRuntime,
+                CaseResolutionService resolutions) {
         this.jdbc = jdbc;
         this.access = access;
         this.quoteRuntime = quoteRuntime;
+        this.resolutions = resolutions;
     }
 
     private static final String FROM = """
@@ -94,6 +98,8 @@ public class CaseQueries {
     public String detail(Principal principal, String caseId) {
         authorize(principal);
         if (!caseId.matches("C-[0-9]{3,}")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"INVALID_CASE_ID");
+        String resolution = resolutions.resolution(principal, caseId,
+                quoteRuntime.effectiveAt(), quoteRuntime.syntheticDemo());
         return jdbc.sql("SELECT (" + CASE_FIELDS + """
             || jsonb_build_object('booking',jsonb_build_object('bookingId',b.booking_code,
                 'hotel',jsonb_build_object('hotelId',h.hotel_code,'name',h.name),'supplierStatus',b.supplier_status,
@@ -114,8 +120,10 @@ public class CaseQueries {
                 FROM case_tasks t LEFT JOIN users owner ON owner.id=t.assignee_id WHERE t.case_id=c.id AND t.status IN ('TODO','IN_PROGRESS')),'[]'),
             'customerReports',coalesce((SELECT jsonb_agg(jsonb_build_object('reportId',r.report_code,'issueType',r.issue_type,
                 'atHotel',r.at_hotel,'receivedAt',r.received_at) ORDER BY r.received_at,r.id) FROM incident_reports r
-                WHERE r.case_id=c.id AND r.booking_id=b.id),'[]')))::text
-            """ + FROM + " WHERE c.case_code=:code").param("code",caseId).query(String.class).optional()
+                WHERE r.case_id=c.id AND r.booking_id=b.id),'[]'),
+            'resolution',CAST(:resolution AS jsonb)))::text
+            """ + FROM + " WHERE c.case_code=:code").param("code",caseId).param("resolution",resolution)
+                .query(String.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"CASE_NOT_FOUND"));
     }
 
@@ -127,11 +135,14 @@ public class CaseQueries {
 
         MessageCursor cursor = beforeMessageId == null ? null : findCursor(caseKey, beforeMessageId);
         String cursorPredicate = cursor == null ? "" : "AND (m.sent_at, m.id) < (:cursorTime, :cursorId)";
+        OffsetDateTime effectiveAt = quoteRuntime.effectiveAt();
+        String resolution = resolutions.resolution(principal, caseId, effectiveAt, quoteRuntime.syntheticDemo());
         var statement = jdbc.sql(MESSAGE_PAGE_SQL.formatted(cursorPredicate))
                 .param("caseId", caseId)
                 .param("caseKey", caseKey)
-                .param("effectiveAt", quoteRuntime.effectiveAt())
+                .param("effectiveAt", effectiveAt)
                 .param("clockMode", quoteRuntime.syntheticDemo() ? "SYNTHETIC_DEMO" : "REAL_TIME")
+                .param("resolution", resolution)
                 .param("limit", limit)
                 .param("lookaheadLimit", limit + 1);
         if (cursor != null) {
@@ -183,6 +194,7 @@ public class CaseQueries {
             )
             SELECT jsonb_build_object(
                 'caseId', CAST(:caseId AS text),
+                'resolution', CAST(:resolution AS jsonb),
                 'latestReplacementBooking', (SELECT jsonb_build_object('replacementBookingId', r.request_code,
                     'selectionId', s.selection_code) FROM replacement_requests r
                     JOIN alternative_selections s ON s.id = r.selection_id AND s.case_id = r.case_id

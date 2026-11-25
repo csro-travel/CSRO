@@ -62,6 +62,26 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("PUT", incident, "customer-test-token", "127.0.0.1"));
     }
 
+    @Test
+    void resolutionCommandsPreserveEstablishedRolesAndExactMethodPaths() throws Exception {
+        String checkin = "/api/v1/replacement-bookings/BRQ-" + "a".repeat(64) + "/checkin-confirmations";
+        assertEquals("demo-customer-001", subject("POST", checkin, "customer-test-token", "127.0.0.1"));
+        // Counselor identity is preserved so the command service rejects its role;
+        // the filter never impersonates a customer for this request.
+        assertEquals("demo-counselor-001", subject("POST", checkin, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("PATCH", checkin, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", checkin + "/extra", "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", checkin, "customer-test-token", "192.0.2.4"));
+        String task = "/api/v1/cases/C-001/tasks/TASK-1";
+        String closure = "/api/v1/cases/C-001/closures";
+        assertEquals("demo-counselor-001", subject("PATCH", task, "counselor-test-token", "127.0.0.1"));
+        assertEquals("demo-counselor-001", subject("POST", closure, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("PATCH", task, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", closure, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", task, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("PATCH", closure, "counselor-test-token", "127.0.0.1"));
+    }
+
     private String subject(String method, String path, String token, String remote) throws Exception {
         var request = new MockHttpServletRequest(method, path);
         request.setServletPath(path);

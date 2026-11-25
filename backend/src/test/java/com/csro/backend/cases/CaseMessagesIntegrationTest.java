@@ -2,6 +2,8 @@ package com.csro.backend.cases;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -177,6 +179,83 @@ class CaseMessagesIntegrationTest {
                 .andExpect(jsonPath("$.items[0].offer.items[0].priceDifference").value(30000))
                 .andExpect(jsonPath("$.activeOfferId").value(offerCode))
                 .andExpect(jsonPath("$.currentSelection.selectionId").value(selectionCode));
+    }
+
+    @Test
+    void exposesResolutionWithoutChangingOpenTaskMeaningOrLeakingCounselorNotes() throws Exception {
+        String privateNote = "counselor-only-original-followup-note";
+        jdbc.sql("""
+                INSERT INTO case_tasks (case_id, booking_id, task_type, status, completion_note, completed_at)
+                VALUES (:caseId, :booking, 'ORIGINAL_FOLLOWUP', 'DONE', :note, :at)
+                """).param("caseId", openCase.id()).param("booking", openCase.bookingId())
+                .param("note", privateNote).param("at", TIE).update();
+        jdbc.sql("""
+                INSERT INTO case_tasks (case_id, booking_id, task_type, status)
+                VALUES (:caseId, :booking, 'CONTACT_CUSTOMER', 'TODO')
+                """).param("caseId", openCase.id()).param("booking", openCase.bookingId()).update();
+        // API-024's required manual verification remains a pending task until API-008 records its completion.
+        jdbc.sql("""
+                INSERT INTO case_tasks (case_id, booking_id, task_type, status, due_at)
+                VALUES (:caseId, :booking, 'VERIFY_HOTEL', 'TODO', :due)
+                """).param("caseId", openCase.id()).param("booking", openCase.bookingId())
+                .param("due", TIE).update();
+
+        mvc.perform(get("/api/v1/cases/{caseId}", openCase.code()).principal(() -> counselor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tasks.length()").value(2))
+                .andExpect(jsonPath("$.tasks[*].type", containsInAnyOrder("VERIFY_HOTEL", "CONTACT_CUSTOMER")))
+                .andExpect(jsonPath("$.nextAction.type").value("VERIFY_HOTEL"))
+                .andExpect(jsonPath("$.resolution.caseStatus").value("OPEN"))
+                .andExpect(jsonPath("$.resolution.requiredTasks.length()").value(3))
+                .andExpect(jsonPath("$.resolution.requiredTasks[*].status", containsInAnyOrder("DONE", "TODO", "TODO")))
+                .andExpect(content().string(containsString(privateNote)));
+
+        mvc.perform(get(MESSAGES, openCase.code()).principal(() -> owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolution.caseStatus").value("OPEN"))
+                .andExpect(jsonPath("$.resolution.requiredTasks").doesNotExist())
+                .andExpect(jsonPath("$.resolution.coverage").doesNotExist())
+                .andExpect(jsonPath("$.resolution.blockers").doesNotExist())
+                .andExpect(jsonPath("$.resolution.canClose").doesNotExist())
+                .andExpect(content().string(not(containsString(privateNote))));
+    }
+
+    @Test
+    void closedCaseCustomerResolutionOmitsClosureReasonCounselorNotesAndInternalAuditFields() throws Exception {
+        String privateNote = "counselor-only-closed-resolution-note";
+        String privateReason = "counselor-only-closure-reason";
+        String publicClosure = "CLOSURE-" + UUID.randomUUID();
+        jdbc.sql("""
+                INSERT INTO case_tasks (case_id, booking_id, task_type, status, completion_note, completed_at)
+                VALUES (:caseId, :booking, 'ORIGINAL_FOLLOWUP', 'DONE', :note, :at)
+                """).param("caseId", closedCase.id()).param("booking", closedCase.bookingId())
+                .param("note", privateNote).param("at", TIE).update();
+        var receipt = Map.of("closureId", publicClosure, "caseId", closedCase.code(), "status", "CLOSED",
+                "reason", privateReason, "closedAt", TIE.toString(), "version", 1,
+                "isSynthetic", true, "clockMode", "SYNTHETIC_DEMO", "internalRowId", closedCase.id());
+        jdbc.sql("""
+                INSERT INTO case_actions (case_id, actor_id, action_type, details, acted_at, booking_id)
+                VALUES (:caseId, :actor, 'CASE_CLOSED', CAST(:details AS jsonb), :at, :booking)
+                """).param("caseId", closedCase.id()).param("actor", counselorId)
+                .param("details", JSON.writeValueAsString(Map.of("protocol", "case-resolution-v1", "response", receipt,
+                        "basis", Map.of("internalNote", privateNote, "bookingRowId", closedCase.bookingId()))))
+                .param("at", TIE).param("booking", closedCase.bookingId()).update();
+
+        mvc.perform(get(MESSAGES, closedCase.code()).principal(() -> owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolution.caseStatus").value("CLOSED"))
+                .andExpect(jsonPath("$.resolution.closure.closureId").value(publicClosure))
+                .andExpect(jsonPath("$.resolution.closure.status").value("CLOSED"))
+                .andExpect(jsonPath("$.resolution.closure.closedAt").isNotEmpty())
+                .andExpect(jsonPath("$.resolution.closure.reason").doesNotExist())
+                .andExpect(jsonPath("$.resolution.closure.internalRowId").doesNotExist())
+                .andExpect(jsonPath("$.resolution.requiredTasks").doesNotExist())
+                .andExpect(jsonPath("$.resolution.coverage").doesNotExist())
+                .andExpect(jsonPath("$.resolution.blockers").doesNotExist())
+                .andExpect(content().string(not(containsString(privateNote))))
+                .andExpect(content().string(not(containsString(privateReason))))
+                .andExpect(content().string(not(containsString("bookingRowId"))));
+        expectProblem(mvc.perform(get(MESSAGES, closedCase.code()).principal(() -> otherCustomer)), 404, "CASE_NOT_FOUND");
     }
 
     @Test

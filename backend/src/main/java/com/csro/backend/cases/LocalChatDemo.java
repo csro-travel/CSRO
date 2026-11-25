@@ -34,6 +34,9 @@ public final class LocalChatDemo {
     private static final Pattern REPLACEMENT_REQUEST_PATH = Pattern.compile("/api/v1/cases/[^/]+/replacement-bookings");
     private static final Pattern INCIDENT_REPORT_PATH = Pattern.compile("/api/v1/bookings/[^/]+/incident-reports");
     private static final Pattern REPLACEMENT_READ_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+");
+    private static final Pattern CHECKIN_PATH = Pattern.compile("/api/v1/replacement-bookings/BRQ-[0-9a-f]{64}/checkin-confirmations");
+    private static final Pattern TASK_COMPLETION_PATH = Pattern.compile("/api/v1/cases/C-[0-9]{3,38}/tasks/TASK-[0-9]{1,19}");
+    private static final Pattern CLOSURES_PATH = Pattern.compile("/api/v1/cases/C-[0-9]{3,38}/closures");
 
     private LocalChatDemo() {}
 
@@ -102,8 +105,10 @@ public final class LocalChatDemo {
                 case "GET" -> !CASE_READ_PATH.matcher(path).matches() && !REPLACEMENT_READ_PATH.matcher(path).matches();
                 case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
                         && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches()
-                        && !INCIDENT_REPORT_PATH.matcher(path).matches();
+                        && !INCIDENT_REPORT_PATH.matcher(path).matches()
+                        && !CHECKIN_PATH.matcher(path).matches() && !CLOSURES_PATH.matcher(path).matches();
                 case "PUT" -> !SELECTION_PATH.matcher(path).matches();
+                case "PATCH" -> !TASK_COMPLETION_PATH.matcher(path).matches();
                 default -> true;
             };
         }
@@ -118,7 +123,8 @@ public final class LocalChatDemo {
                 boolean customerPath = ("GET".equals(request.getMethod()) && (MESSAGES_PATH.matcher(request.getServletPath()).matches()
                         || REPLACEMENT_READ_PATH.matcher(request.getServletPath()).matches()))
                         || ("PUT".equals(request.getMethod()) && SELECTION_PATH.matcher(request.getServletPath()).matches())
-                        || ("POST".equals(request.getMethod()) && INCIDENT_REPORT_PATH.matcher(request.getServletPath()).matches());
+                        || ("POST".equals(request.getMethod()) && (INCIDENT_REPORT_PATH.matcher(request.getServletPath()).matches()
+                            || CHECKIN_PATH.matcher(request.getServletPath()).matches()));
                 if (MessageDigest.isEqual(authorization, supplied)) principal = COUNSELOR;
                 else if (customerPath && customerAuthorization != null && MessageDigest.isEqual(customerAuthorization, supplied))
                     principal = CUSTOMER;
