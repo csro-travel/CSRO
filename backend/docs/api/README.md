@@ -5,6 +5,7 @@
 | API | 기능 | 경로 | 작업 범위·브랜치 | 현재 범위 | 구현 문서 |
 | --- | --- | --- | --- | --- | --- |
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
+| API-002 | 고객 체크인 문제 신고 | `POST /api/v1/bookings/{bookingId}/incident-reports` | A팀 · `1124cy-core-flow` | 소유권·멱등 스냅샷·원자 접수·활성 사건 재사용·재확인 작업, 별도 고객 시연. 운영 인증·024 연결은 후속 | [계약·시연·검증](API-002.md) |
 | API-009 | 사건의 대체 견적 조회 | `GET /api/v1/cases/{caseId}/quotes` | `1124cy-core-flow` | 저장 견적·검색 상태·기간별 그룹·비교 결과 조회. 조회 자체는 검색하지 않음 | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-010 | 대체 견적 검색 접수 | `POST /api/v1/cases/{caseId}/quote-searches` | `1124cy-core-flow` | 202 접수, 동일 키 재사용, QUOTE_SEARCH·견적 저장·025 비교, 격리 시연 Worker | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 · `1124cy-core-flow` 확장 | 소유 사건·상담사 큐 조회, 이전 페이지·제안 카드·현재 제안/선택·서버 판단 시각 | [API-011 구현 메모](#api-011-구현-메모) · [제안·선택 연결](OFFERS-DEMO.md) |

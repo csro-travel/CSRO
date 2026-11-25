@@ -1,5 +1,13 @@
 # API 계약 변경 기준
 
+## API-002 고객 현장 신고
+
+[Notion API-002](https://app.notion.com/p/8952f2597c5783a0a3f2813647f2dc9e)의 기존 접수 계약을 구현한다. `POST /api/v1/bookings/{bookingId}/incident-reports`는 고객 본인의 신고·첫 채팅·활성 사건·필수 업무·재확인 대기를 원자 저장하고 최초 201을 멱등 재생한다. 고객 신고를 호텔 근거로 취급하지 않으며, 기존 활성 사건의 상태와 담당자를 유지한다. Spring 업무 DB와 적용된 Flyway는 유지한다. [실행·검증·인증 범위](../backend/docs/api/API-002.md)
+
+별도 고객 시연 토큰의 정확한 신고 POST 경로만 `local-chat-demo`와 3101 프록시에 추가한다. 일반 로그인이나 API-001의 운영 Bearer 연결을 완료한 것은 아니다. 재확인 Worker는 기본 꺼짐이며 검증된 전용 시연 프로필에서만 명시적으로 켠다.
+
+API-024의 분석 HTTP 서버는 B팀, 원문 저장 후 해당 서버를 호출하고 응답을 검증·저장하는 Spring 연결은 A팀 책임이다. 이번 API-002는 기존 정형 026/027 경로를 재사용하며, 자연어 API-024 호출·분석 저장을 새로 구현하지 않는다.
+
 ## API-009/010 견적 연결
 
 사용자 승인 [최소 계약](../backend/docs/api/API-009-010-PROPOSAL.md)에 따라 상담사의 검색 접수와 저장 견적 조회를 구현한다. Spring이 기존 QUOTE_SEARCH·견적·비교 테이블을 소유하며 API-028/025는 기존 HTTP 경계에서 호출한다. 공급사 견적 ID는 검색 스냅샷별로 구분하고 제안·선택·가상 예약까지 보존할 값이다. [실행·검증](../backend/docs/api/QUOTES-DEMO.md)

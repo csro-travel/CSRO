@@ -316,6 +316,44 @@ jobs:
           --tests 'com.csro.backend.offers.OfferSelectionIntegrationTest'
           --tests 'com.csro.backend.cases.CaseMessagesIntegrationTest'
 
+  incidents:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      incidents-db:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: yb_incident_test
+          POSTGRES_DB: yeohaengbom_incidents_test
+          POSTGRES_PASSWORD: ci-isolated-incident-db-only
+        ports:
+          - 127.0.0.1:25446:5432
+        options: >-
+          --health-cmd "pg_isready -U yb_incident_test -d yeohaengbom_incidents_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: backend/**/*.gradle*
+      - name: 고객 신고·재확인 격리 DB 검사
+        working-directory: backend
+        env:
+          INCIDENT_REPORT_TEST: 'true'
+          INCIDENT_REPORT_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25446/yeohaengbom_incidents_test
+          INCIDENT_REPORT_TEST_DB_USER: yb_incident_test
+          INCIDENT_REPORT_TEST_DB_PASSWORD: ci-isolated-incident-db-only
+        run: >-
+          bash ./gradlew --no-daemon --console=plain test
+          --tests 'com.csro.backend.incidents.*IntegrationTest'
+
   replacements:
     needs: changes
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.mock == 'true'
@@ -400,7 +438,7 @@ jobs:
       - run: |
           pnpm build
           pnpm exec tsc --noEmit
-          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs tests/demo-offers-proxy.cjs tests/demo-replacements-proxy.cjs
+          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs tests/demo-offers-proxy.cjs tests/demo-replacements-proxy.cjs tests/demo-incidents-proxy.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -475,7 +513,7 @@ jobs:
 
   ci-gate:
     if: always()
-    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes, offers, replacements]
+    needs: [changes, backend, frontend, ml, agent, mock, risk, quotes, offers, replacements, incidents]
     runs-on: ubuntu-latest
     steps:
       - name: 필수 테스트 결과 확인
@@ -488,10 +526,10 @@ jobs:
           if jobs['changes']['result'] != 'success':
               sys.exit('변경 영역 판단 실패')
           outputs = jobs['changes']['outputs']
-          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes', 'offers', 'replacements'):
+          for name in ('backend', 'frontend', 'ml', 'agent', 'mock', 'risk', 'quotes', 'offers', 'replacements', 'incidents'):
               selected = (outputs.get(name) == 'true'
                   or (name == 'backend' and outputs.get('postgres') == 'true')
-                  or (name in ('quotes', 'offers') and outputs.get('backend') == 'true')
+                  or (name in ('quotes', 'offers', 'incidents') and outputs.get('backend') == 'true')
                   or (name == 'replacements' and (outputs.get('backend') == 'true' or outputs.get('mock') == 'true')))
               if selected and jobs[name]['result'] != 'success':
                   sys.exit(f'{name}: {jobs[name]["result"]}')
