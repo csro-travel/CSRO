@@ -16,6 +16,16 @@ API-024의 분석 HTTP 서버는 B팀, 원문 저장 후 해당 서버를 호출
 
 공개 고객 API·Flyway·Python 계약·ML 모델·기존 026/027 사실 반영은 유지한다. 실행은 검증된 `local-chat-demo`에서 명시한 근거 한 건만 처리하는 선택적 수동 진입점이다. 원문 자동 수집·분석 큐·상담 화면 결과 표시·자동 사실 채택은 후속이다. [입력 경계·실행·검증](../backend/docs/api/API-024-SPRING.md)
 
+## API-008/017/018 입실·업무 완료·사건 종료
+
+과거 `1124cy-core-flow/f5add12`에서 사용자가 승인한 [최소 계약](../backend/docs/api/API-008-017-018-PROPOSAL.md)을 API-002·API-024가 포함된 `1125cy-api024/db3b15f`에 연결한다. 고객은 본인의 확정 대체 예약에 `{"checkedIn":true}`로 API-017 입실을 기록하고, 상담사만 API-008 기존 업무 DONE 완료와 API-018 종료를 실행한다. 공통 Idempotency-Key·소유권·역할·버전 보호와 최초 불변 응답 재생을 유지한다. 일반 로그인·API-001의 Bearer 인증 범위를 넓히지 않는다.
+
+API-008은 기존 task의 DONE 부분 구현이다. 완료 메모와 expectedVersion을 받고 ORIGINAL_FOLLOWUP에는 COMPLETED/NOT_REQUIRED를 추가로 요구한다. 업무 생성·선점·담당자·기한 편집·완료 취소는 구현하지 않는다. 고객 직접 확인이 필요한 CHECKIN_CONFIRM을 상담사 메모로 대신 완료할 수 없다. API-002·API-024가 생성한 필수 VERIFY_HOTEL도 실제 확인 메모로 완료하며 분석만으로 업무를 완료하거나 숙박일을 확정하지 않는다.
+
+종료는 입실 확인·필요한 모든 숙박일 보장·필수 업무 DONE·대체 예약 결과 불명 없음·버전을 잠금 안에서 재검사한다. 같은 원예약 전체의 RECHECK Job에 PENDING/RUNNING/WAITING이 남으면 RECHECK_PENDING으로 차단한다. 다른 소유자나 다른 사건 연결의 대기 Job도 포함하며, 종료 로직이 Job 상태를 임의로 바꾸지 않는다. 실패는 CASE_NOT_RESOLVED와 부족 조건을 반환하고 성공 시 사건·감사·SYSTEM 안내를 원자 저장한다. 실제 취소·환불·정산은 실행하지 않는다.
+
+API-004/011의 resolution 요약은 기존 필드·메시지 페이지·예약 포인터를 보존한다. 고객용 요약은 상담사 메모·종료 사유·내부 키를 제외한다. 기존 신고·견적·제안·예약의 격리 인증·정확한 프록시 경로를 유지하며 API-017은 고객, API-008/018은 상담사 경로만 추가한다. [실행기·현재 검증 범위](../backend/docs/api/RESOLUTION-DEMO.md)를 참고한다.
+
 ## API-009/010 견적 연결
 
 사용자 승인 [최소 계약](../backend/docs/api/API-009-010-PROPOSAL.md)에 따라 상담사의 검색 접수와 저장 견적 조회를 구현한다. Spring이 기존 QUOTE_SEARCH·견적·비교 테이블을 소유하며 API-028/025는 기존 HTTP 경계에서 호출한다. 공급사 견적 ID는 검색 스냅샷별로 구분하고 제안·선택·가상 예약까지 보존할 값이다. [실행·검증](../backend/docs/api/QUOTES-DEMO.md)

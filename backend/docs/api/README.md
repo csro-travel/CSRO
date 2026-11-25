@@ -6,14 +6,17 @@
 | --- | --- | --- | --- | --- | --- |
 | API-001 | 고객 예약 상세 조회 | `GET /api/v1/bookings/{bookingId}` | A팀 · `1116cy` 초기 구현 | DB 조회·인가 판단·DTO·오류 처리, 공통 Bearer 인증 연결 및 ID 형식 검증은 남음 | [API-001 구현·검토](API-001.md) |
 | API-002 | 고객 체크인 문제 신고 | `POST /api/v1/bookings/{bookingId}/incident-reports` | A팀 · `1124cy-core-flow` | 소유권·멱등 스냅샷·원자 접수·활성 사건 재사용·정형 재확인 작업, 별도 고객 시연. 운영 인증·자연어 자동 수집은 후속 | [계약·시연·검증](API-002.md) |
+| API-008 | 기존 필수 업무 완료의 부분 구현 | `PATCH /api/v1/cases/{caseId}/tasks/{taskId}` | `1125cy-api024` · 과거 승인 `f5add12` 이식 | 상담사 DONE·완료 메모·버전 검증, 원예약 후속 완료값, VERIFY_HOTEL 완료. 생성·선점·담당자/기한 편집·완료 취소 미지원 | [사용자 승인 최소 계약](API-008-017-018-PROPOSAL.md) · [실행·현재 검증](RESOLUTION-DEMO.md) |
 | API-009 | 사건의 대체 견적 조회 | `GET /api/v1/cases/{caseId}/quotes` | `1124cy-core-flow` | 저장 견적·검색 상태·기간별 그룹·비교 결과 조회. 조회 자체는 검색하지 않음 | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
 | API-010 | 대체 견적 검색 접수 | `POST /api/v1/cases/{caseId}/quote-searches` | `1124cy-core-flow` | 202 접수, 동일 키 재사용, QUOTE_SEARCH·견적 저장·025 비교, 격리 시연 Worker | [최소 계약](API-009-010-PROPOSAL.md) · [실행·검증](QUOTES-DEMO.md) |
-| API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 · `1124cy-core-flow` 확장 | 소유 사건·상담사 큐 조회, 이전 페이지·제안 카드·현재 제안/선택·서버 판단 시각 | [API-011 구현 메모](#api-011-구현-메모) · [제안·선택 연결](OFFERS-DEMO.md) |
+| API-011 | 사건별 상담 채팅 메시지 조회 | `GET /api/v1/cases/{caseId}/messages` | 상담 백엔드 · `1124cy-core-flow` 확장 | 소유 사건·상담사 큐 조회, 이전 페이지·제안 카드·현재 제안/선택·서버 판단 시각·고객 안전 입실/종료 요약 | [API-011 구현 메모](#api-011-구현-메모) · [제안·선택 연결](OFFERS-DEMO.md) |
 | API-012 | 사건별 상담 채팅 메시지 전송 | `POST /api/v1/cases/{caseId}/messages` | 상담 백엔드 | 활성 고객·상담사의 일반 텍스트 저장 | [API-012 구현 메모](#api-012-구현-메모) |
 | API-013 | 고객 후보 제안 | `POST /api/v1/cases/{caseId}/offers` | `1124cy-core-flow` | 상담사가 유효한 저장 견적의 서로 다른 숙소 3곳 발송, 카드·메시지·감사 기록 원자 저장·동일 키 재생 | [사용자 승인 최소 계약](API-013-014-PROPOSAL.md) · [실행·경계](OFFERS-DEMO.md) |
 | API-014 | 고객 선택 저장 | `PUT /api/v1/cases/{caseId}/selection` | `1124cy-core-flow` | 예약 소유 고객이 현재 발송 항목 선택, 이력·SYSTEM 알림·현재 선택 조회. 예약 접수는 API-015 별도 | [사용자 승인 최소 계약](API-013-014-PROPOSAL.md) · [실행·경계](OFFERS-DEMO.md) |
-| API-015 | 상담사 대체 예약 접수 | `POST /api/v1/cases/{caseId}/replacement-bookings` | `1124cy-core-flow` | 현재 선택·가격 동결 후 202 접수, 같은 BRQ의 가상 공급사 실행·복구 Worker. 입실·종료는 후속 | [사용자 승인 최소 계약](API-015-016-PROPOSAL.md) · [실행·검증 범위](REPLACEMENT-DEMO.md) |
+| API-015 | 상담사 대체 예약 접수 | `POST /api/v1/cases/{caseId}/replacement-bookings` | `1124cy-core-flow` | 현재 선택·가격 동결 후 202 접수, 같은 BRQ의 가상 공급사 실행·복구 Worker. 입실·종료는 API-017/018에서 별도 처리 | [사용자 승인 최소 계약](API-015-016-PROPOSAL.md) · [실행·검증 범위](REPLACEMENT-DEMO.md) |
 | API-016 | 대체 예약 처리 상태 조회 | `GET /api/v1/replacement-bookings/{replacementBookingId}` | `1124cy-core-flow` | 상담사·예약 소유 고객의 저장 상태 읽기. 공급사 호출·예약 실행·재시도 한도 초기화 없음 | [사용자 승인 최소 계약](API-015-016-PROPOSAL.md) · [실행·검증 범위](REPLACEMENT-DEMO.md) |
+| API-017 | 고객 직접 입실 확인 | `POST /api/v1/replacement-bookings/{replacementBookingId}/checkin-confirmations` | `1125cy-api024` · 과거 승인 `f5add12` 이식 | 소유 고객·확정 대체 예약·숙박 기간 안의 서버 시각, 입실 기록과 해당 CHECKIN_CONFIRM 완료. 실제 호텔 입실 검증과 구분 | [사용자 승인 최소 계약](API-008-017-018-PROPOSAL.md) · [실행·현재 검증](RESOLUTION-DEMO.md) |
+| API-018 | 조건부 사건 종료 | `POST /api/v1/cases/{caseId}/closures` | `1125cy-api024` · 과거 승인 `f5add12` 이식 | 고객 직접 입실·전 기간 보장·모든 필수 업무 DONE·예약 전체 RECHECK 대기 없음·버전 검사, 같은 키 최초 결과 재생 | [사용자 승인 최소 계약](API-008-017-018-PROPOSAL.md) · [실행·현재 검증](RESOLUTION-DEMO.md) |
 | API-024 | 호텔 자연어 회신 주장 추출 | `POST /internal/v1/hotel-reply-extractions` | B팀 제공자 · A팀 `1125cy-api024` 호출·저장 | 저장 자연어 원문 한 건의 입력·응답 검증·분석 저장·필수 수동 확인. 정형 JSON 자동 분석·자동 사실 채택·화면 표시는 후속 | [Spring 연결·시연·범위](API-024-SPRING.md) · [기존 제공자](../../../llm/agent/README.md) |
 | API-025 | 견적 비교·요약 | `POST /internal/v1/alternative-rankings` | `llm/agent` | Spring에 저장한 견적 ID의 규칙 기반 순서·근거 반환, 유효 결과 저장. 고객 발송은 Spring API-013 책임 | [구현 범위](../../../llm/agent/docs/API-025.md) |
 | API-028 | 가상 공급사 대체 숙소 검색 | `POST /mock-supplier/v1/availability-searches` | `mock-server` | 고정 시연 기간의 견적·검색별 스냅샷 ID, Spring 검증·저장 연결. 예약·재고 차감은 없음 | [구현 범위](../../../mock-server/docs/API-028.md) |
@@ -24,6 +27,8 @@
 API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같은 패키지의 `src/test/java/`에 있다. 각 클래스 JavaDoc과 JUnit DisplayName에도 API 번호가 표시된다. API 목록 전체가 구현됐다는 인덱스가 아니다.
 
 공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다.
+
+현재 입실·업무·종료의 적용 기준은 `1125cy-api024/db3b15f`이며 과거 `1124cy-core-flow/f5add12`의 사용자 승인 범위를 유지한다. API-002 신고 경로와 API-024의 수동 확인 업무를 보존한다. 전체 실행기와 `--mock-port`·`--agent-port`·`--ml-port`, 고객 신고 URL, 실제 ML 비교 정책 및 현재 검증 범위는 [RESOLUTION-DEMO.md](RESOLUTION-DEMO.md)에 있다.
 
 ## API-011 구현 메모
 
@@ -36,6 +41,8 @@ API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같
 사용자 승인 API-015/016 계약으로 `latestReplacementBooking: null|{replacementBookingId,selectionId}`를 추가한다. 사건의 최신 접수를 가리키는 포인터만 반환하며 결과 상세는 API-016으로 읽는다. 최신 접수는 현재 선택이 바뀐 뒤에도 찾을 수 있다. API-011/016 조회 자체는 예약·선점·공급사 호출을 실행하지 않는다.
 
 통합 테스트는 새 격리 PostgreSQL을 사용한다. `CHATTING_API_INTEGRATION_TEST=true`, `CHATTING_API_TEST_DB_URL=jdbc:postgresql://127.0.0.1:25433/yeohaengbom_chat_api_test`와 `CHATTING_API_TEST_DB_PASSWORD`를 테스트 프로세스에 설정한 뒤 `backend`에서 `.\gradlew.bat test --tests '*CaseMessagesIntegrationTest'`를 실행한다. 테스트는 Spring과 Flyway를 시작하기 전에 DB 이름과 사용자 `yb`를 확인한다.
+
+API-004에는 상담사용 `resolution`을, API-011에는 역할에 맞는 `resolution`을 추가한다. 고객은 본인 입실·사건 상태·공개 종료 결과만 읽으며 상담사 완료 메모·진단·종료 사유·내부 감사 키는 받지 않는다. 기존 top-level `tasks`와 `nextAction`은 미완료 업무의 의미를 유지하고 API-002·API-024의 `VERIFY_HOTEL`도 포함한다. 예약 전체의 재확인이 `PENDING/RUNNING/WAITING`이면 `RECHECK_PENDING` 부족 조건이 종료를 막는다. 상세 [읽기·종료 보호](RESOLUTION-DEMO.md)를 참고한다.
 
 ## API-012 구현 메모
 
@@ -95,6 +102,6 @@ API-011은 최신 이력 조회와 이전 방향 커서를 제공하며 새 대�
 
 - API-009/010은 사용자 승인 최소 계약으로 Spring 저장·사건 화면에 연결했다. [실행·검증 및 시연 시각](QUOTES-DEMO.md)을 확인한다. 검색 전·진행 중·실패·완료 0건은 서로 구분한다.
 - API-013/014는 [사용자 승인 최소 계약](API-013-014-PROPOSAL.md)으로 전송·선택 저장에 연결했다. [고객 전용 시연](OFFERS-DEMO.md)은 별도 고객 토큰·3101 프록시를 명시적으로 켜며, 기존 DB·loopback·프로필 검증을 유지한다. 별도 대체 숙소 탐색 시연은 이 저장 견적·제안 흐름과 독립적이다.
-- API-015/016의 [가상 예약 시연](REPLACEMENT-DEMO.md)은 별도 Mock DB와 상태 저장 서버, Spring `replacement.worker.enabled=true`, 양 프록시의 `CSRO_REPLACEMENT_DEMO_PROXY=true`를 추가로 명시한다. 상담사만 예약을 접수하고 고객은 API-011·014와 자신의 예약 상태 API-016을 사용한다. 일반 인증·입실·사건 종료 구현 완료를 뜻하지 않는다.
+- API-015/016의 [가상 예약 시연](REPLACEMENT-DEMO.md)은 별도 Mock DB와 상태 저장 서버, Spring `replacement.worker.enabled=true`, 양 프록시의 `CSRO_REPLACEMENT_DEMO_PROXY=true`를 추가로 명시한다. 상담사만 예약을 접수하고 고객은 API-011·014와 자신의 예약 상태 API-016을 사용한다. 일반 인증은 후속이며 입실·사건 종료는 별도 [API-008/017/018](RESOLUTION-DEMO.md) 범위다.
 
 시연을 마치면 이 세션에서 `Stop-Process -Id $chatDemoSpring.Id`와 `docker stop csro-local-chat-demo-db`를 실행한다. 컨테이너의 메모리 볼륨에 저장한 시연 메시지는 컨테이너 종료 시 사라진다.
