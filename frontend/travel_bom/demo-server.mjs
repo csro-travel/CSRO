@@ -41,7 +41,7 @@ function validateCustomerConfig(customerMode, port, backendPort, token) {
   }
 }
 
-export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, handle, fetchUpstream = fetch }) {
+export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, resolutionAccess = false, handle, fetchUpstream = fetch }) {
   validateCustomerConfig(customerMode, port, backendPort, token)
   const authority = host + ':' + port
   const origin = 'http://' + authority
@@ -52,6 +52,8 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
   const canRequestReplacement = replacementAccess && counselorMode
   const canReadReplacement = replacementAccess && (counselorMode || customerMode)
   const canReportIncident = incidentWrites && customerMode
+  const canResolveCases = resolutionAccess && counselorMode
+  const canConfirmCheckin = resolutionAccess && customerMode
 
   return http.createServer(async (req, res) => {
     if (req.socket.remoteAddress !== host || req.headers.host !== authority ||
@@ -65,13 +67,17 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
     const headers = { Authorization: 'Bearer ' + token }
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
     const replacement = req.method === 'POST' && canRequestReplacement && /^\/demo\/cases\/C-[0-9]{3,38}\/replacement-bookings$/.test(req.url)
-    if (req.method === 'POST' || req.method === 'PUT') {
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
       const message = req.method === 'POST' && canSendMessages && /^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)
       const quoteSearch = req.method === 'POST' && canSearchQuotes && /^\/demo\/cases\/C-[0-9]{3,38}\/quote-searches$/.test(req.url)
       const offer = req.method === 'POST' && canSendOffers && /^\/demo\/cases\/C-[0-9]{3,38}\/offers$/.test(req.url)
       const selection = req.method === 'PUT' && customerMode && /^\/demo\/cases\/C-[0-9]{3,38}\/selection$/.test(req.url)
       const incident = req.method === 'POST' && canReportIncident && /^\/demo\/bookings\/[A-Za-z0-9][A-Za-z0-9._-]{0,39}\/incident-reports$/.test(req.url)
-      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
+      const checkin = req.method === 'POST' && canConfirmCheckin && /^\/demo\/replacement-bookings\/BRQ-[a-f0-9]{64}\/checkin-confirmations$/.test(req.url)
+      const task = req.method === 'PATCH' && canResolveCases && /^\/demo\/cases\/C-[0-9]{3,38}\/tasks\/TASK-[0-9]{1,19}$/.test(req.url)
+      const closure = req.method === 'POST' && canResolveCases && /^\/demo\/cases\/C-[0-9]{3,38}\/closures$/.test(req.url)
+      const resolution = checkin || task || closure
+      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !resolution) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -80,7 +86,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
         res.writeHead(415).end()
         return
       }
-      if (quoteSearch || offer || selection || replacement || incident) {
+      if (quoteSearch || offer || selection || replacement || incident || resolution) {
         const key = req.headers['idempotency-key']
         if (typeof key !== 'string' || !/^[A-Za-z0-9._:-]{1,100}$/.test(key)) {
           res.writeHead(400).end()
@@ -130,5 +136,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
     customerMode,
     replacementAccess: process.env.CSRO_REPLACEMENT_DEMO_PROXY === 'true',
     incidentWrites: process.env.CSRO_INCIDENT_DEMO_PROXY === 'true',
+    resolutionAccess: process.env.CSRO_RESOLUTION_DEMO_PROXY === 'true',
   }).listen(port, host)
 }

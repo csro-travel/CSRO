@@ -1,3 +1,5 @@
+import type { CounselorResolution } from "./resolution";
+
 type CaseTask = {
   taskId: string;
   type: string;
@@ -30,6 +32,8 @@ export type CaseList = {
 export type CaseDetail = {
   caseId: string;
   status: string;
+  version?: number;
+  resolution?: CounselorResolution;
   booking: {
     bookingId: string;
     hotel: { name: string };

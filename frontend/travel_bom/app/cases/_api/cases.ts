@@ -1,5 +1,6 @@
 import type { CaseDetail, CaseList, CaseStatus } from "../_types/case";
 import type { CaseChatMessage, CaseMessageList } from "../_types/message";
+import { counselorResolution } from "./resolution";
 
 async function read<T>(path: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(path, {
@@ -23,11 +24,13 @@ export function getCases(
 }
 
 /** API-004 상담사 사건 상세 조회 (`GET /api/v1/cases/{caseId}`). */
-export function getCaseDetail(
+export async function getCaseDetail(
   caseId: string,
   signal: AbortSignal,
 ): Promise<CaseDetail> {
-  return read(`/demo/cases/${encodeURIComponent(caseId)}`, signal);
+  const result = await read<CaseDetail>(`/demo/cases/${encodeURIComponent(caseId)}`, signal);
+  if (result.caseId !== caseId || (result.resolution !== undefined && !counselorResolution(result.resolution))) throw Error("사건의 종료 조건 응답을 확인하지 못했습니다.");
+  return result;
 }
 
 /** API-011 사건별 상담 채팅 메시지 조회 (`GET /api/v1/cases/{caseId}/messages`). */

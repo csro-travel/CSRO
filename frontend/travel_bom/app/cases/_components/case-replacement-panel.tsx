@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { formatWon } from "@/lib/alternative-stays";
 import { clearReplacement, getReplacement, pendingReplacement, ReplacementError, requestReplacement, saveReplacement } from "../_api/replacements";
@@ -142,7 +142,7 @@ export function useCaseReplacement({ caseId, customer, closed, selection, active
     submit, refresh, refreshChat };
 }
 
-export function CaseReplacementPanel({ state, customer }: { state: ReturnType<typeof useCaseReplacement>; customer: boolean }) {
+export function CaseReplacementPanel({ state, customer, children }: { state: ReturnType<typeof useCaseReplacement>; customer: boolean; children?: ReactNode }) {
   const { booking, target, reading, readError, sendError, notice, reads, intent, sending, canRequest } = state;
   return (
     <section aria-label="대체 예약 처리" className="space-y-2 border-b px-5 py-3 text-sm">
@@ -163,6 +163,7 @@ export function CaseReplacementPanel({ state, customer }: { state: ReturnType<ty
       </div>}
       {target && <Button type="button" variant="outline" size="sm" disabled={reading} onClick={state.refresh}>예약 처리 상태 새로고침</Button>}
       {booking && !terminal(booking) && reads >= MAX_READS && <p>자동 상태 조회를 마쳤습니다. 같은 접수번호로 수동 새로고침해 주세요.</p>}
+      {children}
       {!customer && <>
         {sendError && <p role="alert">{sendError}</p>}
         {notice && <p role="status" className="wrap-anywhere">{notice}</p>}

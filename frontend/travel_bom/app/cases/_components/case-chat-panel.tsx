@@ -7,6 +7,8 @@ import { CaseMessageSendError, getCaseMessages, sendCaseMessage } from "../_api/
 import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, selectCaseOffer, type PendingIntent, type SelectionBody } from "../_api/offers";
 import { replacementPointer } from "../_api/replacements";
 import { CaseReplacementPanel, replacementStatusText, useCaseReplacement } from "./case-replacement-panel";
+import { customerResolution } from "../_api/resolution";
+import { CustomerCheckinPanel } from "./case-resolution-panel";
 import type { CaseChatMessage, CaseChatState, CaseMessageList } from "../_types/message";
 
 const senderLabels = {
@@ -129,7 +131,8 @@ function readChatState(response: CaseMessageList): CaseChatState | null {
   const choice = response.currentSelection;
   if (choice !== null && (!choice || !isText(choice.selectionId) || !isText(choice.offerId) || !isText(choice.quoteId) || !isTime(choice.selectedAt) || choice.offerId !== response.activeOfferId)) return null;
   if (!(response.latestReplacementBooking === undefined || response.latestReplacementBooking === null || replacementPointer(response.latestReplacementBooking))) return null;
-  return { activeOfferId: response.activeOfferId, currentSelection: choice, effectiveAt: response.effectiveAt, clockMode: response.clockMode, latestReplacementBooking: response.latestReplacementBooking };
+  if (!(response.resolution === undefined || customerResolution(response.resolution))) return null;
+  return { activeOfferId: response.activeOfferId, currentSelection: choice, effectiveAt: response.effectiveAt, clockMode: response.clockMode, latestReplacementBooking: response.latestReplacementBooking, resolution: response.resolution };
 }
 
 type HistoryDirection = "latest" | "older";
@@ -151,7 +154,7 @@ function captureScrollPosition(view: HTMLDivElement, direction: HistoryDirection
   return { target: "message", id: anchor.dataset.chatMessageId, offset: anchor.getBoundingClientRect().top - top };
 }
 
-export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion = 0 }: {
+export function CaseChatPanel({ caseId, closed: parentClosed, customer = false, refreshVersion = 0 }: {
   caseId: string; closed: boolean; customer?: boolean; refreshVersion?: number;
 }) {
   const [history, setHistory] = useState<HistoryResult | null>(null);
@@ -167,6 +170,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
   const transcript = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<ScrollPosition | null>(null);
   const [chatState, setChatState] = useState<CaseChatState | null>(null);
+  const closed = parentClosed || chatState?.resolution?.caseStatus === "CLOSED";
   const [pendingSelection, setPendingSelection] = useState<PendingIntent<SelectionBody>>();
   const [selecting, setSelecting] = useState(false);
   const [selectionError, setSelectionError] = useState("");
@@ -328,7 +332,9 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
         <p className="text-xs text-muted-foreground">{chatState.clockMode === "SYNTHETIC_DEMO" ? "시연용 합성 데이터 · 가상 판단 시각" : "서버 판단 시각"}: <time dateTime={chatState.effectiveAt}>{formatTimestamp(chatState.effectiveAt, offerExpiryFormat)}</time></p>
         <p role="status">{chatState.currentSelection ? `현재 선택: ${messages.flatMap(message => message.offer?.items ?? []).find(item => item.quoteId === chatState.currentSelection?.quoteId)?.propertyName ?? chatState.currentSelection.quoteId} · ${replacement.booking?.selectionId === chatState.currentSelection.selectionId ? replacementStatusText[replacement.booking.status] : replacement.target && !replacement.booking ? "예약 처리 상태 확인 필요" : "선택 완료 · 예약 진행 전"}` : "현재 선택 없음 · 고객 선택은 예약 확정이 아닙니다."}</p>
       </div>}
-      <CaseReplacementPanel state={replacement} customer={customer} />
+      <CaseReplacementPanel state={replacement} customer={customer}>
+        {customer && <CustomerCheckinPanel caseId={caseId} booking={replacement.booking} resolution={chatState?.resolution} onRefresh={refreshChat} />}
+      </CaseReplacementPanel>
       {customer && !chatState && history && <p className="border-b px-5 py-3 text-sm">현재 제안·선택과 서버 판단 시각을 확인해야 선택할 수 있습니다. 새 메시지 확인을 눌러 주세요.</p>}
       {customer && <div className="space-y-2 border-b px-5 py-3 text-sm">
         <p>고객 본인에게 전송된 현재 제안에서 숙소를 선택할 수 있습니다. 일반 메시지 전송은 이 시연에 포함되지 않습니다.</p>

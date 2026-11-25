@@ -16,6 +16,7 @@ export function CaseDetailTabs({
   children,
   chat,
   onOfferSent,
+  resolution,
 }: {
   title: string;
   caseId: string;
@@ -24,6 +25,7 @@ export function CaseDetailTabs({
   children: ReactNode;
   chat: ReactNode;
   onOfferSent?: () => void;
+  resolution?: ReactNode;
 }) {
   return (
     <Tabs.Root defaultValue="case" className="min-w-0 space-y-4">
@@ -45,6 +47,7 @@ export function CaseDetailTabs({
         <div className="min-w-0">
           <Tabs.Panel value="case" keepMounted>
             {children}
+            {resolution}
           </Tabs.Panel>
           <Tabs.Panel value="alternatives">
             <p className="mb-3 text-sm text-muted-foreground">예약번호 <span className="font-medium text-foreground">{bookingId}</span></p>

@@ -1,4 +1,5 @@
 import type { ReplacementPointer } from "./replacement";
+import type { CustomerResolution } from "./resolution";
 
 type CaseChatOfferItem = {
   quoteId: string;
@@ -37,6 +38,7 @@ export type CaseMessageList = {
   effectiveAt?: string;
   clockMode?: "REAL_TIME" | "SYNTHETIC_DEMO";
   latestReplacementBooking?: ReplacementPointer | null;
+  resolution?: CustomerResolution;
   pagination: {
     hasMoreBefore: boolean;
     nextBeforeMessageId: string | null;
@@ -56,4 +58,5 @@ export type CaseChatState = {
   effectiveAt: string;
   clockMode: "REAL_TIME" | "SYNTHETIC_DEMO";
   latestReplacementBooking?: ReplacementPointer | null;
+  resolution?: CustomerResolution;
 };
