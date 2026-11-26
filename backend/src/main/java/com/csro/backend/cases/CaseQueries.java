@@ -47,7 +47,7 @@ public class CaseQueries {
         return principal.getName();
     }
 
-    public String list(Principal principal, List<String> status, String priority, String assignee, String pageValue, String sizeValue) {
+    public String list(Principal principal, List<String> status, String priority, String assignee, String pageValue, String sizeValue, String search) {
         String subject = authorize(principal);
         int page;
         int size;
@@ -60,7 +60,9 @@ public class CaseQueries {
         var active = List.of("OPEN","IN_PROGRESS","WAITING");
         if (page < 0 || size < 1 || size > 50)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"INVALID_PAGE_SIZE");
-        if ((status != null && (status.isEmpty() || !active.containsAll(status)))
+        // CLOSED is listed only when asked for explicitly; the default queue stays active cases.
+        if ((status != null && (status.isEmpty() || !List.of("OPEN","IN_PROGRESS","WAITING","CLOSED").containsAll(status)))
+                || (search != null && (search.isBlank() || search.length() > 40 || search.chars().anyMatch(Character::isISOControl)))
                 || (priority != null && !List.of("URGENT","NORMAL").contains(priority))
                 || (assignee != null && !"me".equals(assignee)))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"INVALID_FILTER");
@@ -68,12 +70,15 @@ public class CaseQueries {
             WITH filtered AS (SELECT c.*,b.booking_code,b.check_in_date,b.check_out_date,h.name,
                 next.due_at,
             """ + CASE_FIELDS + " AS common " + FROM + """
+            JOIN users customer ON customer.id=b.customer_id
             WHERE c.status IN (:statuses) AND (:priority='' OR c.priority=:priority)
-                AND (:mine=false OR u.subject_key=:subject)),
+                AND (:mine=false OR u.subject_key=:subject)
+                AND (:search='' OR strpos(lower(c.case_code || ' ' || b.booking_code || ' ' || h.name || ' ' || customer.display_name),
+                    lower(:search))>0)),
             sliced AS (SELECT * FROM filtered ORDER BY priority DESC,due_at ASC NULLS LAST,
                 updated_at DESC,case_code LIMIT :size OFFSET :offset),
             items AS (SELECT s.*, common || jsonb_build_object('bookingId',booking_code,'hotelName',name,
-                'checkInDate',check_in_date,'checkOutDate',check_out_date,'summary',
+                'checkInDate',check_in_date,'checkOutDate',check_out_date,'createdAt',created_at,'summary',
                 CASE WHEN jsonb_array_length(n.unavailable)>0 THEN '객실 제공 불가 확인: ' || (n.unavailable->>0)
                      WHEN jsonb_array_length(n.conflict)>0 THEN '상반된 근거 확인 필요' ELSE '숙박일 상태 확인 필요' END,
                 'unavailableStayDates',n.unavailable,'unknownStayDates',n.unknown,'conflictStayDates',n.conflict) AS item
@@ -87,7 +92,7 @@ public class CaseQueries {
             """;
         long offset = (long) page * size;
         return jdbc.sql(query).param("statuses",status == null ? active : status).param("priority",priority == null ? "" : priority)
-                .param("mine",assignee != null).param("subject",subject).param("page",page).param("size",size)
+                .param("mine",assignee != null).param("subject",subject).param("search",search == null ? "" : search.strip()).param("page",page).param("size",size)
                 .param("offset",offset).param("end",offset+size).query(String.class).single();
     }
 
@@ -97,7 +102,8 @@ public class CaseQueries {
         return jdbc.sql("SELECT (" + CASE_FIELDS + """
             || jsonb_build_object('booking',jsonb_build_object('bookingId',b.booking_code,
                 'hotel',jsonb_build_object('hotelId',h.hotel_code,'name',h.name),'supplierStatus',b.supplier_status,
-                'checkInDate',b.check_in_date,'checkOutDate',b.check_out_date,'adults',b.adults),
+                'checkInDate',b.check_in_date,'checkOutDate',b.check_out_date,'adults',b.adults,'rooms',b.rooms,
+                'originalPrice',jsonb_build_object('amount',b.original_total_amount,'currency',b.currency)),
             'nights',coalesce((SELECT jsonb_agg(jsonb_build_object('stayDate',n.stay_date,
                 'fulfillmentStatus',n.fulfillment_status,'factStatus',n.fact_status,'evidenceId','EV-' || a.evidence_id) ORDER BY n.stay_date)
                 FROM booking_nights n LEFT JOIN evidence_nights a ON a.id=n.accepted_assertion_id WHERE n.booking_id=b.id),'[]'),

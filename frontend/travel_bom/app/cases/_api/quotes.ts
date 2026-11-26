@@ -80,7 +80,7 @@ export async function getCaseQuotes(caseId: string, signal: AbortSignal): Promis
     throw new Error((await problemDetail(response, `견적 조회 실패 (HTTP ${response.status})`)).message);
   }
   const result: unknown = await response.json();
-  if (!quoteList(result, caseId)) throw new Error("사건과 견적 응답을 확인하지 못했습니다. 다시 조회해 주세요.");
+  if (!quoteList(result, caseId)) throw new Error("대응 건과 견적 응답을 확인하지 못했습니다. 다시 조회해 주세요.");
   return result;
 }
 

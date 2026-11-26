@@ -45,8 +45,8 @@ public class CaseController {
     public ResponseEntity<String> list(HttpServletRequest request,
             @RequestParam(required=false) List<String> status, @RequestParam(required=false) String priority,
             @RequestParam(required=false) String assignee, @RequestParam(defaultValue="0") String page,
-            @RequestParam(defaultValue="20") String size) {
-        return ok(queries.list(principal(request), status, priority, assignee, page, size));
+            @RequestParam(defaultValue="20") String size, @RequestParam(required=false) String q) {
+        return ok(queries.list(principal(request), status, priority, assignee, page, size, q));
     }
 
     @GetMapping("/{caseId}")

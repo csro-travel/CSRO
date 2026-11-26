@@ -14,7 +14,7 @@ export default function CustomerCase() {
       </header>
       {/^C-[0-9]{3,38}$/.test(caseId)
         ? <CaseChatPanel key={caseId} caseId={caseId} closed={false} customer />
-        : <p role="alert">사건 번호를 확인해 주세요.</p>}
+        : <p role="alert">상담 번호를 확인해 주세요.</p>}
     </main>
   );
 }

@@ -29,6 +29,8 @@ A팀의 완료 범위·남은 작업과 B팀 연결 정보는 [A팀 인계](A-TE
 
 API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같은 패키지의 `src/test/java/`에 있다. 각 클래스 JavaDoc과 JUnit DisplayName에도 API 번호가 표시된다. API 목록 전체가 구현됐다는 인덱스가 아니다.
 
+화면 문구의 "상담 대응 건"은 문서·API의 상담 사건(Case)과 같다. API-003의 `CLOSED` 필터·검색어 `q`, API-004의 `rooms`·`originalPrice`, 고객 화면의 API-001 연결은 [사용자 승인 최소 변경](CONSOLE-VIEWS-PROPOSAL.md)을 따른다.
+
 공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다.
 
 ## API-011 구현 메모

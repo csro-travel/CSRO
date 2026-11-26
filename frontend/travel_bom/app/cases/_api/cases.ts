@@ -16,9 +16,11 @@ export function getCases(
   page: number,
   status: CaseStatus | undefined,
   signal: AbortSignal,
+  search?: string,
 ): Promise<CaseList> {
   const query = new URLSearchParams({ page: String(page) });
   if (status) query.set("status", status);
+  if (search?.trim()) query.set("q", search.trim());
   return read(`/demo/cases?${query}`, signal);
 }
 

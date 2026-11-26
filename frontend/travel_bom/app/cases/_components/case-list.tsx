@@ -8,10 +8,14 @@ const caseStatuses = {
     label: "확인 대기",
     tone: "bg-secondary text-secondary-foreground",
   },
+  CLOSED: { label: "종료", tone: "bg-muted text-muted-foreground" },
 } satisfies Record<CaseStatus, { label: string; tone: string }>;
 
-const statusOptions = [undefined, "OPEN", "IN_PROGRESS", "WAITING"] as const;
-const taskLabels = new Map([["CONTACT_CUSTOMER", "고객 연락"]]);
+const statusOptions = [undefined, "OPEN", "IN_PROGRESS", "WAITING", "CLOSED"] as const;
+const taskLabels = new Map([
+  ["CONTACT_CUSTOMER", "고객 연락"], ["VERIFY_HOTEL", "호텔 직접 확인"],
+  ["CHECKIN_CONFIRM", "입실 확인"], ["ORIGINAL_FOLLOWUP", "원예약 후속 처리"],
+]);
 const deadlineFormat = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
   month: "2-digit",
@@ -27,6 +31,8 @@ type CaseListProps = {
   status: CaseStatus | undefined;
   error: string;
   onStatusChange: (status: CaseStatus | undefined) => void;
+  search: string;
+  onSearch: (search: string) => void;
   onPageChange: (page: number) => void;
   onOpen: (caseId: string) => void;
   onRetry: () => void;
@@ -44,6 +50,8 @@ export function CaseListView({
   status,
   error,
   onStatusChange,
+  search,
+  onSearch,
   onPageChange,
   onOpen,
   onRetry,
@@ -55,9 +63,27 @@ export function CaseListView({
 
   return (
     <section className="space-y-4">
+      <form
+        role="search"
+        className="flex flex-wrap gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSearch(String(new FormData(event.currentTarget).get("q") ?? ""));
+        }}
+      >
+        <input
+          name="q"
+          defaultValue={search}
+          maxLength={40}
+          aria-label="대응 건 검색"
+          placeholder="대응 건·예약번호·숙소명·고객명"
+          className="h-10 min-w-64 flex-1 rounded-lg border bg-background px-3 text-sm"
+        />
+        <Button type="submit" variant="outline" size="lg">검색</Button>
+      </form>
       <div
         role="group"
-        aria-label="사건 상태 필터"
+        aria-label="처리 상태 필터"
         className="flex flex-wrap gap-2"
       >
         {statusOptions.map((option) => (
@@ -76,7 +102,7 @@ export function CaseListView({
 
       <div
         role="region"
-        aria-label="상담 사건 목록"
+        aria-label="상담 대응 목록"
         tabIndex={0}
         className="overflow-x-auto rounded-2xl border bg-card focus-visible:outline-2 focus-visible:outline-ring"
       >
@@ -87,7 +113,7 @@ export function CaseListView({
                 긴급도
               </th>
               <th scope="col" className="w-32 whitespace-nowrap px-4 py-4">
-                사건·예약
+                대응 건·예약
               </th>
               <th scope="col" className="min-w-52 px-4 py-4">
                 확인된 문제
@@ -99,7 +125,7 @@ export function CaseListView({
                 다음 업무·기한
               </th>
               <th scope="col" className="w-28 whitespace-nowrap px-4 py-4 text-right">
-                사건 열기
+                열기
               </th>
             </tr>
           </thead>
@@ -112,8 +138,8 @@ export function CaseListView({
                     className={error ? "text-destructive" : "text-muted-foreground"}
                   >
                     {error || (list
-                      ? "현재 처리할 상담 사건이 없습니다"
-                      : "사건 조회 중…")}
+                      ? (search ? "검색 결과가 없습니다" : "현재 처리할 상담 대응 건이 없습니다")
+                      : "대응 건 조회 중…")}
                   </p>
                   {error && (
                     <Button
@@ -193,13 +219,13 @@ export function CaseListView({
                   <td className="px-4 py-4 text-right">
                     <Button
                       type="button"
-                      aria-label={`${item.caseId} 사건 열기`}
+                      aria-label={`${item.caseId} 대응 건 열기`}
                       onClick={(event) => {
                         event.stopPropagation();
                         onOpen(item.caseId);
                       }}
                     >
-                      사건 열기
+                      열기
                     </Button>
                   </td>
                 </tr>
@@ -211,7 +237,7 @@ export function CaseListView({
 
       {pagination && pageCount > 1 && (
         <nav
-          aria-label="사건 목록 페이지"
+          aria-label="상담 대응 목록 페이지"
           className="flex flex-wrap items-center justify-end gap-3 text-sm"
         >
           <Button

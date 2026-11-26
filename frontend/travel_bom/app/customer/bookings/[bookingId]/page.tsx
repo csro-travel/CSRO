@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { BookingSummary } from "./booking-summary";
 
 type IncidentBody = { issueType: "CHECKIN_FAILED"; atHotel: boolean; message: string };
 type Intent = { version: 1; key: string; body: IncidentBody };
@@ -120,6 +121,7 @@ export default function CustomerIncidentReport() {
         <p className="text-sm text-muted-foreground">여행봄 고객 전용 시연 · 예약 {bookingId}</p>
         <p className="text-sm">접수 후 호텔에 예약을 재확인합니다. 고객 신고만으로 객실 제공 불가나 대체 예약이 확정되지는 않습니다.</p>
       </header>
+      {validBooking && <BookingSummary bookingId={bookingId} />}
       {!validBooking ? <p role="alert">예약 번호를 확인해 주세요.</p> : (
         <form onSubmit={submit} className="space-y-5">
           <fieldset disabled={!ready || blocked || busy || !!pending || !!receivedCase} className="space-y-4 disabled:opacity-70">

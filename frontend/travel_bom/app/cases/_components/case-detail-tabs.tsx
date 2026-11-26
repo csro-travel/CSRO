@@ -29,10 +29,10 @@ export function CaseDetailTabs({
     <Tabs.Root defaultValue="case" className="min-w-0 space-y-4">
       <header className="flex flex-col items-start gap-3 lg:flex-row lg:items-center lg:gap-5">
         <h2 className="min-w-0 text-2xl font-bold wrap-anywhere">{title}</h2>
-        <Tabs.List aria-label="사건 상세" className="inline-flex max-w-full shrink-0 flex-wrap gap-1 rounded-xl border bg-card p-1">
+        <Tabs.List aria-label="대응 건 상세" className="inline-flex max-w-full shrink-0 flex-wrap gap-1 rounded-xl border bg-card p-1">
           <Tabs.Tab value="case" className={tabClassName}>
             <FileText aria-hidden="true" className="size-4 shrink-0" />
-            사건
+            대응 건
           </Tabs.Tab>
           <Tabs.Tab value="alternatives" className={tabClassName}>
             <BedDouble aria-hidden="true" className="size-4 shrink-0" />

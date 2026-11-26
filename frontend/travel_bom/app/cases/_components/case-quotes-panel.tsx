@@ -211,7 +211,7 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
           <button className="min-h-10 rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50" disabled={sending || closed || offering || !!pendingOffer || (!retryKey && (loading || !!readError || inProgress))} onClick={() => void search()}>{sending ? "검색 접수 중…" : retryKey ? "같은 요청으로 접수 확인" : "대체 숙소 검색"}</button>
         </div>
       </div>
-      {closed && <p className="text-sm text-muted-foreground">종료된 사건은 견적 이력만 조회할 수 있습니다.</p>}
+      {closed && <p className="text-sm text-muted-foreground">종료된 대응 건은 견적 이력만 조회할 수 있습니다.</p>}
       {loading && <p role="status">견적 조회 중…</p>}
       {readError && <p role="alert">{readError}</p>}
       {sendError && <p role="alert">{sendError}</p>}

@@ -5,7 +5,7 @@ export type CaseTask = {
   dueAt: string | null;
 };
 
-export type CaseStatus = "OPEN" | "IN_PROGRESS" | "WAITING";
+export type CaseStatus = "OPEN" | "IN_PROGRESS" | "WAITING" | "CLOSED";
 
 type CaseListItem = {
   caseId: string;
@@ -36,6 +36,9 @@ export type CaseDetail = {
     supplierStatus: string;
     checkInDate?: string;
     checkOutDate?: string;
+    adults?: number;
+    rooms?: number;
+    originalPrice?: { amount: number; currency: string };
   };
   nights: {
     stayDate: string;

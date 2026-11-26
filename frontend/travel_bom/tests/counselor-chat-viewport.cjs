@@ -86,7 +86,7 @@ async function checkChatViewport() {
     })
 
     await page.goto(`http://127.0.0.1:${port}/cases`)
-    await page.getByRole('button', { name: `${caseId} 사건 열기`, exact: true }).click()
+    await page.getByRole('button', { name: `${caseId} 대응 건 열기`, exact: true }).click()
     const panel = page.getByRole('region', { name: '채팅', exact: true })
     const history = panel.getByRole('region', { name: '대화 내역', exact: true })
     const draft = panel.getByRole('textbox', { name: '메시지', exact: true })
@@ -140,7 +140,7 @@ async function checkChatViewport() {
     const chatWithDraft = await panel.boundingBox()
     const alternatives = page.getByRole('tabpanel', { name: '대체 숙소', exact: true }).locator('section').first()
     for (const [tabName, leftCard, hiddenCard] of [
-      ['대체 숙소', alternatives, firstCard], ['사건', firstCard, alternatives],
+      ['대체 숙소', alternatives, firstCard], ['대응 건', firstCard, alternatives],
     ]) {
       const tab = tabs.getByRole('tab', { name: tabName, exact: true })
       await tab.click()

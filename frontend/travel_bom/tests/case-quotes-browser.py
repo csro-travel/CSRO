@@ -97,7 +97,7 @@ def run():
 
             page.route("**/demo/cases**", route_api)
             page.goto(BASE + "/cases")
-            page.get_by_role("button", name="C-029 사건 열기", exact=True).click()
+            page.get_by_role("button", name="C-029 대응 건 열기", exact=True).click()
             page.get_by_role("tab", name="대체 숙소", exact=True).click()
             panel = page.get_by_role("region", name="대체 숙소 견적", exact=True)
             expect(panel.get_by_text("아직 검색하지 않았습니다. 대체 숙소 검색을 눌러 주세요.", exact=True)).to_be_visible()
@@ -105,7 +105,7 @@ def run():
             panel.get_by_role("button", name="대체 숙소 검색", exact=True).click()
             expect(panel.get_by_role("alert")).to_contain_text("접수 결과를 확인하지 못했습니다")
             page.reload()
-            page.get_by_role("button", name="C-029 사건 열기", exact=True).click()
+            page.get_by_role("button", name="C-029 대응 건 열기", exact=True).click()
             page.get_by_role("tab", name="대체 숙소", exact=True).click()
             panel.get_by_role("button", name="같은 요청으로 접수 확인", exact=True).click()
             expect(panel.get_by_text("검색 상태: 접수됨", exact=True)).to_be_visible()
@@ -141,8 +141,8 @@ def run():
 
             state["mode"] = "delayed"
             panel.get_by_role("button", name="새로고침", exact=True).click()
-            page.get_by_role("button", name="← 사건 목록", exact=True).click()
-            page.get_by_role("button", name="C-030 사건 열기", exact=True).click()
+            page.get_by_role("button", name="← 상담 대응 목록", exact=True).click()
+            page.get_by_role("button", name="C-030 대응 건 열기", exact=True).click()
             page.get_by_role("tab", name="대체 숙소", exact=True).click()
             expect(panel.get_by_role("heading", name="C-030 대체 숙소 견적", exact=True)).to_be_visible()
             if state["held"] is not None:
