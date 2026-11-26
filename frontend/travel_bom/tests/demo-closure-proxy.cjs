@@ -49,15 +49,18 @@ async function proxy(t, overrides = {}) {
   return { port: server.address().port, authority: host + ':' + config.port, forwarded }
 }
 
-test('counselor proxy forwards API-008 completion and keyed API-018 closure with server credentials only', async t => {
+test('counselor proxy forwards API-008 completion, keyed API-018 closure and API-006 evidence with server credentials only', async t => {
   const instance = await proxy(t)
   const task = await request(instance, taskPath, { method: 'PATCH', body: '{"status":"DONE","completionNote":"done"}' })
   assert.equal(task.status, 200)
   const closure = await request(instance, closurePath, { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'close:1' } })
   assert.equal(closure.status, 201)
+  const evidence = await request(instance, '/demo/cases/C-029/evidence', { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'call:1' } })
+  assert.equal(evidence.status, 201)
   assert.deepEqual(instance.forwarded.map(item => [item.method, item.url, item.headers.Authorization, item.headers['Idempotency-Key']]), [
     ['PATCH', 'http://127.0.0.1:18082/api/v1/cases/C-029/tasks/TASK-3', 'Bearer ' + counselorToken, undefined],
     ['POST', 'http://127.0.0.1:18082/api/v1/cases/C-029/closures', 'Bearer ' + counselorToken, 'close:1'],
+    ['POST', 'http://127.0.0.1:18082/api/v1/cases/C-029/evidence', 'Bearer ' + counselorToken, 'call:1'],
   ])
 })
 
@@ -78,6 +81,7 @@ test('customer proxy forwards only API-017 check-in and never counselor commands
   assert.equal(checkin.status, 201)
   assert.equal((await request(instance, taskPath, { method: 'PATCH', body: '{}' })).status, 403)
   assert.equal((await request(instance, closurePath, { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'k' } })).status, 403)
+  assert.equal((await request(instance, '/demo/cases/C-029/evidence', { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'k' } })).status, 403)
   assert.deepEqual(instance.forwarded.map(item => [item.url, item.headers.Authorization]), [
     ['http://127.0.0.1:18082' + checkinPath.replace('/demo/', '/api/v1/'), 'Bearer ' + customerToken],
   ])

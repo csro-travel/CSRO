@@ -79,6 +79,9 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("PATCH", task, "customer-test-token", "127.0.0.1"));
         assertNull(subject("POST", closure, "customer-test-token", "127.0.0.1"));
         assertNull(subject("PATCH", closure, "counselor-test-token", "127.0.0.1"));
+        String evidence = "/api/v1/cases/C-001/evidence";
+        assertEquals("demo-counselor-001", subject("POST", evidence, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", evidence, "customer-test-token", "127.0.0.1"));
     }
 
     @Test

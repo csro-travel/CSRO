@@ -38,6 +38,7 @@ public final class LocalChatDemo {
     private static final Pattern CHECKIN_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+/checkin-confirmations");
     private static final Pattern TASK_PATH = Pattern.compile("/api/v1/cases/[^/]+/tasks/[^/]+");
     private static final Pattern CLOSURE_PATH = Pattern.compile("/api/v1/cases/[^/]+/closures");
+    private static final Pattern EVIDENCE_PATH = Pattern.compile("/api/v1/cases/[^/]+/evidence");
 
     private LocalChatDemo() {}
 
@@ -108,7 +109,7 @@ public final class LocalChatDemo {
                 case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
                         && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches()
                         && !INCIDENT_REPORT_PATH.matcher(path).matches() && !CHECKIN_PATH.matcher(path).matches()
-                        && !CLOSURE_PATH.matcher(path).matches();
+                        && !CLOSURE_PATH.matcher(path).matches() && !EVIDENCE_PATH.matcher(path).matches();
                 case "PUT" -> !SELECTION_PATH.matcher(path).matches();
                 case "PATCH" -> !TASK_PATH.matcher(path).matches();
                 default -> true;

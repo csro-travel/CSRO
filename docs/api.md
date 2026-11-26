@@ -48,6 +48,10 @@ Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결�
 
 사용자 승인 [최소 변경](../backend/docs/api/CONSOLE-VIEWS-PROPOSAL.md)에 따라 API-003은 명시적 `status=CLOSED`와 검색어 `q`를 허용하고, 항목에 `createdAt`을 더한다. 기본 목록은 계속 활성 사건만 반환한다. API-004 `booking`에는 `rooms`·`originalPrice`를 더한다. 고객 화면은 기존 API-001로 예약과 진행 중인 상담 링크를 표시한다. 화면 명칭 "상담 대응 건"은 문서의 상담 사건(Case)과 같다.
 
+## API-006 호텔 수동 확인 근거
+
+사용자 승인 [최소 계약](../backend/docs/api/API-006-PROPOSAL.md)에 따라 상담사가 `POST /api/v1/cases/{caseId}/evidence`(`callNote`, 숙박일별 `reportedProvisionStatus`, Idempotency-Key)로 호텔 직접 확인 결과를 `MANUAL_HOTEL` 근거로 남긴다. 숙박일 반영은 자동 재확인과 같은 규칙이다. 원예약의 모든 숙박일이 VERIFIED가 아니면 사건을 WAITING으로 바꾸고, 모두 VERIFIED이면 필수 `VERIFY_HOTEL`을 이 근거로 완료한다.
+
 ## 유지할 계약
 
 - 각 API의 URI·메서드·요청·응답·오류 조건은 현행 Notion 상세 명세에서 확인한다. 성공은 리소스 JSON을 직접 반환한다. 오류는 `application/problem+json`과 안정적인 `code`, 추적용 `traceId`를 유지한다.

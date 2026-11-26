@@ -75,7 +75,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       const selection = req.method === 'PUT' && customerMode && /^\/demo\/cases\/C-[0-9]{3,38}\/selection$/.test(req.url)
       const incident = req.method === 'POST' && canReportIncident && /^\/demo\/bookings\/[A-Za-z0-9][A-Za-z0-9._-]{0,39}\/incident-reports$/.test(req.url)
       const task = req.method === 'PATCH' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/tasks\/TASK-[1-9][0-9]{0,17}$/.test(req.url)
-      const closure = req.method === 'POST' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/closures$/.test(req.url)
+      const closure = req.method === 'POST' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/(?:closures|evidence)$/.test(req.url)
       const checkin = req.method === 'POST' && canConfirmCheckin && /^\/demo\/replacement-bookings\/BRQ-[a-f0-9]{64}\/checkin-confirmations$/.test(req.url)
       if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
