@@ -25,6 +25,22 @@ Spring 격리 인증은 입실 경로만 고객 주체로 연결하고 업무·�
 
 2026-11-26 Windows에서 새 tmpfs 업무 DB·Mock DB와 실제 ML·Mock·Agent·Spring·두 프록시를 띄우고 앱 내 브라우저로 위 1~5단계를 진행했다. 종료 전 차단 사유 2회(예약 전·입실 전), 고객 입실, 업무 자동/수동 완료, 종료, 채팅 입력 비활성화를 확인했다. 이어 HTTP로 종료·입실의 같은 키 재생(201), 새 키 409(`CASE_ALREADY_CLOSED`·`CASE_CLOSED`), 상담사 입실 403, 같은 메모 업무 재생 200·다른 메모 409, 잘못된 본문 400, 고객 프록시의 업무 변경 403을 확인했다.
 
-자동 검사: `backend`에서 `.\gradlew.bat ciUnitTest`(인증 경계 테스트 포함), `frontend/travel_bom`에서 빌드·`tsc --noEmit`·`node --test tests/demo-closure-proxy.cjs`. 기존 프록시 테스트 4개는 Windows에서 `ECONNRESET`으로 실패하며 `main`의 원본 프록시에서도 같다.
+핵심 업무 규칙은 `ClosureIntegrationTest`가 실제 V1 행에서 검증한다. 견적·제안·선택·예약 서비스를 그대로 거치며 공급사·Agent HTTP만 대역이다. 종료는 예약 원장 위에서만 의미가 있으므로 예약 전용 DB를 함께 사용한다.
 
-미검증: 부분 기간(1박) 대체 확정 사건의 `STAY_NOT_COVERED` 차단(대체 예약이 없을 때의 차단만 확인), 전용 PostgreSQL 통합 테스트, GitHub Actions 원격 실행. 호텔·공급사 출처 입실, 원예약 자동 취소·환불, 운영 인증은 범위 밖이다.
+| 시나리오 | 검증 내용 |
+| --- | --- |
+| 3박 정상 종료 | 예약 전 차단 3종(대체 예약 없음·숙박일 미보장·필수 업무) → 예약 후 입실·업무 차단 → 입실 뒤 원예약 후속만 차단 → 종료. 차단 중 사건 상태·종료 기록 불변, 같은 키 재생·새 키 409, 종료 후 입실 409 |
+| 1박 부분 대체 | 입실·모든 업무 완료 뒤에도 11/11·11/12 미확인으로 `STAY_NOT_COVERED`. 두 날짜가 VERIFIED+AVAILABLE이 된 뒤에만 종료 |
+| 미확정 예약 | PROCESSING 예약의 입실은 409 `REPLACEMENT_NOT_CONFIRMED` |
+
+```powershell
+$env:REPLACEMENT_TEST = 'true'
+$env:REPLACEMENT_TEST_DB_URL = 'jdbc:postgresql://127.0.0.1:25444/yeohaengbom_replacements_test'
+$env:REPLACEMENT_TEST_DB_USER = 'yb_replacement_test'
+# REPLACEMENT_TEST_DB_PASSWORD는 전용 테스트 DB 비밀번호
+.\gradlew.bat test --tests 'com.csro.backend.closure.ClosureIntegrationTest'
+```
+
+Windows에서 새 tmpfs 전용 DB로 `ClosureIntegrationTest` 3개와 기존 `ReplacementIntegrationTest` 15개가 통과했다. 그 밖에 `ciUnitTest`(인증 경계 테스트 포함), 프런트 빌드·`tsc --noEmit`·`node --test tests/demo-closure-proxy.cjs`를 확인했다. 기존 프록시 테스트 4개는 Windows에서 `ECONNRESET`으로 실패하며 `main`의 원본 프록시에서도 같다.
+
+미검증: GitHub Actions 원격 실행. 호텔·공급사 출처 입실, 원예약 자동 취소·환불, 운영 인증은 범위 밖이다.

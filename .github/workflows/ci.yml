@@ -409,14 +409,14 @@ jobs:
         run: |
           python -m pip install -r requirements-stateful.txt
           python -m unittest discover -s tests -p test_stateful_booking.py -k StatefulBookingPostgresTest
-      - name: Spring 예약 원장·복구·원자 저장 검사
+      - name: Spring 예약 원장·복구·원자 저장·사건 종료 검사
         working-directory: backend
         env:
           REPLACEMENT_TEST: 'true'
           REPLACEMENT_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25444/yeohaengbom_replacements_test
           REPLACEMENT_TEST_DB_USER: yb_replacement_test
           REPLACEMENT_TEST_DB_PASSWORD: ci-isolated-replacement-db-only
-        run: bash ./gradlew --no-daemon --console=plain test --tests 'com.csro.backend.replacements.ReplacementIntegrationTest'
+        run: bash ./gradlew --no-daemon --console=plain test --tests 'com.csro.backend.replacements.ReplacementIntegrationTest' --tests 'com.csro.backend.closure.ClosureIntegrationTest'
 
   frontend:
     needs: changes
