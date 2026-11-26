@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/input";
 import { BookingSummary } from "./booking-summary";
 
 type IncidentBody = { issueType: "CHECKIN_FAILED"; atHotel: boolean; message: string };
@@ -115,31 +118,33 @@ export default function CustomerIncidentReport() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-5 py-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">체크인 문제 신고</h1>
+    <main className="mx-auto max-w-2xl space-y-5 px-5 py-6">
+      <header className="space-y-1.5">
+        <h1 className="text-xl font-bold">체크인 문제 신고</h1>
         <p className="text-sm text-muted-foreground">여행봄 고객 전용 시연 · 예약 {bookingId}</p>
         <p className="text-sm">접수 후 호텔에 예약을 재확인합니다. 고객 신고만으로 객실 제공 불가나 대체 예약이 확정되지는 않습니다.</p>
       </header>
       {validBooking && <BookingSummary bookingId={bookingId} />}
       {!validBooking ? <p role="alert">예약 번호를 확인해 주세요.</p> : (
-        <form onSubmit={submit} className="space-y-5">
+        <form onSubmit={submit} className="panel space-y-4 p-4">
           <fieldset disabled={!ready || blocked || busy || !!pending || !!receivedCase} className="space-y-4 disabled:opacity-70">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={atHotel} onChange={event => setAtHotel(event.target.checked)} />
-              현재 숙소에 도착해 있습니다
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <Checkbox checked={atHotel} onCheckedChange={checked => setAtHotel(checked === true)}
+                disabled={!ready || blocked || busy || !!pending || !!receivedCase} />
+              지금 숙소에 도착해 있습니다
             </label>
             <label className="block space-y-2">
               <span className="text-sm font-medium">어떤 체크인 문제가 있나요?</span>
-              <textarea value={message} onChange={event => setMessage(event.target.value)} required rows={6}
-                aria-describedby="incident-message-help" className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+              <Textarea value={message} onChange={event => setMessage(event.target.value)} required rows={6}
+                placeholder="예: 호텔 프런트에서 예약을 찾을 수 없다고 합니다."
+                aria-describedby="incident-message-help" />
             </label>
             <p id="incident-message-help" className="text-xs text-muted-foreground">1~1,000자 · 비밀번호나 결제 정보를 적지 마세요. 현재 {[...message.trim()].length.toLocaleString("ko-KR")}자</p>
           </fieldset>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {receivedCase && <p role="status">신고가 접수되었습니다. <a href={`/customer/cases/${encodeURIComponent(receivedCase)}`} className="underline">상담 내용 확인</a></p>}
-          <Button type="submit" disabled={!ready || blocked || busy || !!receivedCase || (!pending && !validMessage(message))}>
-            {busy ? "접수 확인 중…" : pending ? "같은 요청으로 접수 결과 확인" : "체크인 문제 접수"}
+          <Button type="submit" size="lg" disabled={!ready || blocked || busy || !!receivedCase || (!pending && !validMessage(message))}>
+            <Send aria-hidden="true" />{busy ? "접수 확인 중…" : pending ? "같은 요청으로 접수 결과 확인" : "체크인 문제 접수"}
           </Button>
         </form>
       )}

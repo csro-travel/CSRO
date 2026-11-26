@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatWon, type AlternativeStay } from '@/lib/alternative-stays'
 
@@ -101,20 +102,10 @@ export function ComparisonResults({
                     <p className="mt-2 text-xs text-muted-foreground">{stay.checkedAt}</p>
                   </td>
                   <td className="px-4 py-4 text-center">
-                    <button
-                      type="button"
-                      onClick={() => onSelect(stay.id)}
-                      aria-pressed={selected}
-                      aria-label={`${stay.name} 조건 확인`}
-                      className={cn(
-                        'inline-flex h-9 items-center rounded-lg border px-4 text-xs font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none',
-                        selected
-                          ? 'border-primary bg-background text-accent-foreground'
-                          : 'bg-background hover:bg-muted',
-                      )}
-                    >
+                    <Button type="button" variant="outline" onClick={() => onSelect(stay.id)} aria-pressed={selected}
+                      aria-label={`${stay.name} 조건 확인`} className={cn(selected && 'border-primary text-accent-foreground')}>
                       조건 확인
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               )

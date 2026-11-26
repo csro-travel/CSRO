@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshCw, Search, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getCaseQuotes, QuoteSearchError, requestCaseQuotes } from "../_api/quotes";
 import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, sendCaseOffer, type OfferBody, type PendingIntent } from "../_api/offers";
 import type { CaseQuoteGroup, CaseQuoteList } from "../_types/quote";
@@ -49,9 +52,9 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
           {group.quotes.map(quote => (
             <li key={quote.quoteId} data-quote-id={quote.quoteId} className="space-y-2 rounded-lg bg-muted/50 p-3">
               <label className="flex items-center gap-2 text-sm font-medium">
-                <input type="checkbox" checked={selectedIds.includes(quote.quoteId)}
+                <Checkbox checked={selectedIds.includes(quote.quoteId)}
                   disabled={disabled || quote.expired === true || !quote.propertyId || (!selectedIds.includes(quote.quoteId) && (selectedIds.length >= 3 || group.quotes.some(other => selectedIds.includes(other.quoteId) && other.propertyId === quote.propertyId)))}
-                  onChange={() => onToggle(quote.quoteId)} />
+                  onCheckedChange={() => onToggle(quote.quoteId)} />
                 {quote.propertyName} 고객 제안에 포함
               </label>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -203,12 +206,12 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
   }
 
   return (
-    <section aria-label="대체 숙소 견적" className="space-y-4 rounded-xl border bg-card p-4 sm:p-6">
+    <section aria-label="대체 숙소 견적" className="panel space-y-4 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h3 className="text-lg font-semibold">{caseId} 대체 숙소 견적</h3><p className="text-sm text-muted-foreground">시연용 가상 견적 · 같은 기간의 서로 다른 숙소 3곳을 고객에게 제안합니다. 전송은 예약 확정이 아닙니다.</p></div>
+        <div><h3 className="text-sm font-semibold">{caseId} 대체 숙소 견적</h3><p className="text-sm text-muted-foreground">시연용 가상 견적 · 같은 기간의 서로 다른 숙소 3곳을 고객에게 제안합니다. 전송은 예약 확정이 아닙니다.</p></div>
         <div className="flex flex-wrap gap-2">
-          <button className="min-h-10 rounded-md border px-3 text-sm disabled:opacity-50" disabled={loading} onClick={() => { setPolls(0); void refresh(); }}>새로고침</button>
-          <button className="min-h-10 rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50" disabled={sending || closed || offering || !!pendingOffer || (!retryKey && (loading || !!readError || inProgress))} onClick={() => void search()}>{sending ? "검색 접수 중…" : retryKey ? "같은 요청으로 접수 확인" : "대체 숙소 검색"}</button>
+          <Button type="button" variant="outline" disabled={loading} onClick={() => { setPolls(0); void refresh(); }}><RefreshCw aria-hidden="true" />새로고침</Button>
+          <Button type="button" disabled={sending || closed || offering || !!pendingOffer || (!retryKey && (loading || !!readError || inProgress))} onClick={() => void search()}><Search aria-hidden="true" />{sending ? "검색 접수 중…" : retryKey ? "같은 요청으로 접수 확인" : "대체 숙소 검색"}</Button>
         </div>
       </div>
       {closed && <p className="text-sm text-muted-foreground">종료된 대응 건은 견적 이력만 조회할 수 있습니다.</p>}
@@ -234,10 +237,11 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
       </>}
       <div className="space-y-2 border-t pt-4">
         <p className="text-sm">고객에게 보낼 숙소 {chosen.ids.length}/3곳 · 다른 기간 그룹을 선택하면 기존 선택이 바뀝니다.</p>
-        <button className="min-h-10 rounded-md bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50"
+        <Button type="button" size="lg"
           disabled={offering || !offerStorageReady || (!pendingOffer && !canOffer)} onClick={() => void offer()}>
+          <Send aria-hidden="true" />
           {offering ? "제안 처리 확인 중…" : pendingOffer ? "같은 요청으로 제안 전송 확인" : "선택한 3곳 고객에게 제안"}
-        </button>
+        </Button>
       </div>
     </section>
   );

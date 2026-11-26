@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { fetchBookingCase, formatWon, type AlternativeStay, type BookingCase } from '@/lib/alternative-stays'
 import { CaseHeader } from './case-header'
 import { SearchStatus } from './search-status'
@@ -157,7 +158,7 @@ export function AlternativeSearchPanel({ caseId, bookingId }: { caseId?: string;
       {bookingCase ? <CaseHeader bookingCase={bookingCase} searching={searching} onSearch={runSearch} /> : (
         <section className="space-y-3 rounded-2xl border p-6">
           {!loadError && <p role="status">예약 정보를 불러오는 중…</p>}
-          <button type="button" disabled className="rounded-lg bg-muted px-6 py-3 text-muted-foreground">대체 숙소 자동 탐색</button>
+          <Button type="button" size="lg" disabled>대체 숙소 자동 탐색</Button>
         </section>
       )}
       {searchError && <p className="text-sm text-red-600" role="alert">{searchError}</p>}

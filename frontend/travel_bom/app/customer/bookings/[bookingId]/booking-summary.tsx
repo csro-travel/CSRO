@@ -34,7 +34,7 @@ export function BookingSummary({ bookingId }: { bookingId: string }) {
   if (error) return <p role="alert" className="text-sm text-destructive">{error}</p>;
   if (!booking) return <p role="status" className="text-sm text-muted-foreground">예약 조회 중…</p>;
   return (
-    <section aria-label="내 예약" className="space-y-1 rounded-xl border bg-card px-4 py-3.5 text-sm">
+    <section aria-label="내 예약" className="panel space-y-1 px-4 py-3.5 text-sm">
       <p className="font-semibold">{booking.hotel.name}</p>
       <p>{booking.stay.checkInDate} ~ {booking.stay.checkOutDate} · {booking.stay.nights}박 · 성인 {booking.stay.adults}명</p>
       <p>{bookingStatuses.get(booking.bookingStatus) ?? booking.bookingStatus} · 결제 금액 {booking.originalPrice.amount.toLocaleString("ko-KR")}원</p>

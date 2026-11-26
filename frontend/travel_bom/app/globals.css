@@ -7,6 +7,8 @@
 @theme inline {
   --font-sans: var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
   --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-surface: var(--surface);
   --color-info: var(--info);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -68,14 +70,16 @@
   --border: oklch(0.92 0.005 260);
   --input: oklch(0.9 0.005 260);
   --ring: oklch(0.63 0.185 33);
-  --success: oklch(0.6 0.13 155);
-  --info: oklch(0.55 0.15 250);
+  --success: oklch(0.55 0.12 158);
+  --info: oklch(0.5 0.13 250);
+  --warning: oklch(0.62 0.13 75);
+  --surface: oklch(0.972 0.004 255);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -164,5 +168,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Work-tool density: 14px body. */
+  html {
+    font-size: 14px;
+  }
+  @media (max-width: 767px) {
+    html {
+      font-size: 15px;
+    }
+  }
+}
+
+@layer components {
+  /* One surface, one section label and one data-number style for every screen. */
+  .panel {
+    @apply min-w-0 rounded-lg border bg-card;
+  }
+  .eyebrow {
+    @apply text-[0.78rem] font-medium tracking-wide text-muted-foreground;
+  }
+  .num {
+    @apply tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+  .scroll-area {
+    @apply min-h-0 overflow-y-auto overscroll-contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
 }

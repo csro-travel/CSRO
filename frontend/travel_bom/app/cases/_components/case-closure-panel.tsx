@@ -1,13 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { CircleCheck, ClipboardCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/input";
+import { formatDateTime, formatDay, originLabels } from "@/lib/case-labels";
 import { ClosureError, closeCase, completeTask, confirmCheckin, type CloseBlocker } from "../_api/closure";
 import type { CaseDetail, CaseTask } from "../_types/case";
 import type { ReplacementBooking } from "../_types/replacement";
 import { taskNames } from "./case-details";
 
-const card = "min-w-0 rounded-xl border bg-card px-4 py-3.5";
+const closeReasons = new Map([["REPLACEMENT_CHECKED_IN", "대체 숙소 입실 확인 후 종료"]]);
 const dateTime = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" });
 
 function blockerText(blocker: CloseBlocker) {
@@ -38,11 +42,10 @@ function TaskRow({ caseId, task, closed, onDone }: { caseId: string; task: CaseT
     <li className="space-y-1.5 py-2 first:pt-0 last:pb-0" data-task-type={task.type}>
       <p className="text-sm font-medium">{taskNames.get(task.type) ?? task.type}</p>
       {checkin ? <p className="text-xs text-muted-foreground">고객이 입실을 확인하면 자동으로 완료됩니다.</p> : <>
-        <textarea aria-label={`${taskNames.get(task.type) ?? task.type} 처리 내용`} value={note} maxLength={1000} disabled={closed || sending}
+        <Textarea aria-label={`${taskNames.get(task.type) ?? task.type} 처리 내용`} value={note} maxLength={1000} disabled={closed || sending}
           onChange={event => setNote(event.target.value)} rows={2}
-          placeholder={task.type === "ORIGINAL_FOLLOWUP" ? "원예약 후속 처리 결과 (예: 원호텔에 대체 숙박 안내·취소 요청 접수)" : "처리 내용"}
-          className="w-full rounded-lg border bg-background px-2.5 py-1.5 text-sm" />
-        <Button type="button" size="sm" variant="outline" disabled={closed || sending || !note.trim()} onClick={() => void submit()}>
+          placeholder={task.type === "ORIGINAL_FOLLOWUP" ? "원예약 후속 처리 결과 (예: 원호텔에 대체 숙박 안내·취소 요청 접수)" : "처리한 내용을 적어 주세요"} />
+        <Button type="button" variant="outline" disabled={closed || sending || !note.trim()} onClick={() => void submit()}>
           {sending ? "완료 처리 중…" : "업무 완료"}
         </Button>
       </>}
@@ -79,9 +82,10 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
   }
 
   return (
-    <section className={`${card} mt-3 space-y-3`} aria-label="후속 업무와 대응 종료">
-      <h3 className="text-sm font-semibold">후속 업무와 대응 종료</h3>
-      {closed ? <p role="status" className="text-sm font-medium">종료된 대응 건입니다.</p> : <>
+    <section className="panel space-y-3 p-4" aria-label="후속 업무와 대응 종료">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold"><ClipboardCheck className="size-4 text-muted-foreground" aria-hidden="true" />{closed ? "처리 결과" : "후속 업무와 대응 종료"}</h3>
+      {closed ? <ClosureSummary detail={detail} /> : <>
+        <CompletedTasks detail={detail} />
         {detail.tasks.length ? (
           <ul className="divide-y">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} onDone={taskDone} />)}</ul>
         ) : <p className="text-sm text-muted-foreground">남은 업무 없음</p>}
@@ -93,6 +97,49 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
         </div>
       </>}
     </section>
+  );
+}
+
+function CompletedTasks({ detail }: { detail: CaseDetail }) {
+  const done = detail.completedTasks ?? [];
+  if (!done.length) return null;
+  return (
+    <ul className="space-y-2">
+      {done.map(task => (
+        <li key={task.taskId} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-2 text-sm">
+          <CircleCheck className="mt-0.5 size-4 text-success" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <span className="font-medium">{taskNames.get(task.type) ?? task.type}</span>
+              <time dateTime={task.completedAt} className="num text-xs text-muted-foreground">{formatDateTime(task.completedAt)} 완료</time>
+            </p>
+            {task.completionNote && <p className="text-muted-foreground wrap-anywhere">{task.completionNote}</p>}
+            {task.completionEvidenceId && <p className="num text-xs text-muted-foreground">근거 {task.completionEvidenceId}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What happened on a closed case, built only from stored facts. */
+function ClosureSummary({ detail }: { detail: CaseDetail }) {
+  const unavailable = detail.nights.filter(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE").map(night => formatDay(night.stayDate));
+  const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
+  return (
+    <div className="space-y-3">
+      <p role="status" className="flex flex-wrap items-center gap-2 text-sm font-medium">
+        <Badge tone="neutral">종료</Badge>
+        {detail.closure ? <>{closeReasons.get(detail.closure.reason) ?? detail.closure.reason}<time dateTime={detail.closure.closedAt} className="num text-xs font-normal text-muted-foreground">{formatDateTime(detail.closure.closedAt)}</time></> : "종료된 대응 건입니다."}
+      </p>
+      <dl className="space-y-1 text-sm">
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">올라온 이유</dt><dd>{origin.label}</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">확인된 문제</dt><dd>{unavailable.length ? `${unavailable.join(", ")} 객실 제공 불가` : "객실 제공 불가로 확인된 숙박일 없음"}</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">완료한 업무</dt><dd>{(detail.completedTasks ?? []).length}건</dd></div>
+      </dl>
+      <CompletedTasks detail={detail} />
+      <p className="text-xs text-muted-foreground">결제·환불·원예약 자동 취소는 이 시연 범위에 없습니다. 위 기록은 상담사가 남긴 처리 내용입니다.</p>
+    </div>
   );
 }
 
