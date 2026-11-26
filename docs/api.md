@@ -44,6 +44,10 @@ Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결�
 
 사용자 승인 [최소 계약](../backend/docs/api/API-008-017-018-PROPOSAL.md)에 따라 예약 소유 고객이 CONFIRMED 대체 예약의 입실을 `POST /api/v1/replacement-bookings/{id}/checkin-confirmations`(빈 본문, Idempotency-Key)로 1회 기록하고, 같은 트랜잭션에서 필수 `CHECKIN_CONFIRM`을 완료한다. 상담사는 `PATCH /api/v1/cases/{caseId}/tasks/{taskId}`(`{"status":"DONE","completionNote":"…"}`)로 원예약 후속 등 필수 업무를 완료한다. `POST /api/v1/cases/{caseId}/closures`(빈 본문, Idempotency-Key)는 확정 대체 예약·입실 기록·숙박일 보장·필수 업무 완료를 함께 검사하고, 미충족이면 `409 CASE_CLOSE_BLOCKED`와 `blockers`를 반환한다. API-016에는 `checkinConfirmation`이 추가된다. 원예약 자동 취소·환불과 Agent의 자동 종료는 하지 않는다. [실행·검증 범위](../backend/docs/api/CLOSURE-DEMO.md)
 
+## API-006 호텔 수동 확인 근거
+
+사용자 승인 [최소 계약](../backend/docs/api/API-006-PROPOSAL.md)에 따라 상담사가 `POST /api/v1/cases/{caseId}/evidence`(`callNote`, 숙박일별 `reportedProvisionStatus`, Idempotency-Key)로 호텔 직접 확인 결과를 `MANUAL_HOTEL` 근거로 남긴다. 숙박일 반영은 자동 재확인과 같은 규칙이다. 원예약의 모든 숙박일이 VERIFIED가 아니면 사건을 WAITING으로 바꾸고, 모두 VERIFIED이면 필수 `VERIFY_HOTEL`을 이 근거로 완료한다.
+
 ## 유지할 계약
 
 - 각 API의 URI·메서드·요청·응답·오류 조건은 현행 Notion 상세 명세에서 확인한다. 성공은 리소스 JSON을 직접 반환한다. 오류는 `application/problem+json`과 안정적인 `code`, 추적용 `traceId`를 유지한다.

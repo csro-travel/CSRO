@@ -12,11 +12,23 @@
 4. 고객 `http://127.0.0.1:3101/customer/cases/{사건 번호}`의 대체 예약 처리에서 **입실 완료 확인**을 누른다. `CHECKIN_CONFIRM` 업무가 같은 트랜잭션에서 완료된다.
 5. 상담사가 **원예약 후속 처리**에 수동 처리 결과를 적어 완료한 뒤 **사건 종료**를 누른다. 사건은 `CLOSED`/`REPLACEMENT_CHECKED_IN`이 되고 채팅 입력이 닫힌다.
 
+## 시연 3 — 호텔 직접 확인 (API-006)
+
+[사용자 승인 최소 계약](API-006-PROPOSAL.md)에 따라 다음 순서로 진행한다.
+
+1. **재확인 Worker 켜기:** Spring 실행 옵션에 `--incident.recheck.worker.enabled=true`를 추가한다.
+2. **고객 신고 경로 열기:** 고객 3101 프록시에 `CSRO_INCIDENT_DEMO_PROXY=true`를 추가로 설정한다.
+3. **호텔 무응답 재현:** Mock 서버(8001)를 잠시 끈 상태에서 고객이 `http://127.0.0.1:3101/customer/bookings/YB-001`에서 체크인 문제를 신고한다. 재확인이 재시도 끝에 FAILED가 되면 필수 `VERIFY_HOTEL` 업무가 생긴다.
+4. **근거 부족 기록:** 상담사 사건 탭의 **호텔 직접 확인 기록**에서 일부 숙박일을 "확인 안 됨"으로 기록하면 사건이 확인 대기가 된다.
+5. **확인 완료 기록:** 나머지 숙박일을 제공 가능·불가로 기록해 전 숙박일이 VERIFIED가 되면 `VERIFY_HOTEL`이 이 근거로 완료되고 사건은 처리 중으로 돌아온다.
+
+2026-11-26 Windows 브라우저에서 위 순서를 실제로 확인했다. 결과는 새 사건 C-002, 재확인 작업 FAILED(2회 시도), 확인 대기, 처리 중, `VERIFY_HOTEL` DONE(근거 연결)이었다. 같은 규칙은 `ManualEvidenceIntegrationTest`(근거 부족→확인 대기→전 숙박일 확정, 상충 시 CONFLICT, 권한·범위·종료 오류)가 예약 전용 DB에서 검증한다.
+
 ## 프록시 경계
 
 | 프록시 | 허용 경로 | 조건 |
 | --- | --- | --- |
-| 상담사 3100 | `PATCH /demo/cases/C-…/tasks/TASK-…`, `POST /demo/cases/C-…/closures` | 같은 출처·JSON, 종료는 Idempotency-Key 필수 |
+| 상담사 3100 | `PATCH /demo/cases/C-…/tasks/TASK-…`, `POST /demo/cases/C-…/closures`, `POST /demo/cases/C-…/evidence` | 같은 출처·JSON, 종료·근거 등록은 Idempotency-Key 필수 |
 | 고객 3101 | `POST /demo/replacement-bookings/BRQ-…/checkin-confirmations` | 같은 출처·JSON·Idempotency-Key 필수 |
 
 Spring 격리 인증은 입실 경로만 고객 주체로 연결하고 업무·종료 경로는 상담사 토큰만 인정한다. 역할 검사는 서비스가 다시 수행한다.
