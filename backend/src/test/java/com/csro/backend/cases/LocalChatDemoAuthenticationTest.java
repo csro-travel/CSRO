@@ -62,6 +62,22 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("PUT", incident, "customer-test-token", "127.0.0.1"));
     }
 
+    @Test
+    void checkinIsCustomerPathWhileTaskAndClosureCommandsStayCounselorOnly() throws Exception {
+        String checkin = "/api/v1/replacement-bookings/BRQ-" + "a".repeat(64) + "/checkin-confirmations";
+        assertEquals("demo-customer-001", subject("POST", checkin, "customer-test-token", "127.0.0.1"));
+        // The service rejects the counselor for this customer-only command.
+        assertEquals("demo-counselor-001", subject("POST", checkin, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", checkin, "customer-test-token", "192.0.2.4"));
+        String task = "/api/v1/cases/C-001/tasks/TASK-3";
+        String closure = "/api/v1/cases/C-001/closures";
+        assertEquals("demo-counselor-001", subject("PATCH", task, "counselor-test-token", "127.0.0.1"));
+        assertEquals("demo-counselor-001", subject("POST", closure, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("PATCH", task, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", closure, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("PATCH", closure, "counselor-test-token", "127.0.0.1"));
+    }
+
     private String subject(String method, String path, String token, String remote) throws Exception {
         var request = new MockHttpServletRequest(method, path);
         request.setServletPath(path);

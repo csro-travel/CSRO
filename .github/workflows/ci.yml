@@ -438,7 +438,7 @@ jobs:
       - run: |
           pnpm build
           pnpm exec tsc --noEmit
-          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs tests/demo-offers-proxy.cjs tests/demo-replacements-proxy.cjs tests/demo-incidents-proxy.cjs
+          node --test tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs tests/demo-offers-proxy.cjs tests/demo-replacements-proxy.cjs tests/demo-incidents-proxy.cjs tests/demo-closure-proxy.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'

@@ -147,6 +147,11 @@ public class ReplacementService {
             body.put("nextCheckAt", state.nextAttemptAt()); body.put("updatedAt", row.updatedAt());
             body.put("isSynthetic", true); body.put("effectiveAt", scope.effectiveAt());
             body.put("clockMode", scope.syntheticDemo() ? "SYNTHETIC_DEMO" : "REAL_TIME");
+            body.put("checkinConfirmation", jdbc.sql("""
+                    SELECT id,checkin_at FROM checkin_confirmations WHERE replacement_request_id=:id
+                        AND confirmation_status IN ('CUSTOMER_CONFIRMED','PROVIDER_VERIFIED') ORDER BY id LIMIT 1
+                    """).param("id", row.id()).query((rs, index) -> Map.of("checkinConfirmationId", "CHK-" + rs.getLong("id"),
+                            "checkedInAt", rs.getObject("checkin_at", OffsetDateTime.class))).optional().orElse(null));
             return JSON.writeValueAsString(body);
         }));
     }

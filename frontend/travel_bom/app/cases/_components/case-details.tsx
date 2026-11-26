@@ -16,7 +16,10 @@ const evidenceSources = new Map([
 const reviewStatuses = new Map([
   ["ACCEPTED", "근거 채택"], ["PENDING_REVIEW", "검토 대기"], ["REJECTED", "근거 제외"],
 ]);
-const taskNames = new Map([["CONTACT_CUSTOMER", "고객에게 확인된 상황 안내"]]);
+export const taskNames = new Map([
+  ["CONTACT_CUSTOMER", "고객에게 확인된 상황 안내"], ["VERIFY_HOTEL", "호텔 직접 확인"],
+  ["CHECKIN_CONFIRM", "대체 숙소 입실 확인"], ["ORIGINAL_FOLLOWUP", "원예약 후속 처리"],
+]);
 const taskStatuses = new Map([["TODO", "할 일"], ["IN_PROGRESS", "진행 중"], ["DONE", "완료"]]);
 const reportNames = new Map([["CHECKIN_FAILED", "체크인 실패 신고"]]);
 const dayFormat = new Intl.DateTimeFormat("ko-KR", {

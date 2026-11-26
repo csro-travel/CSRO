@@ -1,4 +1,4 @@
-type CaseTask = {
+export type CaseTask = {
   taskId: string;
   type: string;
   status: string;
@@ -56,6 +56,7 @@ export type CaseDetail = {
     }[];
   }[];
   nextAction: CaseTask | null;
+  tasks: CaseTask[];
   customerReports: {
     reportId: string;
     issueType: string;

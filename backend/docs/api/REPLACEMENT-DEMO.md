@@ -91,4 +91,4 @@ Spring 단위 검사는 `backend`에서 `.\gradlew.bat test --tests 'com.csro.ba
 
 프런트는 빌드·TypeScript 및 `node --test tests/demo-replacements-proxy.cjs tests/demo-offers-proxy.cjs tests/demo-quotes-proxy.cjs tests/demo-messages-proxy.cjs`로 확인한다. 실제 브라우저에서는 정상 확정, 응답 유실 후 동일 BRQ 복구, 새로고침 후 상태 재조회와 권한 분리를 확인한다. 응답 유실 시연 옵션·Mock 독립 검사는 [API-029/030 안내](../../../mock-server/docs/API-029-030.md)를 따른다.
 
-실제 입실·원예약 처리 완료·사건 종료 API와 종료 차단 조건은 후속이다. 실제 결제·환불·원예약 자동 취소·실공급사 운영 연동·운영 로그인·배포는 이번 범위에 포함하지 않는다.
+입실·원예약 처리 완료·사건 종료와 종료 차단 조건은 [다음 단계 안내](CLOSURE-DEMO.md)에 연결했다. 실제 결제·환불·원예약 자동 취소·실공급사 운영 연동·운영 로그인·배포는 이번 범위에 포함하지 않는다.
