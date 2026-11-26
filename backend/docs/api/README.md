@@ -31,7 +31,7 @@ API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같
 
 화면 문구의 "상담 대응 건"은 문서·API의 상담 사건(Case)과 같다. API-003의 `CLOSED` 필터·검색어 `q`, API-004의 `rooms`·`originalPrice`, 고객 화면의 API-001 연결은 [사용자 승인 최소 변경](CONSOLE-VIEWS-PROPOSAL.md)을 따른다.
 
-공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다.
+공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다. 시연 1·3용 예약 시드와 합성 관측은 [시연 시드](DEMO-SEEDS.md)를 참고한다.
 
 ## API-011 구현 메모
 
