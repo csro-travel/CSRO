@@ -1,0 +1,13 @@
+{
+  "format": "risk-observation-sources-1",
+  "sources": [
+    {
+      "hotelId": "HOTEL-001",
+      "path": "../examples/risk-events-cold-start.json"
+    },
+    {
+      "hotelId": "HOTEL-002",
+      "path": "../examples/risk-events-demo-hotel-002.json"
+    }
+  ]
+}

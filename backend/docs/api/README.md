@@ -28,7 +28,7 @@ A팀의 완료 범위·남은 작업과 B팀 연결 정보는 [A팀 인계](A-TE
 
 API-001의 구현은 `src/main/java/com/csro/backend/booking/`, 테스트는 같은 패키지의 `src/test/java/`에 있다. 각 클래스 JavaDoc과 JUnit DisplayName에도 API 번호가 표시된다. API 목록 전체가 구현됐다는 인덱스가 아니다.
 
-공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다.
+공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다. 시연 1·3용 예약 시드와 합성 관측은 [시연 시드](DEMO-SEEDS.md)를 참고한다.
 
 ## API-011 구현 메모
 
