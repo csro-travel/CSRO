@@ -15,7 +15,7 @@ function allowsMessageList(url) {
 }
 
 function allowsCaseRead(req) {
-  const listPage = /^\/demo\/cases\?page=(0|[1-9][0-9]{0,9})(?:&status=(?:OPEN|IN_PROGRESS|WAITING))?$/.exec(req.url)
+  const listPage = /^\/demo\/cases\?page=(0|[1-9][0-9]{0,9})(?:&status=(?:OPEN|IN_PROGRESS|WAITING|CLOSED))?(?:&q=[^&#]{1,160})?$/.exec(req.url)
   const allowedPage = listPage !== null && Number(listPage[1]) <= 2147483647
   return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
     req.headers['sec-fetch-site'] === 'same-origin' &&
@@ -26,7 +26,8 @@ function allowsCaseRead(req) {
 function allowsCustomerRead(req) {
   return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
     req.headers['sec-fetch-site'] === 'same-origin' &&
-    /^\/demo\/cases\/C-[0-9]{3,38}\/messages(?:\?|$)/.test(req.url) && allowsMessageList(req.url)
+    ((/^\/demo\/cases\/C-[0-9]{3,38}\/messages(?:\?|$)/.test(req.url) && allowsMessageList(req.url)) ||
+      /^\/demo\/bookings\/[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(req.url))
 }
 
 function allowsReplacementRead(req) {

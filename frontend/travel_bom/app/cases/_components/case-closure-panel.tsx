@@ -66,7 +66,7 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
     try { await closeCase(detail.caseId, key.current); key.current = null; onChanged(); }
     catch (cause) {
       if (cause instanceof ClosureError && !cause.outcomeUnknown) key.current = null;
-      setError(cause instanceof Error ? cause.message : "사건 종료 실패");
+      setError(cause instanceof Error ? cause.message : "대응 종료 실패");
       if (cause instanceof ClosureError) setBlockers(cause.blockers);
       // Blockers may name tasks created after this detail was loaded.
       onChanged();
@@ -79,15 +79,15 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
   }
 
   return (
-    <section className={`${card} mt-3 space-y-3`} aria-label="후속 업무와 사건 종료">
-      <h3 className="text-sm font-semibold">후속 업무와 사건 종료</h3>
-      {closed ? <p role="status" className="text-sm font-medium">종료된 사건입니다.</p> : <>
+    <section className={`${card} mt-3 space-y-3`} aria-label="후속 업무와 대응 종료">
+      <h3 className="text-sm font-semibold">후속 업무와 대응 종료</h3>
+      {closed ? <p role="status" className="text-sm font-medium">종료된 대응 건입니다.</p> : <>
         {detail.tasks.length ? (
           <ul className="divide-y">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} onDone={taskDone} />)}</ul>
         ) : <p className="text-sm text-muted-foreground">남은 업무 없음</p>}
         <div className="space-y-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">입실 확인, 필요한 숙박일 보장, 필수 업무 완료를 모두 확인한 뒤에만 종료됩니다.</p>
-          <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "사건 종료"}</Button>
+          <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "대응 건 종료"}</Button>
           {error && <p role="alert" className="text-sm">{error}</p>}
           {blockers.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm">{blockers.map(item => <li key={item.code}>{blockerText(item)}</li>)}</ul>}
         </div>

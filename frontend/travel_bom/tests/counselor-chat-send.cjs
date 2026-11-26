@@ -78,7 +78,7 @@ async function checkChatSend() {
     })
 
     await page.goto(`http://127.0.0.1:${port}/cases`)
-    const openCase = caseId => page.getByRole('button', { name: `${caseId} 사건 열기`, exact: true }).click()
+    const openCase = caseId => page.getByRole('button', { name: `${caseId} 대응 건 열기`, exact: true }).click()
     await openCase('C-101')
     const panel = page.getByRole('region', { name: '채팅', exact: true })
     const history = panel.getByRole('region', { name: '대화 내역', exact: true })
@@ -123,7 +123,7 @@ async function checkChatSend() {
     assert.equal(await draft.inputValue(), uncertainDraft)
     assert.equal(historyReads, 2)
 
-    await page.getByRole('button', { name: /사건 목록/ }).click()
+    await page.getByRole('button', { name: /상담 대응 목록/ }).click()
     await openCase('C-102')
     await history.getByText('표시할 대화가 없습니다.', { exact: true }).waitFor()
     assert.equal(await draft.isDisabled(), true)

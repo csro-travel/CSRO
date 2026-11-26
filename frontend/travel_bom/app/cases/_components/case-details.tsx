@@ -55,11 +55,11 @@ export function CaseDetails({ detail }: { detail: CaseDetail }) {
   const { booking, customerReports, evidence, nextAction, nights } = detail;
   return (
     <article className="min-w-0 space-y-3">
-      <section className={card} aria-label="예약과 사건 요약">
+      <section className={card} aria-label="예약과 대응 건 요약">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <p>예약번호 <strong className="tabular-nums">{booking.bookingId}</strong></p>
           <span className="rounded-md bg-accent px-2 py-0.5 font-medium text-accent-foreground">
-            {caseStatuses.get(detail.status) ?? "사건 상태 확인 필요"}
+            {caseStatuses.get(detail.status) ?? "처리 상태 확인 필요"}
           </span>
         </div>
         <p className="mt-2 text-sm font-semibold">{problemSummary(detail)}</p>
@@ -67,6 +67,8 @@ export function CaseDetails({ detail }: { detail: CaseDetail }) {
           {booking.checkInDate && booking.checkOutDate && (
             <span>숙박 {formatDay(booking.checkInDate)} ~ {formatDay(booking.checkOutDate)}</span>
           )}
+          {booking.adults !== undefined && <span>성인 {booking.adults}명{booking.rooms !== undefined && ` · 객실 ${booking.rooms}개`}</span>}
+          {booking.originalPrice && <span>원예약 총액 {booking.originalPrice.amount.toLocaleString("ko-KR")}원</span>}
           <span>공급사 · {supplierStatuses.get(booking.supplierStatus) ?? "예약 상태 미확인"}</span>
         </div>
       </section>

@@ -96,7 +96,7 @@ def run():
             context.route("**/demo/**", route_api)
             counselor = context.new_page()
             counselor.goto(BASE + "/cases")
-            counselor.get_by_role("button", name="C-029 사건 열기", exact=True).click()
+            counselor.get_by_role("button", name="C-029 대응 건 열기", exact=True).click()
             panel = counselor.get_by_role("region", name="대체 예약 처리", exact=True)
             request_button = panel.get_by_role("button", name="대체 예약 진행", exact=True)
             expect(request_button).to_be_enabled()
@@ -104,7 +104,7 @@ def run():
             expect(panel.get_by_text("예약 접수 결과를 확인하지 못했습니다.", exact=False)).to_be_visible()
             assert len(state["posts"]) == 1, "Double click must issue one intention"
             counselor.reload()
-            counselor.get_by_role("button", name="C-029 사건 열기", exact=True).click()
+            counselor.get_by_role("button", name="C-029 대응 건 열기", exact=True).click()
             panel.get_by_role("button", name="같은 요청으로 예약 접수 확인", exact=True).click()
             expect(panel.locator('[data-replacement-status="PROCESSING"]')).to_be_visible()
             assert state["posts"][0] == state["posts"][1], "Unknown receipt must preserve key AND selection across reload"
@@ -144,7 +144,7 @@ def run():
             refresh.click()
             expect(panel.locator('[data-replacement-status="CONFIRMED"]')).to_be_visible()
             expect(panel.get_by_text("가상 예약번호 ALT-UI", exact=False)).to_be_visible()
-            expect(panel.get_by_text("실제 입실·원예약 후속 처리·사건 종료", exact=False)).to_be_visible()
+            expect(panel.get_by_text("실제 입실·원예약 후속 처리·대응 종료", exact=False)).to_be_visible()
             expect(counselor.get_by_text("현재 선택: 가상 1-1호텔 · 가상 예약 확정", exact=True)).to_be_visible()
             customer_panel.get_by_role("button", name="예약 처리 상태 새로고침", exact=True).click()
             expect(customer_panel.locator('[data-replacement-status="CONFIRMED"]')).to_be_visible()

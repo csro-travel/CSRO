@@ -412,7 +412,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
             className="block w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring lg:max-h-32"
           />
         </label>
-        {closed && <p className="text-sm text-muted-foreground">종료된 사건에는 메시지를 보낼 수 없습니다.</p>}
+        {closed && <p className="text-sm text-muted-foreground">종료된 대응 건에는 메시지를 보낼 수 없습니다.</p>}
         {sendError && <p role="alert" className="text-sm text-destructive">{sendError}</p>}
         <div className="flex justify-end">
           <Button type="submit" size="lg" disabled={!canSend}>

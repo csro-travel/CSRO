@@ -124,7 +124,7 @@ export function useCaseReplacement({ caseId, customer, closed, selection, active
       if (known && !controller.signal.aborted && currentCase.current === caseId) {
         const retained = { ...pending, resolved: known };
         try { saveReplacement(caseId, retained); }
-        catch { setStorageReady(false); setSendError("접수번호는 확인했지만 보관함을 갱신하지 못했습니다. 사건 대화를 다시 조회해 주세요."); }
+        catch { setStorageReady(false); setSendError("접수번호는 확인했지만 보관함을 갱신하지 못했습니다. 대응 건 대화를 다시 조회해 주세요."); }
         setIntent(retained);
         const refreshed = await refreshChat();
         if (refreshed && !controller.signal.aborted && currentCase.current === caseId) {
@@ -156,7 +156,7 @@ export function CaseReplacementPanel({ state, customer }: { state: ReturnType<ty
         <p>{booking.stay.checkInDate} ~ {booking.stay.checkOutDate} · 성인 {booking.stay.adults}명 · 객실 {booking.stay.rooms}개</p>
         <p>고객 선택 당시 견적 총액 {formatWon(booking.expectedPrice.totalAmount)}</p>
         {booking.status === "RESULT_UNKNOWN" && <p>성공 여부를 확인 중입니다. 새 요청번호로 예약하지 않습니다.</p>}
-        {booking.status === "CONFIRMED" && <><p>가상 예약번호 {booking.supplierBookingId} · 확정 총액 {formatWon(booking.confirmedPrice!.totalAmount)}</p><p>가상 예약 확정입니다. 실제 입실·원예약 후속 처리·사건 종료는 별도로 확인해야 합니다.</p></>}
+        {booking.status === "CONFIRMED" && <><p>가상 예약번호 {booking.supplierBookingId} · 확정 총액 {formatWon(booking.confirmedPrice!.totalAmount)}</p><p>가상 예약 확정입니다. 실제 입실·원예약 후속 처리·대응 종료는 별도로 확인해야 합니다.</p></>}
         {booking.status === "FAILED" && <><p>실패 사유: {booking.failureCode}</p>{booking.currentPrice && <p>확인된 변경 가격 {formatWon(booking.currentPrice.totalAmount)} · 변경 가격에 자동 동의하지 않습니다.</p>}<p>새 견적 검색 → 새 제안 → 고객 재선택 후 진행해 주세요.</p></>}
         {customer && <CustomerCheckin booking={booking} onDone={state.refresh} />}
         {booking.manualRequired &&<p className="font-medium">자동 확인을 마쳤습니다. 담당자가 같은 접수번호로 추가 확인해야 합니다. 새 예약을 만들지 않습니다.</p>}
@@ -169,11 +169,11 @@ export function CaseReplacementPanel({ state, customer }: { state: ReturnType<ty
         {sendError && <p role="alert">{sendError}</p>}
         {notice && <p role="status" className="wrap-anywhere">{notice}</p>}
         {intent && !intent.resolved && <p>이전 접수 결과가 확인되지 않았습니다. 선택과 요청 키를 바꾸지 않고 같은 요청으로 확인합니다.</p>}
-        {intent?.resolved && <p>접수번호를 확인했습니다. 사건의 최신 접수를 다시 읽어야 새 작업을 판단할 수 있습니다.</p>}
+        {intent?.resolved && <p>접수번호를 확인했습니다. 대응 건의 최신 접수를 다시 읽어야 새 작업을 판단할 수 있습니다.</p>}
         <Button type="button" disabled={sending || (!canRequest && (!intent || !!intent.resolved))} onClick={() => void state.submit()}>
           {sending ? "예약 접수 확인 중…" : intent && !intent.resolved ? "같은 요청으로 예약 접수 확인" : "대체 예약 진행"}
         </Button>
-        {intent?.resolved && <Button type="button" variant="outline" onClick={() => void state.refreshChat()}>사건의 최신 접수 확인</Button>}
+        {intent?.resolved && <Button type="button" variant="outline" onClick={() => void state.refreshChat()}>대응 건의 최신 접수 확인</Button>}
       </>}
     </section>
   );

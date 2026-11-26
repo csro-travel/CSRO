@@ -44,6 +44,10 @@ Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결�
 
 사용자 승인 [최소 계약](../backend/docs/api/API-008-017-018-PROPOSAL.md)에 따라 예약 소유 고객이 CONFIRMED 대체 예약의 입실을 `POST /api/v1/replacement-bookings/{id}/checkin-confirmations`(빈 본문, Idempotency-Key)로 1회 기록하고, 같은 트랜잭션에서 필수 `CHECKIN_CONFIRM`을 완료한다. 상담사는 `PATCH /api/v1/cases/{caseId}/tasks/{taskId}`(`{"status":"DONE","completionNote":"…"}`)로 원예약 후속 등 필수 업무를 완료한다. `POST /api/v1/cases/{caseId}/closures`(빈 본문, Idempotency-Key)는 확정 대체 예약·입실 기록·숙박일 보장·필수 업무 완료를 함께 검사하고, 미충족이면 `409 CASE_CLOSE_BLOCKED`와 `blockers`를 반환한다. API-016에는 `checkinConfirmation`이 추가된다. 원예약 자동 취소·환불과 Agent의 자동 종료는 하지 않는다. [실행·검증 범위](../backend/docs/api/CLOSURE-DEMO.md)
 
+## 상담 대응 목록·고객 예약 화면 보강
+
+사용자 승인 [최소 변경](../backend/docs/api/CONSOLE-VIEWS-PROPOSAL.md)에 따라 API-003은 명시적 `status=CLOSED`와 검색어 `q`를 허용하고, 항목에 `createdAt`을 더한다. 기본 목록은 계속 활성 사건만 반환한다. API-004 `booking`에는 `rooms`·`originalPrice`를 더한다. 고객 화면은 기존 API-001로 예약과 진행 중인 상담 링크를 표시한다. 화면 명칭 "상담 대응 건"은 문서의 상담 사건(Case)과 같다.
+
 ## 유지할 계약
 
 - 각 API의 URI·메서드·요청·응답·오류 조건은 현행 Notion 상세 명세에서 확인한다. 성공은 리소스 JSON을 직접 반환한다. 오류는 `application/problem+json`과 안정적인 `code`, 추적용 `traceId`를 유지한다.

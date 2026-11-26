@@ -82,3 +82,14 @@ test('customer proxy forwards only API-017 check-in and never counselor commands
     ['http://127.0.0.1:18082' + checkinPath.replace('/demo/', '/api/v1/'), 'Bearer ' + customerToken],
   ])
 })
+
+test('customer proxy reads only its booking and counselor list accepts CLOSED and a search term', async t => {
+  const customer = await proxy(t, { port: 3101, token: customerToken, customerMode: true })
+  const read = (instance, target) => request(instance, target, { method: 'GET', headers: { 'X-Demo-Read': '1', Origin: undefined, 'Content-Type': undefined } })
+  assert.equal((await read(customer, '/demo/bookings/YB-001')).status, 201)
+  assert.equal((await read(customer, '/demo/cases?page=0')).status, 403)
+  const counselor = await proxy(t)
+  assert.equal((await read(counselor, '/demo/cases?page=0&status=CLOSED&q=' + encodeURIComponent('제주'))).status, 201)
+  assert.equal((await read(counselor, '/demo/cases?page=0&status=DELETED')).status, 403)
+  assert.deepEqual(customer.forwarded.map(item => item.url), ['http://127.0.0.1:18082/api/v1/bookings/YB-001'])
+})

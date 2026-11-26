@@ -59,7 +59,7 @@ async function checkChatDisplay() {
     })
 
     await page.goto(`http://127.0.0.1:${port}/cases`)
-    await page.getByRole('button', { name: `${caseId} 사건 열기`, exact: true }).click()
+    await page.getByRole('button', { name: `${caseId} 대응 건 열기`, exact: true }).click()
     const panel = page.getByRole('region', { name: '채팅', exact: true })
     const transcript = panel.getByRole('region', { name: '대화 내역', exact: true })
     const customer = transcript.getByText(messages[0].body, { exact: true })

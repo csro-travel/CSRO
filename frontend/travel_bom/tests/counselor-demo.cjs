@@ -40,12 +40,12 @@ async function checkDashboard() {
     await table.waitFor()
     assert.deepEqual((await table.getByRole('columnheader').allTextContents()).map(text => (
       text.trim().replace(/\s*·\s*/g, '·')
-    )), ['긴급도', '사건·예약', '확인된 문제', '처리 상태', '다음 업무·기한', '사건 열기'])
+    )), ['긴급도', '대응 건·예약', '확인된 문제', '처리 상태', '다음 업무·기한', '열기'])
     for (const name of ['전체', '접수', '처리 중', '확인 대기']) {
       await live.getByRole('button', {name, exact:true}).waitFor()
     }
     if (liveList.pagination.totalElements === 0) {
-      const empty = table.getByText('현재 처리할 상담 사건이 없습니다')
+      const empty = table.getByText('현재 처리할 상담 대응 건이 없습니다')
       await empty.waitFor()
       await live.locator('main > header').getByText('0건', {exact:true}).waitFor()
       const [filteredResponse] = await Promise.all([
@@ -67,7 +67,7 @@ async function checkDashboard() {
       ])
       assert.equal(response.status(), 200)
       const details = await response.json()
-      const casePanel = live.getByRole('tabpanel', {name: '사건', exact: true})
+      const casePanel = live.getByRole('tabpanel', {name: '대응 건', exact: true})
       await casePanel.getByText(details.booking.bookingId, {exact:true}).waitFor()
       if (details.caseId === 'C-002') {
         await casePanel.getByText('고객에게 확인된 상황 안내', {exact:true}).waitFor()
@@ -132,8 +132,8 @@ async function checkDashboard() {
       waitForFirstPage(page, 'WAITING'),
       page.getByRole('button', {name: '확인 대기', exact:true}).click(),
     ])
-    await page.getByRole('table').getByText('현재 처리할 상담 사건이 없습니다').waitFor()
-    assert.equal(await page.getByRole('navigation', {name: '사건 목록 페이지'}).count(), 0)
+    await page.getByRole('table').getByText('현재 처리할 상담 대응 건이 없습니다').waitFor()
+    assert.equal(await page.getByRole('navigation', {name: '상담 대응 목록 페이지'}).count(), 0)
     await Promise.all([
       waitForFirstPage(page, null),
       page.getByRole('button', {name: '전체 보기', exact:true}).click(),
@@ -190,8 +190,8 @@ async function checkDashboard() {
 
     const releaseEmptyChat = await holdChatHistory(page, 'C-102', [])
     try {
-      await page.getByRole('button', {name: /사건 목록/}).click()
-      await caseRow(page, 'C-102').getByRole('button', {name: 'C-102 사건 열기'}).click()
+      await page.getByRole('button', {name: /상담 대응 목록/}).click()
+      await caseRow(page, 'C-102').getByRole('button', {name: 'C-102 대응 건 열기'}).click()
       await history.getByText('대화 내역을 불러오는 중…', {exact:true}).waitFor()
       assert.equal(await firstMessages.count(), 0)
     } finally {
@@ -200,8 +200,8 @@ async function checkDashboard() {
     await history.getByText('표시할 대화가 없습니다.', {exact:true}).waitFor()
 
     await page.route('**/demo/cases/C-103/messages', route => route.fulfill({status: 502, body: ''}))
-    await page.getByRole('button', {name: /사건 목록/}).click()
-    await caseRow(page, 'C-103').getByRole('button', {name: 'C-103 사건 열기'}).click()
+    await page.getByRole('button', {name: /상담 대응 목록/}).click()
+    await caseRow(page, 'C-103').getByRole('button', {name: 'C-103 대응 건 열기'}).click()
     await history.getByRole('alert').filter({hasText: '대화 내역을 불러오지 못했습니다.'}).waitFor()
     assert.equal(await firstMessages.count(), 0)
     assert.equal(await history.getByText('표시할 대화가 없습니다.', {exact:true}).count(), 0)

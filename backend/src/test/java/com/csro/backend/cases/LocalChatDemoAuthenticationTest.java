@@ -56,6 +56,9 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("POST", incident, "wrong-token", "127.0.0.1"));
         for (String path : new String[]{"/api/v1/bookings/YB-001", incident + "/extra", incident + "/"}) {
             assertNull(subject("POST", path, "customer-test-token", "127.0.0.1"));
+        }
+        // API-001 booking reads are the only GET opened on booking routes (customer booking summary).
+        for (String path : new String[]{incident + "/extra", incident + "/"}) {
             assertNull(subject("GET", path, "customer-test-token", "127.0.0.1"));
         }
         assertNull(subject("GET", incident, "customer-test-token", "127.0.0.1"));
@@ -76,6 +79,14 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("PATCH", task, "customer-test-token", "127.0.0.1"));
         assertNull(subject("POST", closure, "customer-test-token", "127.0.0.1"));
         assertNull(subject("PATCH", closure, "counselor-test-token", "127.0.0.1"));
+    }
+
+    @Test
+    void customerReadsOwnBookingThroughTheSameRoleSplit() throws Exception {
+        String booking = "/api/v1/bookings/YB-001";
+        assertEquals("demo-customer-001", subject("GET", booking, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("GET", booking, "customer-test-token", "192.0.2.4"));
+        assertNull(subject("GET", booking + "/extra", "customer-test-token", "127.0.0.1"));
     }
 
     private String subject(String method, String path, String token, String remote) throws Exception {
