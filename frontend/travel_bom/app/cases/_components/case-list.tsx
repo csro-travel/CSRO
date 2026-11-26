@@ -118,8 +118,8 @@ export function CaseListView({
                 <tr key={item.caseId} onClick={() => onOpen(item.caseId)}
                   className={`cursor-pointer align-top hover:bg-muted/60 ${fresh ? "bg-accent/60" : ""} ${urgent && item.status !== "CLOSED" ? "shadow-[inset_3px_0_0_var(--destructive)]" : ""}`}>
                   <th scope="row" className="px-4 py-3 font-normal">
-                    <p className="flex items-center gap-1.5">
-                      <span className="num text-base font-bold">{item.caseId}</span>
+                    <p className="flex flex-wrap items-center gap-1.5">
+                      <span className="num text-base font-bold whitespace-nowrap">{item.caseId}</span>
                       {urgent && item.status !== "CLOSED" && <Badge tone="danger">긴급</Badge>}
                       {fresh && <Badge tone="brand">새 건</Badge>}
                     </p>

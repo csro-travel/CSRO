@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CircleCheck, ClipboardCheck } from "lucide-react";
+import { CircleCheck, ClipboardCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { formatDateTime, formatDay, originLabels } from "@/lib/case-labels";
+import { requestAssistDraft, type AssistDraft } from "../_api/assist";
 import { ClosureError, closeCase, completeTask, confirmCheckin, type CloseBlocker } from "../_api/closure";
 import type { CaseDetail, CaseTask } from "../_types/case";
 import type { ReplacementBooking } from "../_types/replacement";
@@ -126,6 +127,18 @@ function CompletedTasks({ detail }: { detail: CaseDetail }) {
 function ClosureSummary({ detail }: { detail: CaseDetail }) {
   const unavailable = detail.nights.filter(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE").map(night => formatDay(night.stayDate));
   const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
+  const [assist, setAssist] = useState<AssistDraft>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function summarize() {
+    if (loading) return;
+    setLoading(true); setError("");
+    try { setAssist(await requestAssistDraft(detail.caseId, "CLOSURE_SUMMARY")); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "요약을 받지 못했습니다."); }
+    finally { setLoading(false); }
+  }
+
   return (
     <div className="space-y-3">
       <p role="status" className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -138,6 +151,19 @@ function ClosureSummary({ detail }: { detail: CaseDetail }) {
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">완료한 업무</dt><dd>{(detail.completedTasks ?? []).length}건</dd></div>
       </dl>
       <CompletedTasks detail={detail} />
+      <div className="space-y-2 rounded-md bg-muted/60 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="eyebrow">상담 요약</p>
+          {assist && <Badge tone={assist.source === "LLM" ? "info" : "outline"}>{assist.source === "LLM" ? `AI 초안 · ${assist.model ?? "모델"}` : "규칙 기반"}</Badge>}
+          <Button type="button" size="sm" variant="ghost" className="ml-auto" disabled={loading} onClick={() => void summarize()}>
+            <Sparkles aria-hidden="true" />{loading ? "요약 만드는 중…" : assist ? "다시 받기" : "AI 요약 받기"}
+          </Button>
+        </div>
+        {assist
+          ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{assist.summary}</p>
+          : <p className="text-sm text-muted-foreground">위 기록을 인계용 문장으로 정리한 요약을 받을 수 있습니다. 대응 건 기록은 바뀌지 않습니다.</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      </div>
       <p className="text-xs text-muted-foreground">결제·환불·원예약 자동 취소는 이 시연 범위에 없습니다. 위 기록은 상담사가 남긴 처리 내용입니다.</p>
     </div>
   );
