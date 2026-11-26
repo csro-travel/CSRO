@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from .assist import AssistRequest, AssistResponse, generate
 from .extractor import ExtractionUnavailable, extract_claims
 from .models import ExtractionRequest, ExtractionResponse, ProblemDetails
 from .rankings import RankingInputError, RankingRequest, RankingResponse, RankingUnavailable, rank_quotes
@@ -75,6 +76,8 @@ async def handle_api_problem(_request: Request, error: ApiProblem) -> JSONRespon
 async def handle_invalid_request(_request: Request, error: RequestValidationError) -> JSONResponse:
     if _request.url.path == "/internal/v1/alternative-rankings":
         return problem_response(400, "INVALID_RANKING_REQUEST", "요청 JSON의 필드 또는 형식이 올바르지 않습니다.")
+    if _request.url.path == "/internal/v1/counselor-assist":
+        return problem_response(400, "INVALID_ASSIST_REQUEST", "요청 JSON의 필드 또는 형식이 올바르지 않습니다.")
     errors = error.errors()
     context_errors = {"empty_stay_dates", "invalid_stay_context"}
     if any(item["type"] not in context_errors for item in errors):
@@ -147,3 +150,22 @@ def compare_alternatives(request: RankingRequest) -> RankingResponse:
         raise ApiProblem(503, "AGENT_UNAVAILABLE", "견적 비교를 일시적으로 사용할 수 없습니다.") from None
     except Exception:
         raise ApiProblem(500, "INTERNAL_ERROR", "견적 비교 중 내부 오류가 발생했습니다.") from None
+
+
+@app.post(
+    "/internal/v1/counselor-assist",
+    dependencies=[Depends(require_service_token)],
+    response_model=AssistResponse,
+    responses={
+        status: {
+            "description": title,
+            "content": {"application/problem+json": {"schema": ProblemDetails.model_json_schema()}},
+        }
+        for status, title in problem_titles.items()
+    },
+)
+def counselor_assist(request: AssistRequest) -> AssistResponse:
+    try:
+        return generate(request)
+    except Exception:
+        raise ApiProblem(500, "INTERNAL_ERROR", "상담사 안내 초안 생성 중 내부 오류가 발생했습니다.") from None

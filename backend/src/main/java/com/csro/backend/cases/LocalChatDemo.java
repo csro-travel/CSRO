@@ -39,6 +39,9 @@ public final class LocalChatDemo {
     private static final Pattern TASK_PATH = Pattern.compile("/api/v1/cases/[^/]+/tasks/[^/]+");
     private static final Pattern CLOSURE_PATH = Pattern.compile("/api/v1/cases/[^/]+/closures");
     private static final Pattern EVIDENCE_PATH = Pattern.compile("/api/v1/cases/[^/]+/evidence");
+    private static final Pattern ASSIST_DRAFT_PATH = Pattern.compile("/api/v1/cases/[^/]+/assist-drafts");
+    private static final Pattern CONSOLE_READ_PATH = Pattern.compile(
+            "/api/v1/console/(?:overview|recheck-jobs|risk-assessments|evidence|hotel-reply-analyses|bookings)");
 
     private LocalChatDemo() {}
 
@@ -87,7 +90,8 @@ public final class LocalChatDemo {
 
     private static FilterRegistrationBean<OncePerRequestFilter> filterRegistration(String token, String customerToken) {
         var registration = new FilterRegistrationBean<OncePerRequestFilter>(new DemoFilter(token, customerToken));
-        registration.addUrlPatterns("/api/v1/cases/*", "/api/v1/replacement-bookings/*", "/api/v1/bookings/*");
+        registration.addUrlPatterns("/api/v1/cases/*", "/api/v1/replacement-bookings/*", "/api/v1/bookings/*",
+                "/api/v1/console/*");
         return registration;
     }
 
@@ -105,11 +109,12 @@ public final class LocalChatDemo {
             String path = request.getServletPath();
             return switch (request.getMethod()) {
                 case "GET" -> !CASE_READ_PATH.matcher(path).matches() && !REPLACEMENT_READ_PATH.matcher(path).matches()
-                        && !BOOKING_READ_PATH.matcher(path).matches();
+                        && !BOOKING_READ_PATH.matcher(path).matches() && !CONSOLE_READ_PATH.matcher(path).matches();
                 case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
                         && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches()
                         && !INCIDENT_REPORT_PATH.matcher(path).matches() && !CHECKIN_PATH.matcher(path).matches()
-                        && !CLOSURE_PATH.matcher(path).matches() && !EVIDENCE_PATH.matcher(path).matches();
+                        && !CLOSURE_PATH.matcher(path).matches() && !EVIDENCE_PATH.matcher(path).matches()
+                        && !ASSIST_DRAFT_PATH.matcher(path).matches();
                 case "PUT" -> !SELECTION_PATH.matcher(path).matches();
                 case "PATCH" -> !TASK_PATH.matcher(path).matches();
                 default -> true;

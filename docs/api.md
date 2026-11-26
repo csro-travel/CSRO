@@ -48,6 +48,8 @@ Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결�
 
 사용자 승인 [최소 변경](../backend/docs/api/CONSOLE-VIEWS-PROPOSAL.md)에 따라 API-003은 명시적 `status=CLOSED`와 검색어 `q`를 허용하고, 항목에 `createdAt`을 더한다. 기본 목록은 계속 활성 사건만 반환한다. API-004 `booking`에는 `rooms`·`originalPrice`를 더한다. 고객 화면은 기존 API-001로 예약과 진행 중인 상담 링크를 표시한다. 화면 명칭 "상담 대응 건"은 문서의 상담 사건(Case)과 같다.
 
+사용자 승인 [사건 표시 제안서](../backend/docs/api/CASE-INSIGHT-PROPOSAL.md)에 따라 API-004에 `origin`·`createdAt`·`risk`·`analysisRuns`·`closure`·`completedTasks`를, API-003 항목에 `origin`을 추가한다. 사건 없이 끝난 자동 확인을 포함해 저장된 작업·위험 평가·근거·회신 분석·예약을 상담사가 읽는 `GET /api/v1/console/*` 6개 조회는 [콘솔 조회 제안서](../backend/docs/api/CONSOLE-PAGES-PROPOSAL.md)를 따른다. 둘 다 읽기 전용 추가이며 기존 필드와 DB는 바꾸지 않는다. 상담사가 요청할 때만 다음 조치·고객 안내 초안·종료 요약을 제안하는 `POST /api/v1/cases/{caseId}/assist-drafts`와 Agent 내부 `POST /internal/v1/counselor-assist`는 [안내 초안 제안서](../backend/docs/api/ASSIST-DRAFT-PROPOSAL.md)를 따른다. 제안만 하며 사건 상태를 바꾸지 않고, 성공 시 `case_actions` 감사 기록 한 건만 남긴다.
+
 ## API-006 호텔 수동 확인 근거
 
 사용자 승인 [최소 계약](../backend/docs/api/API-006-PROPOSAL.md)에 따라 상담사가 `POST /api/v1/cases/{caseId}/evidence`(`callNote`, 숙박일별 `reportedProvisionStatus`, Idempotency-Key)로 호텔 직접 확인 결과를 `MANUAL_HOTEL` 근거로 남긴다. 숙박일 반영은 자동 재확인과 같은 규칙이다. 원예약의 모든 숙박일이 VERIFIED가 아니면 사건을 WAITING으로 바꾸고, 모두 VERIFIED이면 필수 `VERIFY_HOTEL`을 이 근거로 완료한다.
