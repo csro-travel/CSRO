@@ -6,6 +6,7 @@ import { formatWon } from "@/lib/alternative-stays";
 import { clearReplacement, getReplacement, pendingReplacement, ReplacementError, requestReplacement, saveReplacement } from "../_api/replacements";
 import type { CaseCurrentSelection } from "../_types/message";
 import type { ReplacementBooking, ReplacementIntent, ReplacementPointer } from "../_types/replacement";
+import { CustomerCheckin } from "./case-closure-panel";
 
 export const replacementStatusText = {
   PROCESSING: "가상 예약 처리 중",
@@ -157,7 +158,8 @@ export function CaseReplacementPanel({ state, customer }: { state: ReturnType<ty
         {booking.status === "RESULT_UNKNOWN" && <p>성공 여부를 확인 중입니다. 새 요청번호로 예약하지 않습니다.</p>}
         {booking.status === "CONFIRMED" && <><p>가상 예약번호 {booking.supplierBookingId} · 확정 총액 {formatWon(booking.confirmedPrice!.totalAmount)}</p><p>가상 예약 확정입니다. 실제 입실·원예약 후속 처리·사건 종료는 별도로 확인해야 합니다.</p></>}
         {booking.status === "FAILED" && <><p>실패 사유: {booking.failureCode}</p>{booking.currentPrice && <p>확인된 변경 가격 {formatWon(booking.currentPrice.totalAmount)} · 변경 가격에 자동 동의하지 않습니다.</p>}<p>새 견적 검색 → 새 제안 → 고객 재선택 후 진행해 주세요.</p></>}
-        {booking.manualRequired && <p className="font-medium">자동 확인을 마쳤습니다. 담당자가 같은 접수번호로 추가 확인해야 합니다. 새 예약을 만들지 않습니다.</p>}
+        {customer && <CustomerCheckin booking={booking} onDone={state.refresh} />}
+        {booking.manualRequired &&<p className="font-medium">자동 확인을 마쳤습니다. 담당자가 같은 접수번호로 추가 확인해야 합니다. 새 예약을 만들지 않습니다.</p>}
         {booking.nextCheckAt && <p className="text-xs text-muted-foreground">다음 확인 예정: <time dateTime={booking.nextCheckAt}>{dateTime.format(new Date(booking.nextCheckAt))}</time></p>}
         <p className="text-xs text-muted-foreground">{booking.clockMode === "SYNTHETIC_DEMO" ? "시연용 가상 판단 시각" : "서버 판단 시각"}: {dateTime.format(new Date(booking.effectiveAt))}</p>
       </div>}

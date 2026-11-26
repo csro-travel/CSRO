@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getCaseDetail, getCases } from "./_api/cases";
 import { CaseChatPanel } from "./_components/case-chat-panel";
+import { CaseClosurePanel } from "./_components/case-closure-panel";
 import { CaseDetailTabs } from "./_components/case-detail-tabs";
 import { CaseDetails } from "./_components/case-details";
 import { CaseListView } from "./_components/case-list";
@@ -107,6 +108,7 @@ export default function Cases() {
           chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} />}
         >
           <CaseDetails detail={detail} />
+          <CaseClosurePanel detail={detail} onChanged={() => { setAttempt(value => value + 1); setChatRefresh(value => value + 1); }} />
         </CaseDetailTabs>
       )}
     </main>

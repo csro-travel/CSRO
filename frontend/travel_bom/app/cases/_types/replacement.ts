@@ -20,6 +20,7 @@ export type ReplacementBooking = ReplacementPointer & {
   isSynthetic: true;
   effectiveAt: string;
   clockMode: "REAL_TIME" | "SYNTHETIC_DEMO";
+  checkinConfirmation?: { checkinConfirmationId: string; checkedInAt: string } | null;
 };
 
 export type ReplacementReceipt = ReplacementPointer & { caseId: string; acceptedAt: string };

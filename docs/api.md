@@ -40,6 +40,10 @@ API-011의 기존 메시지·페이지 계약에 `activeOfferId`, `currentSelect
 
 Mock은 별도 PostgreSQL에서 전 숙박일 재고 차감·예약 요청 결과를 원자 저장한다. 기존 DB 없는 026/027/028 모드는 유지하며 업무 DB·Spring V1·jobs.kind·ML 모델을 변경하지 않는다. 상태 저장 모드로 전환한 뒤 새 검색→제안→선택을 해야 하며 Spring의 과거 견적을 Mock에 복사하지 않는다. 기존 상담사·고객 시연 토큰에 정확한 015/016 경로만 추가하고 운영 인증은 그대로 후속이다. [실행·복구·검증 범위](../backend/docs/api/REPLACEMENT-DEMO.md)
 
+## API-017/008/018 입실·필수 업무 완료·사건 종료
+
+사용자 승인 [최소 계약](../backend/docs/api/API-008-017-018-PROPOSAL.md)에 따라 예약 소유 고객이 CONFIRMED 대체 예약의 입실을 `POST /api/v1/replacement-bookings/{id}/checkin-confirmations`(빈 본문, Idempotency-Key)로 1회 기록하고, 같은 트랜잭션에서 필수 `CHECKIN_CONFIRM`을 완료한다. 상담사는 `PATCH /api/v1/cases/{caseId}/tasks/{taskId}`(`{"status":"DONE","completionNote":"…"}`)로 원예약 후속 등 필수 업무를 완료한다. `POST /api/v1/cases/{caseId}/closures`(빈 본문, Idempotency-Key)는 확정 대체 예약·입실 기록·숙박일 보장·필수 업무 완료를 함께 검사하고, 미충족이면 `409 CASE_CLOSE_BLOCKED`와 `blockers`를 반환한다. API-016에는 `checkinConfirmation`이 추가된다. 원예약 자동 취소·환불과 Agent의 자동 종료는 하지 않는다. [실행·검증 범위](../backend/docs/api/CLOSURE-DEMO.md)
+
 ## 유지할 계약
 
 - 각 API의 URI·메서드·요청·응답·오류 조건은 현행 Notion 상세 명세에서 확인한다. 성공은 리소스 JSON을 직접 반환한다. 오류는 `application/problem+json`과 안정적인 `code`, 추적용 `traceId`를 유지한다.
