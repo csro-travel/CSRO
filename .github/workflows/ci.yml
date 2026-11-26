@@ -454,7 +454,7 @@ jobs:
           REPLACEMENT_TEST_DB_URL: jdbc:postgresql://127.0.0.1:25444/yeohaengbom_replacements_test
           REPLACEMENT_TEST_DB_USER: yb_replacement_test
           REPLACEMENT_TEST_DB_PASSWORD: ci-isolated-replacement-db-only
-        run: bash ./gradlew --no-daemon --console=plain test --tests 'com.csro.backend.replacements.ReplacementIntegrationTest' --tests 'com.csro.backend.closure.ClosureIntegrationTest'
+        run: bash ./gradlew --no-daemon --console=plain test --tests 'com.csro.backend.replacements.ReplacementIntegrationTest' --tests 'com.csro.backend.closure.ClosureIntegrationTest' --tests 'com.csro.backend.evidence.ManualEvidenceIntegrationTest'
 
   frontend:
     needs: changes

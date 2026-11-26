@@ -37,6 +37,14 @@ export function completeTask(caseId: string, taskId: string, completionNote: str
     { status: "DONE", completionNote }, 200, undefined, signal);
 }
 
+/** API-006 호텔 수동 확인 근거 등록 (`POST /api/v1/cases/{caseId}/evidence`). */
+export async function recordHotelEvidence(caseId: string, key: string,
+  body: { callNote: string; nights: { stayDate: string; reportedProvisionStatus: string }[] }, signal?: AbortSignal) {
+  const value = await send(`/demo/cases/${encodeURIComponent(caseId)}/evidence`, "POST", body, 201, key, signal);
+  if (!text(value.caseStatus)) throw new ClosureError("처리 결과를 확인하지 못했습니다. 같은 요청으로 다시 확인해 주세요.", true);
+  return value as { caseStatus: string; evidenceId: string };
+}
+
 /** API-018 사건 종료 (`POST /api/v1/cases/{caseId}/closures`). */
 export function closeCase(caseId: string, key: string, signal?: AbortSignal) {
   return send(`/demo/cases/${encodeURIComponent(caseId)}/closures`, "POST", {}, 201, key, signal);
