@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { Activity, Radar, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatDateTime, formatDay, formatFeature, formatScore, jobStatusLabels, originLabels, policyLabels, riskFeatureLabels, triggerLabels,
+  formatDateTime, formatDay, formatFeature, formatScore, jobStatusLabels, originLabels, policyLabels, policyNotes, riskFeatureLabels, triggerLabels,
 } from "@/lib/case-labels";
 import type { AnalysisRun, CaseDetail, RiskSignal } from "../_types/case";
 
@@ -12,32 +13,37 @@ function RiskBlock({ risk }: { risk: RiskSignal }) {
   const scale = 1;
   return (
     <div className="space-y-2 rounded-md bg-muted/60 p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-sm">
-          위험 신호 <strong className="num text-base">{formatScore(risk.score)}</strong>
-          <span className="ml-2 text-xs text-muted-foreground">선별 기준 {formatScore(risk.threshold)} 이상 · {policyLabels.get(risk.policy) ?? risk.policy}</span>
-        </p>
-        {risk.assessedAt && <time dateTime={risk.assessedAt} className="num text-xs text-muted-foreground">{formatDateTime(risk.assessedAt)} 평가</time>}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-sm font-medium">위험 신호</span>
+        <Badge tone="info" className="num text-sm">{formatScore(risk.score)} ≥ {formatScore(risk.threshold)} · {policyLabels.get(risk.policy) ?? risk.policy}</Badge>
+        <span className="text-xs text-muted-foreground">장애 확정이 아닌 재확인 대상 선별 신호</span>
+        {risk.assessedAt && <time dateTime={risk.assessedAt} className="num ml-auto text-xs text-muted-foreground">{formatDateTime(risk.assessedAt)} 평가</time>}
       </div>
       <div className="relative h-1.5 rounded-full bg-border" role="img" aria-label={`위험 신호 ${formatScore(risk.score)}, 선별 기준 ${formatScore(risk.threshold)}`}>
         <span className="absolute inset-y-0 left-0 rounded-full bg-info" style={{ width: `${Math.min(100, (risk.score / scale) * 100)}%` }} />
         <span className="absolute -inset-y-1 w-0.5 bg-foreground" style={{ left: `${Math.min(100, (risk.threshold / scale) * 100)}%` }} />
       </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        이 호텔의 {risk.targetCheckInDate ? `${formatDay(risk.targetCheckInDate)} 체크인` : "체크인 날짜"}에 대한 신호입니다.
-        객실 미제공이 확정됐다는 뜻도, 이 고객의 실패 확률도 아닙니다. 재확인할 예약을 고르는 데만 썼습니다.
-      </p>
-      {risk.features && (
-        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
-          {featureOrder.filter(name => name in risk.features!).map(name => (
-            <div key={name} className="flex items-baseline justify-between gap-2 border-b border-dashed py-0.5">
-              <dt className="text-muted-foreground">{riskFeatureLabels[name] ?? name}</dt>
-              <dd className="num font-medium">{formatFeature(name, risk.features![name])}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      <p className="num text-[0.7rem] text-muted-foreground">모델 {risk.modelVersion} · 합성 데이터로 학습</p>
+      <details className="text-xs">
+        <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">기준 보기</summary>
+        <div className="mt-2 space-y-2">
+          {policyNotes.has(risk.policy) && <p className="leading-relaxed">{policyNotes.get(risk.policy)}</p>}
+          <p className="leading-relaxed text-muted-foreground">
+            이 호텔의 {risk.targetCheckInDate ? `${formatDay(risk.targetCheckInDate)} 체크인` : "체크인 날짜"}에 대한 신호입니다.
+            객실 미제공이 확정됐다는 뜻도, 이 고객의 실패 확률도 아닙니다. 재확인할 예약을 고르는 데만 썼습니다.
+          </p>
+          {risk.features && (
+            <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              {featureOrder.filter(name => name in risk.features!).map(name => (
+                <div key={name} className="flex items-baseline justify-between gap-2 border-b border-dashed py-0.5">
+                  <dt className="text-muted-foreground">{riskFeatureLabels[name] ?? name}</dt>
+                  <dd className="num font-medium">{formatFeature(name, risk.features![name])}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <p className="num text-[0.7rem] text-muted-foreground">모델 {risk.modelVersion} · 합성 데이터로 학습</p>
+        </div>
+      </details>
     </div>
   );
 }
@@ -96,6 +102,7 @@ export function CaseInsight({ detail }: { detail: CaseDetail }) {
                       {status && <Badge tone={status.tone}>{status.label}</Badge>}
                     </p>
                     {runDetail(run) && <p className="text-xs text-muted-foreground">{runDetail(run)}</p>}
+                    {run.kind === "HOTEL_REPLY_ANALYSIS" && <Link href="/risk/analyses" className="text-xs text-primary underline-offset-4 hover:underline">분석 기록 보기</Link>}
                     {run.version && <p className="num text-[0.7rem] text-muted-foreground">{run.version}</p>}
                   </div>
                 </li>

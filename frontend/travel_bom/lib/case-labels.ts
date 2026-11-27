@@ -61,7 +61,12 @@ export const policyLabels = new Map([
   ["F1_BASELINE", "기본 정책"], ["RECALL_50_F1", "재현율 50% 정책"], ["MAX_OBSERVED_RECALL", "재현율 우선 정책"],
 ]);
 
-const dayFormat = new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" });
+/** Why a policy's threshold sits where it does. Shown only behind "기준 보기". */
+export const policyNotes = new Map([
+  ["MAX_OBSERVED_RECALL", "검증에서 관측된 재현율이 가장 높았던 후보 중 가장 높은 임계값입니다. 놓치는 비용보다 한 번 더 확인하는 비용이 낮아 기준을 낮게 잡고, 선별된 예약은 자동 재확인으로 거릅니다."],
+]);
+
+const dayFormat =new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" });
 const dateTimeFormat = new Intl.DateTimeFormat("ko-KR", {
   month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Seoul",
 });

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, Search, Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getCaseQuotes, QuoteSearchError, requestCaseQuotes } from "../_api/quotes";
@@ -49,8 +50,14 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
       {!group.rankingAvailable && group.quotes.length > 0 && <p className="text-sm text-muted-foreground">비교 결과 없이 공급사 원본 견적을 표시합니다.</p>}
       {group.quotes.length === 0 ? <p className="text-sm">이 기간과 조건에 맞는 견적이 없습니다.</p> : (
         <ul className="space-y-3">
-          {group.quotes.map(quote => (
+          {group.quotes.map((quote, index) => (
             <li key={quote.quoteId} data-quote-id={quote.quoteId} className="space-y-2 rounded-lg bg-muted/50 p-3">
+              {(group.rankingAvailable || quote.reason) && (
+                <p className="flex flex-wrap items-center gap-2 rounded-md border-l-4 border-primary bg-accent px-2.5 py-1.5 text-sm font-semibold text-accent-foreground">
+                  {group.rankingAvailable && <Badge tone="brand" className="border border-primary/40 bg-background text-sm">비교 {index + 1}순위</Badge>}
+                  {quote.reason}
+                </p>
+              )}
               <label className="flex items-center gap-2 text-sm font-medium">
                 <Checkbox checked={selectedIds.includes(quote.quoteId)}
                   disabled={disabled || quote.expired === true || !quote.propertyId || (!selectedIds.includes(quote.quoteId) && (selectedIds.length >= 3 || group.quotes.some(other => selectedIds.includes(other.quoteId) && other.propertyId === quote.propertyId)))}
@@ -63,7 +70,6 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
               </div>
               <p className="text-sm">기존 호텔에서 {(quote.distanceMeters / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}km · 가상 직선 거리</p>
               {quote.priceDifference !== null && <p className="text-sm">동일 기간 원예약 대비 견적 차이: {quote.priceDifference > 0 ? "+" : ""}{amount.format(quote.priceDifference)} <span className="text-muted-foreground">(추가 부담·환급 확정 금액 아님)</span></p>}
-              {quote.reason && <p className="text-sm">{quote.reason}</p>}
               <p className="text-xs text-muted-foreground">조회 <time dateTime={quote.checkedAt}>{formattedTime(quote.checkedAt)}</time> · 유효 기한 <time dateTime={quote.expiresAt}>{formattedTime(quote.expiresAt)}</time></p>
               {quote.expired === true && <p className="text-sm font-medium text-destructive">견적 유효 기한 경과 · 새 검색 필요</p>}
             </li>
@@ -237,6 +243,7 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
       </>}
       <div className="space-y-2 border-t pt-4">
         <p className="text-sm">고객에게 보낼 숙소 {chosen.ids.length}/3곳 · 다른 기간 그룹을 선택하면 기존 선택이 바뀝니다.</p>
+        <p className="text-xs text-muted-foreground">순위와 추천 사유는 상담사용입니다. 고객 제안 카드에는 숙소명·기간·거리·가격만 나갑니다.</p>
         <Button type="button" size="lg"
           disabled={offering || !offerStorageReady || (!pendingOffer && !canOffer)} onClick={() => void offer()}>
           <Send aria-hidden="true" />

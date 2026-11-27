@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Building2, Headset, Hotel, Info } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { evidenceSourceLabels, formatDateTime, formatDay, provisionLabels, reviewLabels, supplierStatusLabels } from "@/lib/case-labels";
@@ -54,6 +55,15 @@ const provisionTones: Record<string, string> = {
   UNAVAILABLE: "font-semibold text-destructive", AVAILABLE: "font-semibold text-[oklch(0.38_0.1_158)]", UNKNOWN: "text-muted-foreground",
 };
 
+/** Why a claim was or was not adopted, read from the stored claim and its review state. */
+function basis(assertion: EvidenceRecord["assertions"][number]) {
+  const { reportedProvisionStatus: reported, reviewStatus: review } = assertion;
+  if (review === "ACCEPTED" && reported === "UNAVAILABLE") return "명시적 제공 불가 확인됨";
+  if (review === "ACCEPTED" && reported === "AVAILABLE") return "명시적 제공 가능 확인됨";
+  if (review === "PENDING_REVIEW" && reported === "UNKNOWN") return "확인 중(미확정 유지)";
+  return null;
+}
+
 function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking }) {
   const payload = parse(record.originalContent);
   const supplier = record.sourceType.startsWith("SUPPLIER") ? supplierSentence(payload, booking) : null;
@@ -94,7 +104,10 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
                   <q className="ml-2 text-muted-foreground before:content-['“'] after:content-['”']">{quotes.get(assertion.stayDate)}</q>
                 )}
               </span>
-              <Badge tone={reviewTones[assertion.reviewStatus] ?? "outline"}>{reviewLabels.get(assertion.reviewStatus) ?? "검토 상태 확인 필요"}</Badge>
+              <span className="flex flex-wrap items-center justify-end gap-1.5">
+                {basis(assertion) && <span className="text-xs text-muted-foreground">{basis(assertion)}</span>}
+                <Badge tone={reviewTones[assertion.reviewStatus] ?? "outline"}>{reviewLabels.get(assertion.reviewStatus) ?? "검토 상태 확인 필요"}</Badge>
+              </span>
             </li>
           ))}
         </ul>
@@ -127,6 +140,19 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
             가상 공급사·호텔 응답(시연용) · 출처 인증 절차 없음
           </p>
         )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
+        <details className="min-w-0 flex-1">
+          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">기준 보기</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
+            <li>호텔·공급사가 말한 내용은 주장이고, &lsquo;사실로 채택&rsquo;된 항목만 숙박일 상태에 반영됩니다.</li>
+            <li>제공 가능·제공 불가를 분명히 답한 숙박일만 채택합니다. 미확인·응답 대기·오류는 제공 불가로 처리하지 않고 미확인으로 둡니다.</li>
+            <li>이미 확인된 사실과 다른 답이 오면 덮어쓰지 않고 상충으로 표시합니다.</li>
+          </ul>
+        </details>
+        <Link href={`/risk/evidence?booking=${encodeURIComponent(booking.bookingId)}`} className="shrink-0 text-primary underline-offset-4 hover:underline">
+          이 예약의 전체 재확인 기록
+        </Link>
       </div>
       {evidence.length
         ? <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
