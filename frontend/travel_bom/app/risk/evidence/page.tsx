@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ConsolePage, EmptyState, useConsoleData } from "@/components/console/use-console-data";
 import { evidenceSourceLabels, formatDateTime, formatDay, provisionLabels, reviewLabels, triggerLabels } from "@/lib/case-labels";
 import { getEvidence } from "@/lib/console-api";
@@ -15,11 +17,24 @@ function pretty(content: string | null) {
 /** Every stored supplier and hotel answer, newest first. */
 export default function EvidenceRecords() {
   const state = useConsoleData(getEvidence);
-  const items = state.data ?? [];
+  // Reached from one booking's re-check row or case; `?booking=` narrows the records to it.
+  const [booking, setBooking] = useState<string>();
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("booking");
+    setBooking(value && /^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(value) ? value : undefined);
+  }, []);
+  const items = (state.data ?? []).filter(item => !booking || item.bookingId === booking);
 
   return (
     <ConsolePage title="재확인 결과" state={state}
       description="공급사·호텔이 답한 내용과 상담사가 직접 확인한 기록입니다. 호텔이 말한 내용은 주장이고, '사실로 채택'된 항목만 숙박일 상태에 반영됩니다.">
+      {booking && (
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge tone="brand" className="num">{booking}</Badge>
+          이 예약의 기록만 보고 있습니다.
+          <Button type="button" variant="outline" size="sm" onClick={() => { setBooking(undefined); window.history.replaceState(null, "", "/risk/evidence"); }}>전체 기록 보기</Button>
+        </p>
+      )}
       {state.data && (items.length === 0 ? <EmptyState>저장된 재확인 결과가 없습니다.</EmptyState> : (
         <ul className="space-y-3">
           {items.map(item => (

@@ -3,14 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  BarChart3,
   CalendarCheck,
   Flower2,
   Headset,
   House,
   ShieldAlert,
+  UserRoundCheck,
   type LucideIcon,
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
@@ -25,23 +26,21 @@ const navItems: NavItem[] = [
   { label: '홈', icon: House, href: '/' },
   { label: '상담 대응', icon: Headset, href: '/cases' },
   {
-    label: '사전 위험 관리',
+    // In the order the work happens: a risk signal picks bookings, then they are re-checked.
+    label: '사전 점검',
     icon: ShieldAlert,
     children: [
-      { label: '자동 확인 작업', href: '/risk/rechecks' },
       { label: '위험 평가', href: '/risk/assessments' },
-      { label: '재확인 결과', href: '/risk/evidence' },
-      { label: '호텔 회신 분석', href: '/risk/analyses' },
+      { label: '자동 확인', href: '/risk/rechecks' },
     ],
   },
   { label: '예약 관리', icon: CalendarCheck, href: '/bookings' },
-  { label: '운영 리포트', icon: BarChart3, href: '/reports' },
 ]
 const mobileLinks = [
   { label: '상담 대응', href: '/cases' },
+  { label: '위험 평가', href: '/risk/assessments' },
   { label: '자동 확인', href: '/risk/rechecks' },
   { label: '예약', href: '/bookings' },
-  { label: '리포트', href: '/reports' },
 ]
 
 function Brand({ customer = false }: { customer?: boolean }) {
@@ -61,9 +60,16 @@ export function ConsoleHeader() {
   if (pathname.startsWith('/customer/')) return <header className="border-b bg-background px-5 py-3"><Brand customer /></header>
 
   return (
-    <header className="border-b bg-background px-5 py-3 lg:hidden">
-      <Brand />
-      <nav aria-label="주 메뉴" className="mt-2 flex flex-wrap gap-1">
+    <header className="border-b bg-background px-5 py-3 lg:py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="lg:hidden"><Brand /></div>
+        {/* States who this screen is for, so it is not read as an admin dashboard. */}
+        <Badge tone="brand" className="text-sm lg:ml-auto">
+          <UserRoundCheck aria-hidden="true" />
+          담당 상담사 실무 화면 · 본인에게 배정된 건을 처리합니다
+        </Badge>
+      </div>
+      <nav aria-label="주 메뉴" className="mt-2 flex flex-wrap gap-1 lg:hidden">
         {mobileLinks.map(link => (
           <Link
             key={link.href}
@@ -79,7 +85,7 @@ export function ConsoleHeader() {
   )
 }
 
-const linkClass = 'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/30'
+const linkClass = 'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-base transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/30'
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -117,7 +123,7 @@ export function Sidebar() {
                         href={child.href}
                         aria-current={child.href === pathname ? 'page' : undefined}
                         className={cn(
-                          'block rounded-md px-2.5 py-1.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/30',
+                          'block rounded-md px-2.5 py-2 text-[0.95rem] transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/30',
                           child.href === pathname ? 'bg-accent font-bold text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                         )}
                       >

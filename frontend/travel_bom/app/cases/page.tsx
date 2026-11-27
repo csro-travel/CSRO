@@ -153,7 +153,7 @@ export default function Cases() {
   }
 
   return (
-    <main className="mx-auto max-w-[1500px] space-y-4 px-5 py-5">
+    <main className="space-y-3 px-5 py-4">
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div>
           <h1 className="text-xl font-bold">상담 대응</h1>
