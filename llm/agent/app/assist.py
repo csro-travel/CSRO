@@ -286,8 +286,8 @@ def _validated(kind: str, reply: object) -> tuple[str, list[str], str | None]:
         if not actions:
             raise ValueError("missing actions")
         draft = _text(draft, MAX_DRAFT)
-    elif draft is not None:
-        raise ValueError("unexpected draft")
+    elif draft is not None or actions:
+        raise ValueError("unexpected draft or actions")
     return summary, actions, draft
 
 

@@ -136,6 +136,18 @@ class LanguageModelFallbackTests(unittest.TestCase):
         self.assertNotIn("test-key", "".join(logs.output) + result.model_dump_json())
         self.assertNotIn("secret upstream text", "".join(logs.output))
 
+    def test_closure_summary_reply_must_not_carry_actions_or_a_draft(self):
+        closure = request(kind="CLOSURE_SUMMARY", caseStatus="CLOSED", closeReason="REPLACEMENT_CHECKED_IN", openTasks=[])
+        accepted = llm_reply({"summary": "요약입니다.", "nextActions": [], "customerMessageDraft": None})
+        result = generate(closure, api_key="test-key", transport=lambda key, payload: accepted)
+        self.assertEqual((result.source, result.nextActions, result.customerMessageDraft), ("LLM", [], None))
+        for extra in ({"nextActions": ["조치"], "customerMessageDraft": None},
+                      {"nextActions": [], "customerMessageDraft": "초안"}):
+            reply = llm_reply({"summary": "요약입니다.", **extra})
+            with self.subTest(extra=extra), self.assertLogs("app.assist", level="WARNING"):
+                result = generate(closure, api_key="test-key", transport=lambda key, payload: reply)
+                self.assertEqual((result.source, result.nextActions, result.customerMessageDraft), ("RULES", [], None))
+
     def test_missing_key_never_calls_the_transport(self):
         def transport(key, payload):
             raise AssertionError("transport must not be called")
