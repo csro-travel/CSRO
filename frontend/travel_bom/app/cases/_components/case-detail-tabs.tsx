@@ -31,14 +31,14 @@ export function CaseDetailTabs({ title, badges, caseId, closed, children, chat, 
         </Button>
         <h1 className="min-w-0 text-xl font-bold wrap-anywhere">{title}</h1>
         {badges}
-        <Tabs.List aria-label="대응 건 상세" className="ml-auto inline-flex shrink-0 gap-1 rounded-lg border bg-card p-1">
+        <Tabs.List aria-label="상담 상세" className="ml-auto inline-flex shrink-0 gap-1 rounded-lg border bg-card p-1">
           <Tabs.Tab value="case" className={tabClassName}>
             <FileText aria-hidden="true" className="size-4 shrink-0" />
-            대응 건
+            상담 정보
           </Tabs.Tab>
           <Tabs.Tab value="alternatives" className={tabClassName}>
             <BedDouble aria-hidden="true" className="size-4 shrink-0" />
-            대체 숙소
+            대체 숙소 추천
           </Tabs.Tab>
         </Tabs.List>
       </header>

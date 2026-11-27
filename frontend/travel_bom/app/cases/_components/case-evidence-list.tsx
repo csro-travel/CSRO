@@ -118,7 +118,7 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
 
       {raw && (
         <details className="group text-xs">
-          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">원본 데이터(감사용)</summary>
+          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">+ 원본 데이터(감사용)</summary>
           <pre className="num mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 leading-relaxed whitespace-pre-wrap wrap-anywhere">{raw}</pre>
         </details>
       )}
@@ -130,10 +130,16 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
 export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
   const { evidence, booking } = detail;
   const unauthenticated = evidence.some(record => !record.sourceAuthenticated && record.sourceType !== "MANUAL_HOTEL");
+  const replied = evidence.filter(record => !record.sourceType.startsWith("SUPPLIER"));
+  const latest = replied.map(record => record.receivedAt).filter((value): value is string => !!value).sort().at(-1);
+  const pending = detail.nights.filter(night => night.factStatus !== "VERIFIED").map(night => formatDay(night.stayDate));
   return (
-    <section className="panel p-4" aria-label="확인 근거">
+    <section className="panel p-4" aria-label="호텔 측 회신">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">확인 근거</h3>
+        <h3 className="flex items-center gap-1.5 text-base font-semibold">
+          <Hotel className="size-4 text-muted-foreground" aria-hidden="true" />호텔 측 회신
+          <Badge tone="outline">실제 회신 · 시스템 추정 아님</Badge>
+        </h3>
         {unauthenticated && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Info className="size-3.5" aria-hidden="true" />
@@ -141,9 +147,16 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
           </p>
         )}
       </div>
-      <div className="mt-1.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <Badge tone={replied.length ? "success" : "warning"} className="px-2.5 py-1 text-sm">{replied.length ? `회신 ${replied.length}건 수신` : "호텔 회신 없음"}</Badge>
+        {latest && <time dateTime={latest} className="num text-xs text-muted-foreground">최근 {formatDateTime(latest)}</time>}
+        {pending.length > 0
+          ? <Badge tone="warning" className="px-2.5 py-1 text-sm">후속 확인 필요 · {pending.join(", ")}</Badge>
+          : detail.nights.length > 0 && <Badge tone="neutral" className="px-2.5 py-1 text-sm">전 숙박일 확인 완료</Badge>}
+      </div>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
         <details className="min-w-0 flex-1">
-          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">기준 보기</summary>
+          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">+ 채택 기준 확인</summary>
           <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
             <li>호텔·공급사가 말한 내용은 주장이고, &lsquo;사실로 채택&rsquo;된 항목만 숙박일 상태에 반영됩니다.</li>
             <li>제공 가능·제공 불가를 분명히 답한 숙박일만 채택합니다. 미확인·응답 대기·오류는 제공 불가로 처리하지 않고 미확인으로 둡니다.</li>

@@ -11,6 +11,7 @@ import { ClosureError, closeCase, completeTask, confirmCheckin, type CloseBlocke
 import type { CaseDetail, CaseTask } from "../_types/case";
 import type { ReplacementBooking } from "../_types/replacement";
 import { taskNames } from "./case-details";
+import { flash } from "./case-process";
 
 const closeReasons = new Map([["REPLACEMENT_CHECKED_IN", "대체 숙소 입실 확인 후 종료"]]);
 const dateTime = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" });
@@ -25,7 +26,16 @@ function blockerText(blocker: CloseBlocker) {
   }
 }
 
-function TaskRow({ caseId, task, closed, onDone }: { caseId: string; task: CaseTask; closed: boolean; onDone: () => void }) {
+/** The first thing to finish, in process order: a replacement booking, then check-in, then the open required tasks. */
+function blockerTarget(blockers: CloseBlocker[]) {
+  const has = (code: string) => blockers.find(blocker => blocker.code === code);
+  if (has("REPLACEMENT_NOT_CONFIRMED") || has("STAY_NOT_COVERED")) return '[data-process-step="4"]';
+  if (has("CHECKIN_NOT_CONFIRMED")) return '[data-task-type="CHECKIN_CONFIRM"], [data-process-step="5"]';
+  const task = has("REQUIRED_TASKS_OPEN")?.tasks?.[0];
+  return task ? `[data-task-type="${task.type}"]` : null;
+}
+
+function TaskRow({ caseId, task, closed, required, onDone }: { caseId: string; task: CaseTask; closed: boolean; required: boolean; onDone: () => void }) {
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -40,8 +50,11 @@ function TaskRow({ caseId, task, closed, onDone }: { caseId: string; task: CaseT
   }
 
   return (
-    <li className="space-y-1.5 py-2 first:pt-0 last:pb-0" data-task-type={task.type}>
-      <p className="text-sm font-medium">{taskNames.get(task.type) ?? task.type}</p>
+    <li className="space-y-1.5 rounded-md px-1 py-2" data-task-type={task.type}>
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        {taskNames.get(task.type) ?? task.type}
+        {required && <Badge tone="danger">필수 · 종료 전 완료</Badge>}
+      </p>
       {checkin ? <p className="text-xs text-muted-foreground">고객이 입실을 확인하면 자동으로 완료됩니다.</p> : <>
         <Textarea aria-label={`${taskNames.get(task.type) ?? task.type} 처리 내용`} value={note} maxLength={1000} disabled={closed || sending}
           onChange={event => setNote(event.target.value)} rows={2}
@@ -70,8 +83,13 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
     try { await closeCase(detail.caseId, key.current); key.current = null; onChanged(); }
     catch (cause) {
       if (cause instanceof ClosureError && !cause.outcomeUnknown) key.current = null;
-      setError(cause instanceof Error ? cause.message : "대응 종료 실패");
-      if (cause instanceof ClosureError) setBlockers(cause.blockers);
+      setError(cause instanceof Error ? cause.message : "상담 종료 실패");
+      if (cause instanceof ClosureError) {
+        setBlockers(cause.blockers);
+        // Point at the first unfinished item instead of only reporting it.
+        const target = blockerTarget(cause.blockers);
+        if (target) window.setTimeout(() => flash(target), 200);
+      }
       // Blockers may name tasks created after this detail was loaded.
       onChanged();
     } finally { setClosing(false); }
@@ -82,18 +100,19 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
     onChanged();
   }
 
+  const requiredTypes = new Set(blockers.flatMap(blocker => blocker.code === "REQUIRED_TASKS_OPEN" ? (blocker.tasks ?? []).map(task => task.type) : []));
   return (
-    <section className="panel space-y-3 p-4" aria-label="후속 업무와 대응 종료">
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold"><ClipboardCheck className="size-4 text-muted-foreground" aria-hidden="true" />{closed ? "처리 결과" : "후속 업무와 대응 종료"}</h3>
+    <section className="panel space-y-3 p-4" aria-label="후속 기록 및 상담 종료">
+      <h3 className="flex items-center gap-1.5 text-base font-semibold"><ClipboardCheck className="size-4 text-muted-foreground" aria-hidden="true" />{closed ? "처리 결과" : "후속 기록 및 상담 종료"}</h3>
       {closed ? <ClosureSummary detail={detail} /> : <>
         <CompletedTasks detail={detail} />
         {detail.tasks.length ? (
-          <ul className="divide-y">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} onDone={taskDone} />)}</ul>
+          <ul className="space-y-1">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} required={requiredTypes.has(task.type)} onDone={taskDone} />)}</ul>
         ) : <p className="text-sm text-muted-foreground">남은 업무 없음</p>}
         <div className="space-y-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">입실 확인, 필요한 숙박일 보장, 필수 업무 완료를 모두 확인한 뒤에만 종료됩니다.</p>
-          <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "대응 건 종료"}</Button>
-          {error && <p role="alert" className="text-sm">{error}</p>}
+          <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "상담 종료"}</Button>
+          {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
           {blockers.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm">{blockers.map(item => <li key={item.code}>{blockerText(item)}</li>)}</ul>}
         </div>
       </>}
@@ -143,10 +162,10 @@ function ClosureSummary({ detail }: { detail: CaseDetail }) {
     <div className="space-y-3">
       <p role="status" className="flex flex-wrap items-center gap-2 text-sm font-medium">
         <Badge tone="neutral">종료</Badge>
-        {detail.closure ? <>{closeReasons.get(detail.closure.reason) ?? detail.closure.reason}<time dateTime={detail.closure.closedAt} className="num text-xs font-normal text-muted-foreground">{formatDateTime(detail.closure.closedAt)}</time></> : "종료된 대응 건입니다."}
+        {detail.closure ? <>{closeReasons.get(detail.closure.reason) ?? detail.closure.reason}<time dateTime={detail.closure.closedAt} className="num text-xs font-normal text-muted-foreground">{formatDateTime(detail.closure.closedAt)}</time></> : "종료된 상담입니다."}
       </p>
       <dl className="space-y-1 text-sm">
-        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">올라온 이유</dt><dd>{origin.label}</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">접수 경로</dt><dd>{origin.label}</dd></div>
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">확인된 문제</dt><dd>{unavailable.length ? `${unavailable.join(", ")} 객실 제공 불가` : "객실 제공 불가로 확인된 숙박일 없음"}</dd></div>
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-muted-foreground">완료한 업무</dt><dd>{(detail.completedTasks ?? []).length}건</dd></div>
       </dl>
@@ -161,7 +180,7 @@ function ClosureSummary({ detail }: { detail: CaseDetail }) {
         </div>
         {assist
           ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{assist.summary}</p>
-          : <p className="text-sm text-muted-foreground">위 기록을 인계용 문장으로 정리한 요약을 받을 수 있습니다. 대응 건 기록은 바뀌지 않습니다.</p>}
+          : <p className="text-sm text-muted-foreground">위 기록을 인계용 문장으로 정리한 요약을 받을 수 있습니다. 상담 기록은 바뀌지 않습니다.</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </div>
       <p className="text-xs text-muted-foreground">결제·환불·원예약 자동 취소는 이 시연 범위에 없습니다. 위 기록은 상담사가 남긴 처리 내용입니다.</p>

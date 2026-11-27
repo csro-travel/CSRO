@@ -12,9 +12,10 @@ import { CaseDetailTabs } from "./_components/case-detail-tabs";
 import { CaseDetails } from "./_components/case-details";
 import { CaseEvidenceList } from "./_components/case-evidence-list";
 import { CaseEvidencePanel } from "./_components/case-evidence-panel";
-import { CaseGuidance } from "./_components/case-guidance";
-import { CaseInsight } from "./_components/case-insight";
+import { CaseDraft } from "./_components/case-guidance";
+import { CaseRiskBasis } from "./_components/case-insight";
 import { CaseListView } from "./_components/case-list";
+import { CaseProcessBar } from "./_components/case-process";
 import type { CaseDetail, CaseList, CaseStatus } from "./_types/case";
 
 const LIST_REFRESH_MS = 10000;
@@ -124,7 +125,7 @@ export default function Cases() {
     return (
       <main className="flex flex-col px-5 py-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
         {error && !detail && <p role="alert" className="panel px-4 py-3 text-sm text-destructive">{error}</p>}
-        {!detail && !error && <p role="status" className="text-sm text-muted-foreground">대응 건을 불러오는 중…</p>}
+        {!detail && !error && <p role="status" className="text-sm text-muted-foreground">상담 건을 불러오는 중…</p>}
         {error && !detail && <Button type="button" variant="outline" className="mt-3 self-start" onClick={() => openCase(undefined)}>상담 대응 목록으로</Button>}
         {detail && (
           <CaseDetailTabs
@@ -138,12 +139,16 @@ export default function Cases() {
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
             onOfferSent={() => setChatRefresh(value => value + 1)}
-            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft} />}
+            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft}
+              composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />} />}
           >
+            <CaseProcessBar detail={detail} />
             <CaseDetails detail={detail} />
-            <CaseGuidance detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />
-            <CaseInsight detail={detail} />
-            <CaseEvidenceList detail={detail} />
+            {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
+            <div className="grid items-start gap-3 2xl:grid-cols-2">
+              <CaseRiskBasis detail={detail} />
+              <CaseEvidenceList detail={detail} />
+            </div>
             <CaseEvidencePanel detail={detail} onChanged={() => setAttempt(value => value + 1)} />
             <CaseClosurePanel detail={detail} onChanged={() => { setAttempt(value => value + 1); setChatRefresh(value => value + 1); }} />
           </CaseDetailTabs>

@@ -31,7 +31,7 @@ export function CaseEvidencePanel({ detail, onChanged }: { detail: CaseDetail; o
     try {
       const result = await recordHotelEvidence(detail.caseId, key.current, { callNote: note.trim(), nights });
       key.current = null; setNote(""); setStatuses({});
-      setMessage(result.caseStatus === "WAITING" ? "기록했습니다. 확인되지 않은 숙박일이 남아 대응 건이 확인 대기로 바뀌었습니다." : "기록했습니다.");
+      setMessage(result.caseStatus === "WAITING" ? "기록했습니다. 확인되지 않은 숙박일이 남아 상담 상태가 확인 대기로 바뀌었습니다." : "기록했습니다.");
       onChanged();
     } catch (cause) {
       if (cause instanceof ClosureError && !cause.outcomeUnknown) key.current = null;
@@ -40,9 +40,9 @@ export function CaseEvidencePanel({ detail, onChanged }: { detail: CaseDetail; o
   }
 
   return (
-    <section className="panel space-y-3 p-4" aria-label="호텔 직접 확인 기록">
+    <section className="panel space-y-3 p-4" aria-label="수동 확인 및 후속 조치 기록">
       <div>
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold"><PhoneCall className="size-4 text-muted-foreground" aria-hidden="true" />호텔 직접 확인 기록</h3>
+        <h3 className="flex items-center gap-1.5 text-base font-semibold"><PhoneCall className="size-4 text-muted-foreground" aria-hidden="true" />수동 확인 및 후속 조치 기록</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           호텔과 통화한 결과를 숙박일별로 남깁니다. 미확인 숙박일에 처음 확인된 결과만 사실로 반영되고, 이미 확인된 사실과 다르면 상충으로 표시됩니다.
         </p>

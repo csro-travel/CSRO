@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -153,8 +153,10 @@ function captureScrollPosition(view: HTMLDivElement, direction: HistoryDirection
   return { target: "message", id: anchor.dataset.chatMessageId, offset: anchor.getBoundingClientRect().top - top };
 }
 
-export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion = 0, insertDraft }: {
+export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion = 0, insertDraft, composerTop }: {
   caseId: string; closed: boolean; customer?: boolean; refreshVersion?: number;
+  /** Shown directly above the composer, e.g. the message draft. */
+  composerTop?: ReactNode;
   /** A suggested message to place in the composer. A new `nonce` re-applies the same text. */
   insertDraft?: { text: string; nonce: number };
 }) {
@@ -421,7 +423,8 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
 
       {!customer && <form onSubmit={submitMessage} className="shrink-0 space-y-2 border-t px-3 py-3">
         {sendError && <p role="alert" className="text-sm text-destructive">{sendError}</p>}
-        {closed ? <p className="px-1 text-sm text-muted-foreground">종료된 대응 건에는 메시지를 보낼 수 없습니다.</p> : (
+        {!closed && composerTop}
+        {closed ? <p className="px-1 text-sm text-muted-foreground">종료된 상담에는 메시지를 보낼 수 없습니다.</p> : (
           <div className="flex items-end gap-2">
             <Textarea
               ref={composer}
