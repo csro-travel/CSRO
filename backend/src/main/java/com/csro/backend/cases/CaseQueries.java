@@ -40,7 +40,19 @@ public class CaseQueries {
             'assigneeId',u.subject_key,'updatedAt',c.updated_at,'version',c.version,'nextAction',next.action)
         """;
 
-    private String authorize(Principal principal) {
+    /** 저장된 생성 기록으로 사건 발생 경로를 판정한다. 사건 행의 별칭 c(id, booking_id, created_at)를 참조한다. */
+    public static final String ORIGIN_TYPE = """
+        CASE WHEN EXISTS (SELECT 1 FROM case_actions oa WHERE oa.case_id=c.id
+                AND oa.action_type='CUSTOMER_REPORT_RECEIVED' AND oa.details->'caseCreated'='true'::jsonb)
+            THEN 'CUSTOMER_REPORT'
+            ELSE coalesce((SELECT CASE oj.trigger_type WHEN 'SCHEDULED' THEN 'RISK_RECHECK' ELSE 'CUSTOMER_REPORT' END
+                FROM evidence_records oe JOIN jobs oj ON oj.id=oe.job_id
+                WHERE oe.booking_id=c.booking_id AND oe.created_at=c.created_at
+                    AND oj.trigger_type IN ('SCHEDULED','CUSTOMER_REPORT')
+                ORDER BY (oj.trigger_type='SCHEDULED') DESC LIMIT 1),'UNKNOWN') END
+        """;
+
+    public String authorize(Principal principal) {
         if (!access.activeUser(principal).isCounselor()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN_ROLE");
         }
@@ -81,7 +93,10 @@ public class CaseQueries {
                 'checkInDate',check_in_date,'checkOutDate',check_out_date,'createdAt',created_at,'summary',
                 CASE WHEN jsonb_array_length(n.unavailable)>0 THEN '객실 제공 불가 확인: ' || (n.unavailable->>0)
                      WHEN jsonb_array_length(n.conflict)>0 THEN '상반된 근거 확인 필요' ELSE '숙박일 상태 확인 필요' END,
-                'unavailableStayDates',n.unavailable,'unknownStayDates',n.unknown,'conflictStayDates',n.conflict) AS item
+                'unavailableStayDates',n.unavailable,'unknownStayDates',n.unknown,'conflictStayDates',n.conflict)
+                || jsonb_build_object('origin',jsonb_build_object('type',(SELECT
+            """ + ORIGIN_TYPE + """
+                    FROM (SELECT s.id,s.booking_id,s.created_at) c))) AS item
                 FROM sliced s CROSS JOIN LATERAL (SELECT
                     coalesce(jsonb_agg(stay_date ORDER BY stay_date) FILTER (WHERE fact_status='VERIFIED' AND fulfillment_status='UNAVAILABLE'),'[]') unavailable,
                     coalesce(jsonb_agg(stay_date ORDER BY stay_date) FILTER (WHERE fact_status='UNCONFIRMED'),'[]') unknown,
@@ -120,7 +135,43 @@ public class CaseQueries {
                 FROM case_tasks t LEFT JOIN users owner ON owner.id=t.assignee_id WHERE t.case_id=c.id AND t.status IN ('TODO','IN_PROGRESS')),'[]'),
             'customerReports',coalesce((SELECT jsonb_agg(jsonb_build_object('reportId',r.report_code,'issueType',r.issue_type,
                 'atHotel',r.at_hotel,'receivedAt',r.received_at) ORDER BY r.received_at,r.id) FROM incident_reports r
-                WHERE r.case_id=c.id AND r.booking_id=b.id),'[]')))::text
+                WHERE r.case_id=c.id AND r.booking_id=b.id),'[]'))
+            || jsonb_build_object('createdAt',c.created_at,'origin',jsonb_build_object('type',
+            """ + ORIGIN_TYPE + """
+                ),
+            'risk',(SELECT jsonb_build_object('score',sel->'rawScore','threshold',sel->'threshold','policy',sel->'policy',
+                'modelVersion',sel->'modelVersion','featureSetVersion',sel->'request'->'featureSetVersion',
+                'targetCheckInDate',sel->'request'->'targetCheckInDate','asOf',sel->'request'->'asOf',
+                'assessedAt',ra.created_at,'features',sel->'request'->'features')
+                FROM jobs j JOIN risk_assessments ra ON ra.id=j.risk_assessment_id
+                CROSS JOIN LATERAL (SELECT j.parameters->'selection' AS sel) picked
+                WHERE j.case_id=c.id AND j.kind='RECHECK' ORDER BY j.created_at DESC,j.id DESC LIMIT 1),
+            'analysisRuns',coalesce((SELECT jsonb_agg(run.item ORDER BY run.at,run.seq,run.id) FROM (
+                SELECT coalesce(j.finished_at,j.updated_at) AS at,1 AS seq,j.id,jsonb_build_object('kind','RECHECK',
+                    'status',j.status,'trigger',j.trigger_type,'failedAttempts',
+                    CASE WHEN jsonb_typeof(j.result_payload->'history')='array'
+                        THEN jsonb_array_length(j.result_payload->'history') ELSE 0 END,
+                    'errorCode',j.result_payload->'last'->'errorCode','manualRequired',j.result_payload->'manualRequired',
+                    'at',coalesce(j.finished_at,j.updated_at)) AS item
+                FROM jobs j WHERE j.case_id=c.id AND j.kind='RECHECK'
+                UNION ALL
+                SELECT aa.analyzed_at,2,aa.id,jsonb_build_object('kind','HOTEL_REPLY_ANALYSIS','status',aa.analysis_status,
+                    'version',aa.model_version,'evidenceId','EV-' || aa.evidence_id,'at',aa.analyzed_at)
+                FROM agent_analyses aa JOIN evidence_records ae ON ae.id=aa.evidence_id WHERE ae.booking_id=b.id
+                UNION ALL
+                SELECT q.analyzed_at,3,q.id,jsonb_build_object('kind','QUOTE_RANKING','status',q.validation_status,
+                    'version',q.ranking_version,'at',q.analyzed_at)
+                FROM quote_rankings q WHERE q.case_id=c.id
+                UNION ALL
+                SELECT ad.acted_at,4,ad.id,jsonb_build_object('kind','COUNSELOR_ASSIST','status',ad.details->>'source',
+                    'version',ad.details->>'model','at',ad.acted_at)
+                FROM case_actions ad WHERE ad.case_id=c.id AND ad.action_type='ASSIST_DRAFT_GENERATED') run),'[]'),
+            'closure',CASE WHEN c.closed_at IS NOT NULL
+                THEN jsonb_build_object('reason',c.close_reason,'closedAt',c.closed_at) END,
+            'completedTasks',coalesce((SELECT jsonb_agg(jsonb_build_object('taskId','TASK-' || t.id,'type',t.task_type,
+                'required',t.is_required,'completedAt',t.completed_at,'completionNote',t.completion_note,
+                'completionEvidenceId','EV-' || t.completion_evidence_id) ORDER BY t.completed_at,t.id)
+                FROM case_tasks t WHERE t.case_id=c.id AND t.status='DONE'),'[]')))::text
             """ + FROM + " WHERE c.case_code=:code").param("code",caseId).query(String.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"CASE_NOT_FOUND"));
     }

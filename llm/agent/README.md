@@ -4,6 +4,18 @@
 
 Agent는 호텔 회신에서 숙박일별 객실 제공 여부에 관한 주장과 원문 인용을 추출한다. Spring은 반환된 주장과 근거를 검증하고 업무 DB에 저장한다. [Notion API-024 상세 명세](https://app.notion.com/p/f366adbd23b38282abc181a14575ff95)
 
+## 상담사 안내 초안
+
+같은 서버의 `POST /internal/v1/counselor-assist`는 상담 건의 구조화된 사실로 다음 조치·고객 안내 초안(`GUIDANCE`) 또는 종료 요약(`CLOSURE_SUMMARY`)을 제안한다. 인증과 오류 형식은 위 두 엔드포인트와 같다. 제안일 뿐이며 업무 상태를 바꾸지 않는다. 계약은 [안내 초안 제안서](../../backend/docs/api/ASSIST-DRAFT-PROPOSAL.md)를 따른다.
+
+| 환경변수 | 뜻 |
+| --- | --- |
+| `OPENAI_API_KEY` | 있으면 언어 모델을 한 번 호출한다. 프로세스 환경에서만 읽으며 파일·로그에 남기지 않는다 |
+| `ASSIST_LLM_MODEL` | 모델명. 기본 `gpt-4o-mini` |
+
+- 키가 없으면 규칙 기반으로 동작한다. 호출이나 응답 검증에 실패해도 같은 형식의 규칙 기반 결과를 반환한다(`source: "RULES"`).
+- 고객 신고 원문은 보내지 않고 구조화된 사실만 보낸다. 요청의 알 수 없는 필드는 거부한다.
+
 ## Windows PowerShell에서 실행
 
 CSRO 저장소 루트에서 아래 명령을 실행한다. 새 가상환경을 만들 때는 PowerShell에서 `python`을 실행할 수 있어야 한다. 검증에는 Python 3.14.7을 사용했다.

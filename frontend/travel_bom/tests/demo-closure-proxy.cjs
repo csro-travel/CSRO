@@ -97,3 +97,46 @@ test('customer proxy reads only its booking and counselor list accepts CLOSED an
   assert.equal((await read(counselor, '/demo/cases?page=0&status=DELETED')).status, 403)
   assert.deepEqual(customer.forwarded.map(item => item.url), ['http://127.0.0.1:18082/api/v1/bookings/YB-001'])
 })
+
+test('console reads are forwarded only by the counselor proxy, on exact paths with the read header', async t => {
+  const read = (instance, target, headers = {}) => request(instance, target, { method: 'GET', headers: { 'X-Demo-Read': '1', Origin: undefined, 'Content-Type': undefined, ...headers } })
+  const names = ['overview', 'recheck-jobs', 'risk-assessments', 'evidence', 'hotel-reply-analyses', 'bookings']
+  const counselor = await proxy(t)
+  for (const name of names) assert.equal((await read(counselor, '/demo/console/' + name)).status, 201)
+  assert.equal((await read(counselor, '/demo/console/overview?limit=1')).status, 403)
+  assert.equal((await read(counselor, '/demo/console/users')).status, 403)
+  assert.equal((await read(counselor, '/demo/console/overview', { 'X-Demo-Read': undefined })).status, 403)
+  assert.equal((await read(counselor, '/demo/console/overview', { 'Sec-Fetch-Site': 'cross-site' })).status, 403)
+  assert.equal((await request(counselor, '/demo/console/overview', { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'k' } })).status, 403)
+  const customer = await proxy(t, { port: 3101, token: customerToken, customerMode: true })
+  for (const name of names) assert.equal((await read(customer, '/demo/console/' + name)).status, 403)
+  assert.deepEqual(counselor.forwarded.map(item => [item.url, item.headers.Authorization]),
+    names.map(name => ['http://127.0.0.1:18082/api/v1/console/' + name, 'Bearer ' + counselorToken]))
+  assert.equal(customer.forwarded.length, 0)
+})
+
+test('assist drafts need the explicit flag and counselor mode, take no idempotency key and get a longer upstream timeout', async t => {
+  const assistPath = '/demo/cases/C-029/assist-drafts'
+  const timeouts = []
+  const original = AbortSignal.timeout
+  AbortSignal.timeout = ms => { timeouts.push(ms); return original.call(AbortSignal, ms) }
+  t.after(() => { AbortSignal.timeout = original })
+  const instance = await proxy(t, { assistWrites: true })
+  assert.equal((await request(instance, assistPath, { method: 'POST', body: '{"kind":"GUIDANCE"}' })).status, 201)
+  assert.equal((await request(instance, closurePath, { method: 'POST', body: '{}', headers: { 'Idempotency-Key': 'close:1' } })).status, 201)
+  assert.deepEqual(timeouts, [5000, 30000, 5000])
+  assert.equal((await request(instance, assistPath, { method: 'POST', body: '{}', headers: { 'Sec-Fetch-Site': 'cross-site' } })).status, 403)
+  assert.equal((await request(instance, assistPath, { method: 'POST', body: '{}', headers: { Origin: 'http://127.0.0.1:9999' } })).status, 403)
+  assert.equal((await request(instance, assistPath, { method: 'POST', body: 'kind=GUIDANCE', headers: { 'Content-Type': 'text/plain' } })).status, 415)
+  assert.equal((await request(instance, assistPath + '/extra', { method: 'POST', body: '{}' })).status, 403)
+  assert.equal((await request(instance, assistPath, { method: 'PUT', body: '{}' })).status, 403)
+  const disabled = await proxy(t)
+  assert.equal((await request(disabled, assistPath, { method: 'POST', body: '{}' })).status, 403)
+  const customer = await proxy(t, { port: 3101, token: customerToken, customerMode: true, assistWrites: true })
+  assert.equal((await request(customer, assistPath, { method: 'POST', body: '{}' })).status, 403)
+  assert.deepEqual(instance.forwarded.map(item => [item.method, item.url, item.headers.Authorization, item.headers['Idempotency-Key'], item.body]), [
+    ['POST', 'http://127.0.0.1:18082/api/v1/cases/C-029/assist-drafts', 'Bearer ' + counselorToken, undefined, '{"kind":"GUIDANCE"}'],
+    ['POST', 'http://127.0.0.1:18082/api/v1/cases/C-029/closures', 'Bearer ' + counselorToken, 'close:1', '{}'],
+  ])
+  assert.equal(disabled.forwarded.length + customer.forwarded.length, 0)
+})

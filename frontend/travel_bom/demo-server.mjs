@@ -23,6 +23,12 @@ function allowsCaseRead(req) {
       /^\/demo\/cases\/C-[0-9]{3,38}\/quotes$/.test(req.url) || allowsMessageList(req.url))
 }
 
+function allowsConsoleRead(req) {
+  return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
+    req.headers['sec-fetch-site'] === 'same-origin' &&
+    /^\/demo\/console\/(?:overview|recheck-jobs|risk-assessments|evidence|hotel-reply-analyses|bookings)$/.test(req.url)
+}
+
 function allowsCustomerRead(req) {
   return req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
     req.headers['sec-fetch-site'] === 'same-origin' &&
@@ -42,7 +48,7 @@ function validateCustomerConfig(customerMode, port, backendPort, token) {
   }
 }
 
-export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, closureWrites = false, handle, fetchUpstream = fetch }) {
+export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, closureWrites = false, assistWrites = false, handle, fetchUpstream = fetch }) {
   validateCustomerConfig(customerMode, port, backendPort, token)
   const authority = host + ':' + port
   const origin = 'http://' + authority
@@ -55,6 +61,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
   const canReportIncident = incidentWrites && customerMode
   const canCloseCases = closureWrites && counselorMode
   const canConfirmCheckin = closureWrites && customerMode
+  const canRequestAssist = assistWrites && counselorMode
 
   return http.createServer(async (req, res) => {
     if (req.socket.remoteAddress !== host || req.headers.host !== authority ||
@@ -63,7 +70,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       return
     }
     res.setHeader('Content-Security-Policy', "frame-ancestors 'none'")
-    if (!req.url.startsWith('/demo/cases') && !req.url.startsWith('/demo/replacement-bookings') && !req.url.startsWith('/demo/bookings')) return handle(req, res)
+    if (!req.url.startsWith('/demo/cases') && !req.url.startsWith('/demo/replacement-bookings') && !req.url.startsWith('/demo/bookings') && !req.url.startsWith('/demo/console/')) return handle(req, res)
 
     const headers = { Authorization: 'Bearer ' + token }
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
@@ -77,7 +84,10 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       const task = req.method === 'PATCH' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/tasks\/TASK-[1-9][0-9]{0,17}$/.test(req.url)
       const closure = req.method === 'POST' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/(?:closures|evidence)$/.test(req.url)
       const checkin = req.method === 'POST' && canConfirmCheckin && /^\/demo\/replacement-bookings\/BRQ-[a-f0-9]{64}\/checkin-confirmations$/.test(req.url)
-      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
+      // Assist drafts are suggestions that change no case state, so no Idempotency-Key; the Agent may take longer than other calls.
+      const assist = req.method === 'POST' && canRequestAssist && /^\/demo\/cases\/C-[0-9]{3,38}\/assist-drafts$/.test(req.url)
+      if (assist) options.signal = AbortSignal.timeout(30000)
+      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin && !assist) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -97,7 +107,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       headers['Content-Type'] = contentType
       options.body = req
       options.duplex = 'half'
-    } else if (!(canReadReplacement && allowsReplacementRead(req)) && !(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
+    } else if (!(canReadReplacement && allowsReplacementRead(req)) && !(counselorMode && allowsConsoleRead(req)) && !(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
       res.writeHead(403).end()
       return
     }
@@ -137,5 +147,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
     replacementAccess: process.env.CSRO_REPLACEMENT_DEMO_PROXY === 'true',
     incidentWrites: process.env.CSRO_INCIDENT_DEMO_PROXY === 'true',
     closureWrites: process.env.CSRO_CLOSURE_DEMO_PROXY === 'true',
+    assistWrites: process.env.CSRO_ASSIST_DEMO_PROXY === 'true',
   }).listen(port, host)
 }

@@ -14,6 +14,9 @@ SCENARIOS = {
     "SUP-BOOK-004": {"booking": "YB-004", "property": "HOTEL-004", "reconfirmation": "RC-004", "mode": "PENDING"},
     "SUP-BOOK-005": {"booking": "YB-005", "property": "HOTEL-005", "reconfirmation": "RC-005", "mode": "UNAVAILABLE_SERVICE"},
 }
+# Demo 1: nine more confirmed bookings at HOTEL-002, all available like YB-002.
+SCENARIOS.update({f"SUP-BOOK-{n}": {"booking": f"YB-{n}", "property": "HOTEL-002",
+                                    "reconfirmation": f"RC-{n}", "mode": "AVAILABLE"} for n in range(101, 110)})
 
 
 def lookup(supplier_booking_id: str) -> dict | None:

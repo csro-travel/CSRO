@@ -92,6 +92,30 @@ class LocalChatDemoAuthenticationTest {
         assertNull(subject("GET", booking + "/extra", "customer-test-token", "127.0.0.1"));
     }
 
+    @Test
+    void consoleReadsEstablishOnlyTheCounselorSubject() throws Exception {
+        for (String name : new String[]{"overview", "recheck-jobs", "risk-assessments", "evidence", "hotel-reply-analyses", "bookings"}) {
+            String path = "/api/v1/console/" + name;
+            assertEquals("demo-counselor-001", subject("GET", path, "counselor-test-token", "127.0.0.1"));
+            assertNull(subject("GET", path, "customer-test-token", "127.0.0.1"));
+            assertNull(subject("GET", path, "counselor-test-token", "192.0.2.4"));
+        }
+        // Paths outside the allowlist and non-GET methods are skipped by the filter, so no subject is attached.
+        assertNull(subject("GET", "/api/v1/console/overview/extra", "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("GET", "/api/v1/console/users", "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", "/api/v1/console/overview", "counselor-test-token", "127.0.0.1"));
+    }
+
+    @Test
+    void assistDraftRequestsEstablishOnlyTheCounselorSubject() throws Exception {
+        String assist = "/api/v1/cases/C-001/assist-drafts";
+        assertEquals("demo-counselor-001", subject("POST", assist, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", assist, "customer-test-token", "127.0.0.1"));
+        assertNull(subject("POST", assist, "counselor-test-token", "192.0.2.4"));
+        assertNull(subject("GET", assist, "counselor-test-token", "127.0.0.1"));
+        assertNull(subject("POST", assist + "/extra", "counselor-test-token", "127.0.0.1"));
+    }
+
     private String subject(String method, String path, String token, String remote) throws Exception {
         var request = new MockHttpServletRequest(method, path);
         request.setServletPath(path);
