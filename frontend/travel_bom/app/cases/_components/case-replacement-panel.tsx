@@ -145,6 +145,7 @@ export function useCaseReplacement({ caseId, customer, closed, selection, active
 
 export function CaseReplacementPanel({ state, customer }: { state: ReturnType<typeof useCaseReplacement>; customer: boolean }) {
   const { booking, target, reading, readError, sendError, notice, reads, intent, sending, canRequest } = state;
+  if (!target && !reading && !readError && !sendError && !notice && !intent && !sending && !canRequest) return null;
   return (
     <section aria-label="대체 예약 처리" className="space-y-2 border-b px-5 py-3 text-sm">
       <p className="font-semibold">대체 예약 처리</p>

@@ -2,9 +2,12 @@
 
 import { Tabs } from "@base-ui/react/tabs";
 import { ArrowLeft, BedDouble, FileText } from "lucide-react";
-import type { ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import type { AlternativeStay } from "@/lib/alternative-stays";
 import { Button } from "@/components/ui/button";
 import { CaseQuotesPanel } from "./case-quotes-panel";
+import { CaseAirbnbPanel } from "./case-airbnb-panel";
+import type { CaseDetail } from "../_types/case";
 
 const tabClassName =
   "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium text-muted-foreground outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30 data-[active]:bg-accent data-[active]:text-accent-foreground";
@@ -13,11 +16,12 @@ const tabClassName =
  * One screen, no page scroll on desktop: case information scrolls on the left,
  * the conversation keeps its own scroll and composer on the right.
  */
-export function CaseDetailTabs({ title, badges, caseId, closed, children, chat, onBack, onOfferSent }: {
+export function CaseDetailTabs({ title, badges, caseId, closed, detail, children, chat, onBack, onOfferSent }: {
   title: string;
   badges?: ReactNode;
   caseId: string;
   closed: boolean;
+  detail: CaseDetail;
   children: ReactNode;
   chat: ReactNode;
   onBack: () => void;
@@ -48,12 +52,30 @@ export function CaseDetailTabs({ title, badges, caseId, closed, children, chat, 
           <Tabs.Panel value="case" keepMounted className="space-y-3 pb-1 outline-none">
             {children}
           </Tabs.Panel>
-          <Tabs.Panel value="alternatives" className="pb-1 outline-none">
-            <CaseQuotesPanel key={caseId} caseId={caseId} closed={closed} onOfferSent={onOfferSent} />
+          <Tabs.Panel value="alternatives" className="space-y-4 pb-1 outline-none">
+            <CaseAlternativePanels key={caseId} detail={detail} closed={closed} onOfferSent={onOfferSent} />
           </Tabs.Panel>
         </div>
         <div className="h-[34rem] min-w-0 lg:h-auto lg:min-h-0">{chat}</div>
       </div>
     </Tabs.Root>
+  );
+}
+
+function CaseAlternativePanels({ detail, closed, onOfferSent }: {
+  detail: CaseDetail;
+  closed: boolean;
+  onOfferSent?: () => void;
+}) {
+  const [airbnbSelection, setAirbnbSelection] = useState<{ stays: AlternativeStay[]; sent: boolean }>({ stays: [], sent: false });
+  const updateAirbnbSelection = useCallback((stays: AlternativeStay[], sent: boolean) => {
+    setAirbnbSelection({ stays, sent });
+  }, []);
+  return (
+    <>
+      <CaseAirbnbPanel detail={detail} closed={closed} onSelectionChange={updateAirbnbSelection} />
+      <CaseQuotesPanel caseId={detail.caseId} closed={closed} onOfferSent={onOfferSent}
+        airbnbCandidates={airbnbSelection.stays} airbnbSelectionSent={airbnbSelection.sent} />
+    </>
   );
 }

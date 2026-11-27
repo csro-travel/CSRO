@@ -48,13 +48,14 @@ function validateCustomerConfig(customerMode, port, backendPort, token) {
   }
 }
 
-export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, closureWrites = false, assistWrites = false, handle, fetchUpstream = fetch }) {
+export function createDemoServer({ port, backendPort, token, chatWrites = false, quoteWrites = false, offerWrites = false, customerMode = false, replacementAccess = false, incidentWrites = false, closureWrites = false, assistWrites = false, airbnbWrites = false, handle, fetchUpstream = fetch }) {
   validateCustomerConfig(customerMode, port, backendPort, token)
   const authority = host + ':' + port
   const origin = 'http://' + authority
   const counselorMode = !customerMode && port === 3100 && backendPort === 18082
   const canSendMessages = chatWrites && counselorMode
   const canSearchQuotes = quoteWrites && counselorMode
+  const canSaveAirbnbSearch = airbnbWrites && counselorMode
   const canSendOffers = offerWrites && counselorMode
   const canRequestReplacement = replacementAccess && counselorMode
   const canReadReplacement = replacementAccess && (counselorMode || customerMode)
@@ -74,11 +75,22 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
 
     const headers = { Authorization: 'Bearer ' + token }
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
+    const simulation = canSaveAirbnbSearch && canSendMessages &&
+      /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/simulations\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}(?:\/book)?$/.test(req.url)
+    const simulationBook = simulation && req.method === 'POST' && req.url.endsWith('/book')
+    const simulationRead = simulation && req.method === 'GET' && !req.url.endsWith('/book') &&
+      req.headers['x-demo-read'] === '1' && req.headers['sec-fetch-site'] === 'same-origin'
     const replacement = req.method === 'POST' && canRequestReplacement && /^\/demo\/cases\/C-[0-9]{3,38}\/replacement-bookings$/.test(req.url)
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
       const message = req.method === 'POST' && canSendMessages && /^\/demo\/cases\/C-[0-9]{3,38}\/messages$/.test(req.url)
       const quoteSearch = req.method === 'POST' && canSearchQuotes && /^\/demo\/cases\/C-[0-9]{3,38}\/quote-searches$/.test(req.url)
       const offer = req.method === 'POST' && canSendOffers && /^\/demo\/cases\/C-[0-9]{3,38}\/offers$/.test(req.url)
+      const airbnbSearch = req.method === 'PUT' && canSaveAirbnbSearch &&
+        /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(req.url)
+      const airbnbSelection = req.method === 'PUT' && canSaveAirbnbSearch &&
+        /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/selection$/.test(req.url)
+      const airbnbGuide = req.method === 'PUT' && canSaveAirbnbSearch && canSendMessages &&
+        /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/guides\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(req.url)
       const selection = req.method === 'PUT' && customerMode && /^\/demo\/cases\/C-[0-9]{3,38}\/selection$/.test(req.url)
       const incident = req.method === 'POST' && canReportIncident && /^\/demo\/bookings\/[A-Za-z0-9][A-Za-z0-9._-]{0,39}\/incident-reports$/.test(req.url)
       const task = req.method === 'PATCH' && canCloseCases && /^\/demo\/cases\/C-[0-9]{3,38}\/tasks\/TASK-[1-9][0-9]{0,17}$/.test(req.url)
@@ -87,7 +99,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       // Assist drafts are suggestions that change no case state, so no Idempotency-Key; the Agent may take longer than other calls.
       const assist = req.method === 'POST' && canRequestAssist && /^\/demo\/cases\/C-[0-9]{3,38}\/assist-drafts$/.test(req.url)
       if (assist) options.signal = AbortSignal.timeout(30000)
-      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin && !assist) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
+      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin && !assist && !airbnbSearch && !airbnbGuide && !airbnbSelection && !simulationBook) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -107,7 +119,9 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       headers['Content-Type'] = contentType
       options.body = req
       options.duplex = 'half'
-    } else if (!(canReadReplacement && allowsReplacementRead(req)) && !(counselorMode && allowsConsoleRead(req)) && !(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
+    } else if (!simulationRead && !(canSaveAirbnbSearch && req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
+        req.headers['sec-fetch-site'] === 'same-origin' &&
+        /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/latest$/.test(req.url)) && !(canReadReplacement && allowsReplacementRead(req)) && !(counselorMode && allowsConsoleRead(req)) && !(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
       res.writeHead(403).end()
       return
     }
@@ -148,5 +162,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
     incidentWrites: process.env.CSRO_INCIDENT_DEMO_PROXY === 'true',
     closureWrites: process.env.CSRO_CLOSURE_DEMO_PROXY === 'true',
     assistWrites: process.env.CSRO_ASSIST_DEMO_PROXY === 'true',
+    airbnbWrites: process.env.CSRO_AIRBNB_DEMO_PROXY === 'true',
   }).listen(port, host)
 }

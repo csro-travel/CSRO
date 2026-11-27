@@ -135,6 +135,7 @@ export default function Cases() {
               {state && <Badge tone={state.tone}>{state.label}</Badge>}
             </>}
             caseId={detail.caseId}
+            detail={detail}
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
             onOfferSent={() => setChatRefresh(value => value + 1)}

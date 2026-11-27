@@ -74,6 +74,15 @@ class AlternativeCandidate(BaseModel):
     price_diff_krw: int | None = None
     cancellation_summary: str = "취소 규정 미확인"
     checks: CandidateChecks
+    review_evidence: dict[str, str | None] = Field(default_factory=dict)
+    ai_review_completed: bool | None = None
+    amenities: list[str] = Field(default_factory=list)
+    image_urls: list[str] = Field(default_factory=list)
+    korean_name: str | None = None
+    original_name: str | None = None
+    check_in_date: date | None = None
+    check_out_date: date | None = None
+    search_scope: str = "full_stay"
     unconfirmed_items: list[str] = Field(default_factory=list)
     approval_required_reasons: list[str] = Field(default_factory=list)
     score_breakdown: ScoreBreakdown | None = None
@@ -82,6 +91,18 @@ class AlternativeCandidate(BaseModel):
     @property
     def total_score(self) -> int:
         return self.score_breakdown.total if self.score_breakdown else 0
+
+
+class RankingCandidateInput(BaseModel):
+    source: str
+    listing_id: str
+    total_price_krw: int | None
+    check_in_date: date | None
+    check_out_date: date | None
+    search_scope: str
+    checks: CandidateChecks
+    total_score: int
+    distance_km: float
 
 
 class AlternativeSearchResponse(BaseModel):
@@ -94,6 +115,9 @@ class AlternativeSearchResponse(BaseModel):
     verified_candidate_count: int = Field(..., ge=0)
     top_recommendations: list[AlternativeCandidate] = Field(default_factory=list)
     exception_candidates: list[AlternativeCandidate] = Field(default_factory=list)
+    ranking_version: str | None = None
+    analyzed_at: datetime | None = None
+    ranking_input: list[RankingCandidateInput] = Field(default_factory=list)
     summary: str = ""
     disclaimer: str = (
         "검색 결과는 조회 시점에 확인된 후보이며, 예약 가능 여부와 가격은 "

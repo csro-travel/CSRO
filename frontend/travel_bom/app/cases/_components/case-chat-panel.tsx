@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
+import { AirbnbDemoBookingCard } from "./airbnb-demo-booking-card";
+import { parseAirbnbGuide } from "@/lib/airbnb-guide";
 import { formatWon } from "@/lib/alternative-stays";
 import { CaseMessageSendError, getCaseMessages, sendCaseMessage } from "../_api/cases";
 import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, selectCaseOffer, type PendingIntent, type SelectionBody } from "../_api/offers";
@@ -55,17 +57,20 @@ function groupMessagesByDate(messages: CaseChatMessage[]) {
   return groups;
 }
 
-function MessageItem({ message, state, customer, selecting, selectionBlocked, onSelect }: {
+function MessageItem({ message, state, customer, selecting, selectionBlocked, onSelect, caseId, closed, onCompose }: {
+  caseId: string; closed: boolean; onCompose: (text: string) => void;
   message: CaseChatMessage; state: CaseChatState | null; customer: boolean; selecting: boolean;
   selectionBlocked: boolean; onSelect: (offerId: string, quoteId: string) => void;
 }) {
   const { body, offer, senderType, sentAt } = message;
+  const airbnbGuide = body && senderType === "COUNSELOR" && message.messageType === "TEXT"
+    ? parseAirbnbGuide(body) : null;
   const active = offer !== null && (state ? state.activeOfferId === offer.offerId : offer.status === "ACTIVE");
 
   return (
     <li
       data-chat-message-id={message.messageId}
-      className={`w-fit min-w-0 space-y-2 rounded-2xl border px-3.5 py-2.5 ${offer ? "max-w-full" : "max-w-[85%]"} ${messageBubbleStyles[senderType]}`}
+      className={`w-fit min-w-0 space-y-2 rounded-2xl border px-3.5 py-2.5 ${offer || airbnbGuide ? "max-w-full" : "max-w-[85%]"} ${messageBubbleStyles[senderType]}`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className={`text-xs font-semibold ${senderType === "COUNSELOR" ? "text-accent-foreground" : ""}`}>
@@ -75,8 +80,41 @@ function MessageItem({ message, state, customer, selecting, selectionBlocked, on
           {formatTimestamp(sentAt, messageTimeFormat) ?? sentAt}
         </time>
       </div>
-      {body && (
-        <p className="whitespace-pre-wrap wrap-anywhere text-sm">{body}</p>
+      {airbnbGuide ? (
+        <div className="space-y-3 text-sm">
+          <p>{airbnbGuide.introduction}</p>
+          <ol className="space-y-2">
+            {airbnbGuide.items.map((stay, index) => (
+              <li key={index} className="space-y-2 rounded-xl border bg-card p-3 text-card-foreground">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="min-w-0 font-semibold wrap-anywhere">{stay.name}</h3>
+                  <span className="font-semibold text-primary tabular-nums">{stay.price}</span>
+                </div>
+                {stay.highlight && <p className="leading-relaxed text-muted-foreground">{stay.highlight}</p>}
+                <a href={stay.url} target="_blank" rel="noopener noreferrer"
+                  aria-label={`${stay.name} Airbnb에서 보기`}
+                  className="inline-block rounded-md border px-3 py-1.5 text-sm font-medium text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
+                  Airbnb에서 보기
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p className="text-xs leading-relaxed text-muted-foreground">{airbnbGuide.reminder}</p>
+        </div>
+      ) : body && (
+        <p className="whitespace-pre-wrap wrap-anywhere text-sm">
+          {body.split("\n").map((line, index) => (
+            <span key={index}>
+              {index > 0 && "\n"}
+              {/^https:\/\/[^\s]+$/.test(line)
+                ? <a href={line} target="_blank" rel="noopener noreferrer" className="underline">{line}</a>
+                : line}
+            </span>
+          ))}
+        </p>
+      )}
+      {!customer && senderType === "COUNSELOR" && /^ACT-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(message.messageId) && (
+        <AirbnbDemoBookingCard caseId={caseId} offerId={message.messageId.slice(4)} closed={closed} onCompose={onCompose} />
       )}
       {offer && (
         <div className="space-y-2">
@@ -254,6 +292,8 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
     if (previousRefresh.current === refreshVersion) return;
     previousRefresh.current = refreshVersion;
     void loadHistory(undefined, true);
+    const timer = window.setTimeout(() => void loadHistory(), 5700);
+    return () => window.clearTimeout(timer);
   }, [refreshVersion, loadHistory]);
 
   // New customer messages and selections appear without a manual refresh while the tab is visible.
@@ -272,6 +312,11 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
 
   const messages = useMemo(() => mergeMessages(sentMessages, history?.items ?? []), [history, sentMessages]);
   const dateGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
+  function composeBookingNotice(text: string) {
+    setDraft(current => current.trim() ? `${current.trimEnd()}\n\n${text}` : text);
+    composer.current?.focus();
+  }
+
   const canSend = !customer && !closed && !sending && draft.trim().length > 0;
 
   useLayoutEffect(() => {
@@ -397,7 +442,8 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
                 )}
                 <ol className="space-y-3">
                   {dayMessages.map((message) => (
-                    <MessageItem key={message.messageId} message={message} state={chatState} customer={customer} selecting={selecting}
+                    <MessageItem key={message.messageId} caseId={caseId} closed={closed} message={message} state={chatState} customer={customer} selecting={selecting}
+                      onCompose={composeBookingNotice}
                       selectionBlocked={closed || !!pendingSelection || !selectionStorageReady || replacement.selectionBlocked} onSelect={(offerId, quoteId) => void choose(offerId, quoteId)} />
                   ))}
                 </ol>
