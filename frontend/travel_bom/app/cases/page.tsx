@@ -141,8 +141,8 @@ export default function Cases() {
             chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft} />}
           >
             <CaseDetails detail={detail} />
-            <CaseGuidance detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />
             <CaseInsight detail={detail} />
+            <CaseGuidance detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />
             <CaseEvidenceList detail={detail} />
             <CaseEvidencePanel detail={detail} onChanged={() => setAttempt(value => value + 1)} />
             <CaseClosurePanel detail={detail} onChanged={() => { setAttempt(value => value + 1); setChatRefresh(value => value + 1); }} />
