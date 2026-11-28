@@ -26,7 +26,7 @@ function runDetail(run: AnalysisRun) {
       run.manualRequired ? "자동 확인 중단 · 상담사 직접 확인 필요" : null,
     ].filter(Boolean).join(" · ");
   }
-  return [run.status ? analysisStatuses.get(run.status) ?? run.status : null, run.evidenceId ? `근거 ${run.evidenceId}` : null].filter(Boolean).join(" · ");
+  return run.status ? analysisStatuses.get(run.status) ?? "" : "";
 }
 
 type Step = { at?: string | null; title: ReactNode; body?: ReactNode; danger?: boolean };
@@ -78,15 +78,6 @@ function steps(detail: CaseDetail): Step[] {
   return list.sort((left, right) => time(left) - time(right));
 }
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="eyebrow">{title}</p>
-      {children}
-    </div>
-  );
-}
-
 /**
  * What is a confirmed fact against what the system only estimated, and how the case arrived.
  * How the model chose the booking is not shown here; it lives on the risk assessment page.
@@ -115,12 +106,11 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
         </li>
       </ul>
 
-      <details className="group text-xs">
+      <details className="group text-xs" aria-label="처리 이력">
         <summary className="cursor-pointer list-none font-medium text-primary select-none">
-          <span className="group-open:hidden">+ 상세 근거 확인</span><span className="hidden group-open:inline">− 상세 근거 닫기</span>
+          <span className="group-open:hidden">+ 처리 이력 보기</span><span className="hidden group-open:inline">− 처리 이력 닫기</span>
         </summary>
-        <div className="mt-2.5 space-y-3">
-          <Block title="처리 경위">
+        <div className="mt-2.5">
             {list.length ? (
               <ol className="space-y-2">
                 {list.map((step, index) => (
@@ -133,8 +123,7 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
                   </li>
                 ))}
               </ol>
-            ) : <p className="text-muted-foreground">경위를 보여 줄 기록이 없습니다.</p>}
-          </Block>
+            ) : <p className="text-muted-foreground">이력을 보여 줄 기록이 없습니다.</p>}
         </div>
       </details>
     </section>

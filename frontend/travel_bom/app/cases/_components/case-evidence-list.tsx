@@ -143,7 +143,7 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
         {unauthenticated && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Info className="size-3.5" aria-hidden="true" />
-            가상 공급사·호텔 응답(시연용) · 출처 인증 절차 없음
+            출처 인증 절차 없음
           </p>
         )}
       </div>
@@ -167,9 +167,14 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
           이 예약의 전체 재확인 기록
         </Link>
       </div>
-      {evidence.length
-        ? <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
-        : <p className="mt-2 text-sm text-muted-foreground">아직 받은 호텔·공급사 근거가 없습니다.</p>}
+      {evidence.length ? (
+        <details className="group mt-3">
+          <summary className="cursor-pointer list-none text-xs font-medium text-primary select-none">
+            <span className="group-open:hidden">+ 회신 원문 보기 · {evidence.length}건</span><span className="hidden group-open:inline">− 회신 원문 닫기</span>
+          </summary>
+          <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
+        </details>
+      ) : <p className="mt-2 text-sm text-muted-foreground">아직 받은 호텔·공급사 근거가 없습니다.</p>}
     </section>
   );
 }

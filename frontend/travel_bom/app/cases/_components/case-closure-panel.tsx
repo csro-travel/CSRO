@@ -134,7 +134,6 @@ function CompletedTasks({ detail }: { detail: CaseDetail }) {
               <time dateTime={task.completedAt} className="num text-xs text-muted-foreground">{formatDateTime(task.completedAt)} 완료</time>
             </p>
             {task.completionNote && <p className="text-muted-foreground wrap-anywhere">{task.completionNote}</p>}
-            {task.completionEvidenceId && <p className="num text-xs text-muted-foreground">근거 {task.completionEvidenceId}</p>}
           </div>
         </li>
       ))}
