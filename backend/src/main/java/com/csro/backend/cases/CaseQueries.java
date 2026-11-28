@@ -131,7 +131,7 @@ public class CaseQueries {
                     'reviewStatus',a.review_status) ORDER BY n.stay_date) FROM evidence_nights a JOIN booking_nights n ON n.id=a.booking_night_id
                     WHERE a.evidence_id=e.id),'[]')) ORDER BY e.received_at,e.id) FROM evidence_records e WHERE e.booking_id=b.id),'[]'),
             'tasks',coalesce((SELECT jsonb_agg(jsonb_build_object('taskId','TASK-' || t.id,'type',t.task_type,'status',t.status,
-                'assigneeId',owner.subject_key,'dueAt',t.due_at) ORDER BY t.due_at ASC NULLS LAST,t.created_at,t.id)
+                'assigneeId',owner.subject_key,'dueAt',t.due_at,'required',t.is_required) ORDER BY t.due_at ASC NULLS LAST,t.created_at,t.id)
                 FROM case_tasks t LEFT JOIN users owner ON owner.id=t.assignee_id WHERE t.case_id=c.id AND t.status IN ('TODO','IN_PROGRESS')),'[]'),
             'customerReports',coalesce((SELECT jsonb_agg(jsonb_build_object('reportId',r.report_code,'issueType',r.issue_type,
                 'atHotel',r.at_hotel,'receivedAt',r.received_at) ORDER BY r.received_at,r.id) FROM incident_reports r

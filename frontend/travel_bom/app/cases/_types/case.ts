@@ -3,6 +3,8 @@ export type CaseTask = {
   type: string;
   status: string;
   dueAt: string | null;
+  /** Blocks closing while open. Absent on the list's `nextAction`. */
+  required?: boolean;
 };
 
 export type CaseStatus = "OPEN" | "IN_PROGRESS" | "WAITING" | "CLOSED";

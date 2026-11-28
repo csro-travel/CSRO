@@ -128,6 +128,7 @@
 ```
 
 - `closure`는 `cases.close_reason`·`closed_at`이며 종료 전에는 `null`이다. 현재 종료 코드가 넣는 사유는 `REPLACEMENT_CHECKED_IN` 하나다.
+- (2026-11-28 추가) 미완료 업무 `tasks[]`의 각 항목에 `required`(`case_tasks.is_required`)를 더한다. 종료를 막는 업무를 종료 시도 전에 화면이 표시하기 위해서다. 기존 필드는 그대로다.
 - `completedTasks`는 이 사건의 `case_tasks` 중 `DONE` 행을 `completed_at` 순으로 반환한다. 기존 `tasks`(미완료만)와 `nextAction`은 그대로 둔다.
 - `completionEvidenceId`는 `completion_evidence_id`를 `EV-` 형식으로 반환하고 없으면 `null`이다. DB 제약상 완료 업무는 메모와 근거 중 하나 이상을 가진다.
 - `completionNote`는 상담사가 적은 처리 내용이다. 상담사 전용 응답이므로 그대로 반환한다.

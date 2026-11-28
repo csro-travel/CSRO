@@ -108,7 +108,7 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
       {closed ? <ClosureSummary detail={detail} /> : <>
         <CompletedTasks detail={detail} />
         {detail.tasks.length ? (
-          <ul className="space-y-1">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} required={requiredTypes.has(task.type)} onDone={taskDone} />)}</ul>
+          <ul className="space-y-1">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} required={task.required === true || requiredTypes.has(task.type)} onDone={taskDone} />)}</ul>
         ) : <p className="text-sm text-muted-foreground">남은 업무 없음</p>}
         <CasePostprocessing key={detail.caseId} caseId={detail.caseId} closed={closed} onSaved={onChanged} />
         <div className="space-y-2 border-t pt-3">
