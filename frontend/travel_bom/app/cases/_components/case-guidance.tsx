@@ -78,7 +78,7 @@ export function CaseDraft({ detail, onUseDraft }: { detail: CaseDetail; onUseDra
       </div>
       <p className="scroll-area max-h-20 text-sm leading-relaxed whitespace-pre-wrap">{draft}</p>
       {assist?.warnings.map(warning => <p key={warning} className="text-xs text-muted-foreground">{warning}</p>)}
-      {error && <p role="alert" className="text-xs text-destructive">{error} 규칙 기반 초안을 그대로 쓸 수 있습니다.</p>}
+      {error && <p role="alert" className="text-xs text-accent-foreground">{error} 규칙 기반 초안을 그대로 쓸 수 있습니다.</p>}
     </div>
   );
 }

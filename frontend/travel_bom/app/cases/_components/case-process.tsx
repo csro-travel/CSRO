@@ -40,7 +40,7 @@ export function flash(selector: string) {
   if (!element) return false;
   element.scrollIntoView({ behavior: "smooth", block: "center" });
   element.animate(
-    [{ boxShadow: "0 0 0 3px var(--destructive)", backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)" }, { boxShadow: "0 0 0 0 transparent", backgroundColor: "transparent" }],
+    [{ boxShadow: "0 0 0 3px var(--primary)", backgroundColor: "color-mix(in oklch, var(--primary) 12%, transparent)" }, { boxShadow: "0 0 0 0 transparent", backgroundColor: "transparent" }],
     { duration: 2600, easing: "ease-out" },
   );
   return true;
@@ -51,10 +51,31 @@ const shown: Record<Shown, { dot: string; text: string }> = {
   done: { dot: "border-success bg-success text-white", text: "text-[oklch(0.4_0.1_158)]" },
   now: { dot: "scale-[1.2] border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
   // The current step has an open task: same place in the flow, shown in red.
-  blocked: { dot: "scale-[1.2] border-destructive bg-destructive text-white", text: "font-bold text-destructive" },
+  blocked: { dot: "scale-[1.2] border-primary bg-primary text-white", text: "font-bold text-accent-foreground" },
   later: { dot: "border-border bg-border text-muted-foreground", text: "text-muted-foreground" },
   skip: { dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground opacity-60" },
 };
+
+/** Where each step is handled: the tab it lives on and the area to point at. */
+const stepTargets: { tab: string; selector: string }[] = [
+  { tab: "상담 정보", selector: '[aria-label="확인된 내용"]' },
+  { tab: "상담 정보", selector: '[aria-label="호텔 측 회신"]' },
+  { tab: "상담 정보", selector: '[aria-label="고객 안내 초안"], [aria-label="채팅"]' },
+  { tab: "대체 숙소 추천", selector: '[aria-label="대체 숙소 추천"]' },
+  { tab: "상담 정보", selector: '[aria-label="대체 예약 처리"], [aria-label="채팅"]' },
+  { tab: "상담 정보", selector: '[aria-label="후속 기록 및 상담 종료"]' },
+  { tab: "상담 정보", selector: '[aria-label="후속 기록 및 상담 종료"]' },
+];
+
+/** Opens the tab that holds the step's area, then scrolls to it and flashes it. */
+function goToStep(index: number) {
+  const target = stepTargets[index];
+  if (!target) return;
+  const tab = [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find(item => item.textContent?.includes(target.tab));
+  if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+  // The panel of a newly opened tab is in the page one frame later.
+  window.setTimeout(() => flash(target.selector), 80);
+}
 
 /** Where the counselor records each open task. A hotel check is recorded as evidence, the rest as a task note. */
 const taskTarget = (type: string) => (type === "VERIFY_HOTEL" ? '[aria-label="수동 확인 및 후속 조치 기록"]' : `[data-task-type="${type}"]`);
@@ -68,7 +89,7 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
   return (
     <nav aria-label="상담 진행 단계" className="panel px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className={`text-base leading-tight font-bold ${blocked ? "text-destructive" : ""}`}>
+        <p className={`text-base leading-tight font-bold ${blocked ? "text-accent-foreground" : ""}`}>
           {now >= 0 ? <>지금: {steps[now].label} <span className="num text-sm font-medium text-muted-foreground">({now + 1}/{steps.length})</span></> : "모든 단계가 끝났습니다"}
         </p>
         {next && (
@@ -89,12 +110,14 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
             const state: Shown = index === now ? (blocked ? "blocked" : "now") : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
             const style = shown[state];
             return (
-              <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined}
-                className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md text-center ${style.text}`}>
-                <span className={`num flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-transform ${style.dot}`}>
-                  {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
-                </span>
-                <span className="px-0.5 text-[0.8rem] leading-tight wrap-anywhere">{step.label}{state === "skip" && <span className="block text-[0.7rem]">해당 없음</span>}</span>
+              <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined} className="min-w-0 flex-1">
+                <button type="button" title={`${step.label} 영역으로 이동`} onClick={() => goToStep(index)}
+                  className={`group flex w-full cursor-pointer flex-col items-center gap-1.5 rounded-md pb-1 text-center outline-none focus-visible:ring-3 focus-visible:ring-ring/40 ${style.text}`}>
+                  <span className={`num flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-transform group-hover:ring-4 group-hover:ring-primary/20 ${style.dot}`}>
+                    {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+                  </span>
+                  <span className="rounded px-1 text-[0.8rem] leading-tight wrap-anywhere group-hover:bg-accent group-hover:text-accent-foreground">{step.label}{state === "skip" && <span className="block text-[0.7rem]">해당 없음</span>}</span>
+                </button>
               </li>
             );
           })}

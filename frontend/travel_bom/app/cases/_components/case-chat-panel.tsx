@@ -353,7 +353,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
       {customer && !chatState && history && <p className="border-b px-5 py-3 text-sm">현재 제안·선택과 서버 판단 시각을 확인해야 선택할 수 있습니다. 새 메시지 확인을 눌러 주세요.</p>}
       {customer && <div className="space-y-2 border-b px-5 py-3 text-sm">
         <p>고객 본인에게 전송된 현재 제안에서 숙소를 선택할 수 있습니다. 일반 메시지 전송은 이 시연에 포함되지 않습니다.</p>
-        {selectionError && <p role="alert" className="text-destructive">{selectionError}</p>}
+        {selectionError && <p role="alert" className="text-accent-foreground">{selectionError}</p>}
         {selectionNotice && <p role="status">{selectionNotice}</p>}
         {pendingSelection && <><p>이전 선택의 결과가 확인되지 않았습니다. 다른 선택 전에 보관된 같은 요청으로 확인해 주세요.</p><Button type="button" disabled={selecting || !selectionStorageReady} onClick={() => void choose()}>{selecting ? "선택 처리 확인 중…" : "같은 요청으로 선택 결과 확인"}</Button></>}
       </div>}
@@ -375,7 +375,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
         </Button>
       </div>
       {historyError && history && (
-        <p role="alert" className="shrink-0 border-b px-5 py-2 text-xs text-destructive">
+        <p role="alert" className="shrink-0 border-b px-5 py-2 text-xs text-accent-foreground">
           {historyError === "older" ? "이전 대화를 불러오지 못했습니다." : "새 메시지를 확인하지 못했습니다."}
         </p>
       )}
@@ -410,7 +410,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
         {((historyError && !history) || (!historyError && messages.length === 0)) && (
           <p
             role={historyError ? "alert" : "status"}
-            className={`m-auto text-center text-sm ${historyError ? "text-destructive" : "text-muted-foreground"}`}
+            className={`m-auto text-center text-sm ${historyError ? "text-accent-foreground" : "text-muted-foreground"}`}
           >
             {historyError
               ? "대화 내역을 불러오지 못했습니다."
@@ -422,7 +422,7 @@ export function CaseChatPanel({ caseId, closed, customer = false, refreshVersion
       </div>
 
       {!customer && <form onSubmit={submitMessage} className="shrink-0 space-y-2 border-t px-3 py-3">
-        {sendError && <p role="alert" className="text-sm text-destructive">{sendError}</p>}
+        {sendError && <p role="alert" className="text-sm text-accent-foreground">{sendError}</p>}
         {!closed && composerTop}
         {closed ? <p className="px-1 text-sm text-muted-foreground">종료된 상담에는 메시지를 보낼 수 없습니다.</p> : (
           <div className="flex items-end gap-2">

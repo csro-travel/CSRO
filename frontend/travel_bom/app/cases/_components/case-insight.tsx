@@ -117,7 +117,7 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
                   <li key={index} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2">
                     <time dateTime={step.at ?? undefined} className="num text-muted-foreground">{step.at ? formatDateTime(step.at) : "시각 없음"}</time>
                     <div className="min-w-0 space-y-1">
-                      <p className={`flex flex-wrap items-center gap-1.5 text-sm font-medium ${step.danger ? "text-destructive" : ""}`}>{step.title}</p>
+                      <p className={`flex flex-wrap items-center gap-1.5 text-sm font-medium ${step.danger ? "text-accent-foreground" : ""}`}>{step.title}</p>
                       {step.body}
                     </div>
                   </li>

@@ -124,7 +124,7 @@ export default function Cases() {
     const state = detail ? caseStatusLabels[detail.status] : undefined;
     return (
       <main className="flex flex-col px-5 py-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
-        {error && !detail && <p role="alert" className="panel px-4 py-3 text-sm text-destructive">{error}</p>}
+        {error && !detail && <p role="alert" className="panel px-4 py-3 text-sm text-accent-foreground">{error}</p>}
         {!detail && !error && <p role="status" className="text-sm text-muted-foreground">상담 건을 불러오는 중…</p>}
         {error && !detail && <Button type="button" variant="outline" className="mt-3 self-start" onClick={() => openCase(undefined)}>상담 대응 목록으로</Button>}
         {detail && (
@@ -132,7 +132,7 @@ export default function Cases() {
             key={detail.caseId}
             title={`${detail.caseId} · ${detail.booking.hotel.name}`}
             badges={<>
-              {detail.priority === "URGENT" && detail.status !== "CLOSED" && <Badge tone="danger">긴급</Badge>}
+              {detail.priority === "URGENT" && detail.status !== "CLOSED" && <Badge tone="urgent">긴급</Badge>}
               {state && <Badge tone={state.tone}>{state.label}</Badge>}
             </>}
             top={<CaseProcessBar detail={detail} />}

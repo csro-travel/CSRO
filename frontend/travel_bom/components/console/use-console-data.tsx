@@ -59,7 +59,7 @@ export function ConsolePage({ title, description, state, children }: {
         </div>
       </header>
       {state.error && (
-        <p role="alert" className="panel border-destructive/40 px-4 py-3 text-sm text-destructive">
+        <p role="alert" className="panel border-primary/40 px-4 py-3 text-sm text-accent-foreground">
           {state.error}. {state.data ? "마지막으로 받은 내용을 보여 주고 있습니다." : "잠시 뒤 다시 시도합니다."}
         </p>
       )}

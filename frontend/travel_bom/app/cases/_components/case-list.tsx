@@ -37,7 +37,7 @@ export function OverviewBar({ overview }: { overview: ConsoleOverview | undefine
       </p>
       <dl className="flex flex-wrap items-center gap-2 text-sm">
         {([
-          ["긴급 대응", cases.urgentActive, cases.urgentActive > 0 ? "danger" : "neutral"],
+          ["긴급 대응", cases.urgentActive, cases.urgentActive > 0 ? "urgent" : "neutral"],
           ["자동 확인 중", autoChecks.pending, "info"],
           ["처리 완료", cases.closed, "neutral"],
         ] as const).map(([label, value, tone]) => (
@@ -85,7 +85,7 @@ export function CaseTable({ items, newCaseIds, onOpen, empty }: {
                 <th scope="row" className="px-4 py-4 font-normal">
                   <p className="flex flex-wrap items-center gap-1.5">
                     <span className="num text-lg font-bold whitespace-nowrap">{item.caseId}</span>
-                    {urgent && item.status !== "CLOSED" && <Badge tone="danger">긴급</Badge>}
+                    {urgent && item.status !== "CLOSED" && <Badge tone="urgent">긴급</Badge>}
                     {fresh && <Badge tone="brand">새 건</Badge>}
                   </p>
                   <p className="num mt-0.5 text-sm text-muted-foreground">
@@ -157,7 +157,7 @@ export function CaseListView({
       </div>
 
       <CaseTable items={list?.items} newCaseIds={newCaseIds} onOpen={onOpen} empty={<>
-        <p role={error ? "alert" : "status"} className={error ? "text-destructive" : "text-muted-foreground"}>
+        <p role={error ? "alert" : "status"} className={error ? "text-accent-foreground" : "text-muted-foreground"}>
           {error || (list
             ? (search ? "검색 결과가 없습니다." : status ? "이 상태의 대응 건이 없습니다." : "지금 처리할 대응 건이 없습니다. 새 건이 접수되면 이 화면에 바로 나타납니다.")
             : "대응 건을 불러오는 중…")}

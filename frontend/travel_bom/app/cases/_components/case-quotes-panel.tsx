@@ -82,7 +82,7 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
                   </div>
                   <div className="rounded-md bg-muted/60 px-2.5 py-2">
                     <dt className="text-xs text-muted-foreground">{quote.priceDifference === null ? `${nights}박 총액` : quote.priceDifference > 0 ? "추가 비용" : quote.priceDifference < 0 ? "비용 절감" : "차액 없음"}</dt>
-                    <dd className={`num text-xl font-bold ${quote.priceDifference !== null && quote.priceDifference > 0 ? "text-destructive" : quote.priceDifference !== null && quote.priceDifference < 0 ? "text-[oklch(0.4_0.1_158)]" : ""}`}>
+                    <dd className={`num text-xl font-bold ${quote.priceDifference !== null && quote.priceDifference > 0 ? "text-accent-foreground" : quote.priceDifference !== null && quote.priceDifference < 0 ? "text-[oklch(0.4_0.1_158)]" : ""}`}>
                       {quote.priceDifference === null ? amount.format(quote.totalAmount) : `${quote.priceDifference > 0 ? "+" : ""}${amount.format(quote.priceDifference)}`}
                     </dd>
                     <dd className="text-[0.7rem] text-muted-foreground">견적 차이 · 확정 금액 아님</dd>

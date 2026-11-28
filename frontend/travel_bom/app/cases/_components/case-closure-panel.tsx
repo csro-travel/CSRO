@@ -112,7 +112,7 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
         <div className="space-y-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">입실 확인, 필요한 숙박일 보장, 필수 업무 완료를 모두 확인한 뒤에만 종료됩니다.</p>
           <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "상담 종료"}</Button>
-          {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm font-medium text-accent-foreground">{error}</p>}
           {blockers.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm">{blockers.map(item => <li key={item.code}>{blockerText(item)}</li>)}</ul>}
         </div>
       </>}
@@ -180,7 +180,7 @@ function ClosureSummary({ detail }: { detail: CaseDetail }) {
         {assist
           ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{assist.summary}</p>
           : <p className="text-sm text-muted-foreground">위 기록을 인계용 문장으로 정리한 요약을 받을 수 있습니다. 상담 기록은 바뀌지 않습니다.</p>}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-accent-foreground">{error}</p>}
       </div>
       <p className="text-xs text-muted-foreground">결제·환불·원예약 자동 취소는 이 시연 범위에 없습니다. 위 기록은 상담사가 남긴 처리 내용입니다.</p>
     </div>

@@ -62,7 +62,7 @@ function PriorityCase({ item }: { item: CaseListItem }) {
           <p className="font-semibold wrap-anywhere">{item.hotelName}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="num text-sm text-muted-foreground">{item.caseId}</span>
-            <Badge tone={urgent ? "danger" : "neutral"}>{urgent ? "긴급" : "일반"}</Badge>
+            <Badge tone={urgent ? "urgent" : "neutral"}>{urgent ? "긴급" : "일반"}</Badge>
           </div>
         </div>
         <div className="col-span-2 min-w-0 lg:col-span-1">
@@ -114,7 +114,7 @@ export default function Home() {
               <span className="text-sm text-muted-foreground">진행 중인 확인 작업 <strong className="num">{countFormat.format(autoChecks.pending)}건</strong></span>
             )}
           </div>
-          <Badge tone={urgent > 0 ? "danger" : "neutral"} className="px-2.5 py-1 text-sm">
+          <Badge tone={urgent > 0 ? "urgent" : "neutral"} className="px-2.5 py-1 text-sm">
             긴급 대응 <strong className="num">{countFormat.format(urgent)}건</strong>
           </Badge>
         </section>

@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { CaseAlarm } from './case-alarm'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
@@ -72,10 +73,13 @@ export function ConsoleHeader() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="lg:hidden"><Brand /></div>
         {/* States who this screen is for, so it is not read as an admin dashboard. */}
-        <Badge tone="brand" className="text-sm lg:ml-auto">
-          <UserRoundCheck aria-hidden="true" />
-          담당 상담사 실무 화면 · 본인에게 배정된 건을 처리합니다
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+          <Badge tone="brand" className="text-sm">
+            <UserRoundCheck aria-hidden="true" />
+            담당 상담사 실무 화면 · 본인에게 배정된 건을 처리합니다
+          </Badge>
+          <CaseAlarm />
+        </div>
       </div>
       <nav aria-label="주 메뉴" className="mt-2 flex flex-wrap gap-1 lg:hidden">
         {mobileLinks.map(link => (

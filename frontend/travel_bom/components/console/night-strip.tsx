@@ -2,7 +2,7 @@ import { formatDay, nightTone, nightToneLabels, type NightTone } from "@/lib/cas
 import { cn } from "@/lib/utils";
 
 const toneStyles: Record<NightTone, string> = {
-  unavailable: "border-destructive/40 bg-destructive/12 text-destructive",
+  unavailable: "border-primary/40 bg-primary/12 text-accent-foreground",
   available: "border-success/40 bg-success/12 text-[oklch(0.38_0.1_158)]",
   conflict: "border-warning/50 bg-warning/15 text-[oklch(0.42_0.1_70)]",
   // Unconfirmed nights are hatched: not yet a fact, and never to be read as "fine".

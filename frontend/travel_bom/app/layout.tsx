@@ -1,7 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
-import { CaseAlarm } from '@/components/console/case-alarm'
 import { ConsoleHeader, Sidebar } from '@/components/console/sidebar'
 import './globals.css'
 
@@ -39,7 +38,6 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {/* The shell is exactly one viewport tall; each screen scrolls inside its own area. */}
         <div className="flex h-dvh overflow-hidden bg-background">
-          <CaseAlarm />
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
             <ConsoleHeader />

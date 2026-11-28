@@ -52,7 +52,7 @@ export function hotelQuotes(payload: unknown) {
 
 const reviewTones: Record<string, BadgeTone> = { ACCEPTED: "success", PENDING_REVIEW: "outline", REJECTED: "neutral" };
 const provisionTones: Record<string, string> = {
-  UNAVAILABLE: "font-semibold text-destructive", AVAILABLE: "font-semibold text-[oklch(0.38_0.1_158)]", UNKNOWN: "text-muted-foreground",
+  UNAVAILABLE: "font-semibold text-accent-foreground", AVAILABLE: "font-semibold text-[oklch(0.38_0.1_158)]", UNKNOWN: "text-muted-foreground",
 };
 
 /** Why a claim was or was not adopted, read from the stored claim and its review state. */
@@ -89,7 +89,7 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
           {supplier.line}.{" "}
           {supplier.differences.length === 0
             ? <span className="text-muted-foreground">우리 예약 정보와 일치합니다.</span>
-            : <span className="font-medium text-destructive">우리 예약 정보와 다릅니다: {supplier.differences.join(", ")}</span>}
+            : <span className="font-medium text-accent-foreground">우리 예약 정보와 다릅니다: {supplier.differences.join(", ")}</span>}
         </p>
       )}
 
