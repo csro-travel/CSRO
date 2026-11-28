@@ -5,6 +5,8 @@ import { MapPin, RefreshCw, Search, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatWon, type AlternativeStay } from "@/lib/alternative-stays";
+import { sendAirbnbSearchGuide } from "../_api/cases";
 import { getCaseQuotes, QuoteSearchError, requestCaseQuotes } from "../_api/quotes";
 import { clearIntent, loadPendingIntent, OfferMutationError, persistIntent, sendCaseOffer, type OfferBody, type PendingIntent } from "../_api/offers";
 import type { CaseQuoteGroup, CaseQuoteList } from "../_types/quote";
@@ -113,7 +115,13 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
   );
 }
 
-export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: string; closed: boolean; onOfferSent?: () => void }) {
+export function CaseQuotesPanel({ caseId, closed, onOfferSent, airbnbCandidates, airbnbSelectionSent }: {
+  caseId: string;
+  closed: boolean;
+  onOfferSent?: () => void;
+  airbnbCandidates: AlternativeStay[];
+  airbnbSelectionSent: boolean;
+}) {
   const [data, setData] = useState<CaseQuoteList>();
   const [loading, setLoading] = useState(true);
   const [readError, setReadError] = useState("");
@@ -134,6 +142,10 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
   const [offerStorageReady, setOfferStorageReady] = useState(false);
   const offerRequest = useRef<AbortController | undefined>(undefined);
   const offeringNow = useRef(false);
+  const airbnbRequest = useRef<AbortController | null>(null);
+  const [airbnbSending, setAirbnbSending] = useState(false);
+  const [airbnbError, setAirbnbError] = useState<{ selection: string; message: string }>();
+  const [submittedAirbnbSelections, setSubmittedAirbnbSelections] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     readRequest.current?.abort();
@@ -163,7 +175,7 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
     retainedKey.current = rememberedRequest(caseId);
     setRetryKey(retainedKey.current);
     void refresh();
-    return () => { readRequest.current?.abort(); sendRequest.current?.abort(); offerRequest.current?.abort(); };
+    return () => { readRequest.current?.abort(); sendRequest.current?.abort(); offerRequest.current?.abort(); airbnbRequest.current?.abort(); };
   }, [caseId, refresh]);
 
   const status = data?.searchJob?.status;
@@ -218,6 +230,36 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
     selectedQuotes.length === 3 && selectedQuotes.every(quote => quote.propertyId && quote.expired !== true) &&
     new Set(selectedQuotes.map(quote => quote.propertyId)).size === 3;
 
+  const airbnbSearchId = airbnbCandidates[0]?.searchId;
+  const listingIds = airbnbCandidates.map(stay => stay.id).sort();
+  const completeAirbnbSelection = !!airbnbSearchId && airbnbCandidates.length === 3 &&
+    new Set(listingIds).size === 3 &&
+    airbnbCandidates.every(stay => stay.searchId === airbnbSearchId && stay.listingUrl && stay.totalPrice !== null);
+  const airbnbSelection = JSON.stringify([airbnbSearchId, listingIds]);
+  const airbnbAlreadySubmitted = airbnbSelectionSent || submittedAirbnbSelections.includes(airbnbSelection);
+
+  async function sendAirbnbGuide() {
+    if (closed || !airbnbSearchId || !completeAirbnbSelection || airbnbAlreadySubmitted || airbnbRequest.current) return;
+    const request = new AbortController();
+    airbnbRequest.current = request;
+    setAirbnbSending(true);
+    setAirbnbError(undefined);
+    try {
+      await sendAirbnbSearchGuide(caseId, airbnbSearchId, listingIds, request.signal);
+      if (request.signal.aborted) return;
+      setSubmittedAirbnbSelections(current => [...current, airbnbSelection]);
+      onOfferSent?.();
+    } catch (error) {
+      if (request.signal.aborted) return;
+      setAirbnbError({ selection: airbnbSelection,
+        message: error instanceof Error ? error.message : "숙소 안내를 전송하지 못했습니다." });
+      onOfferSent?.();
+    } finally {
+      airbnbRequest.current = null;
+      if (!request.signal.aborted) setAirbnbSending(false);
+    }
+  }
+
   async function offer() {
     if (offeringNow.current || !offerStorageReady || (!pendingOffer && !canOffer)) return;
     const intent: PendingIntent<OfferBody> = pendingOffer ?? { version: 1, key: crypto.randomUUID(), body: { quoteIds: [...chosen.ids] } };
@@ -242,8 +284,28 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent }: { caseId: strin
 
   return (
     <section aria-label="대체 숙소 추천" className="panel space-y-4 p-4">
+      <div className="space-y-2 border-b pb-4">
+        <h3 className="text-base font-semibold">Airbnb 탐색 결과에서 고른 숙소</h3>
+      <p role="status" className="text-sm font-medium">고객에게 보낼 숙소 {airbnbCandidates.length}/3곳</p>
+      {airbnbCandidates.length > 0 ? (
+        <ul className="space-y-1 text-sm">
+          {airbnbCandidates.map(stay => <li key={stay.id}>{stay.name} · {formatWon(stay.totalPrice)}</li>)}
+        </ul>
+      ) : <p className="text-sm text-muted-foreground">상단 자동 탐색 결과에서 숙소를 선택해 주세요.</p>}
+      <p className="text-sm text-muted-foreground">숙소명, 조회 총액, 링크를 고객 채팅에 보냅니다.</p>
+      {airbnbCandidates.length === 3 && !completeAirbnbSelection && (
+        <p className="text-sm text-muted-foreground">저장된 검색에서 요금과 Airbnb 링크가 있는 숙소 3곳을 선택해 주세요.</p>
+      )}
+      <Button type="button" disabled={closed || !completeAirbnbSelection || airbnbSending || airbnbAlreadySubmitted}
+        onClick={() => void sendAirbnbGuide()}>
+        <Send aria-hidden="true" />
+        {airbnbSending ? "안내 전송 중…" : "고객에게 제안"}
+      </Button>
+      {airbnbAlreadySubmitted && <p role="status">선택한 숙소 3곳을 고객 채팅에 안내했습니다.</p>}
+      {airbnbError?.selection === airbnbSelection && <p role="alert">{airbnbError.message}</p>}
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h3 className="text-base font-semibold">{caseId} 대체 숙소 추천</h3><p className="text-sm text-muted-foreground">시연용 가상 견적 · 같은 기간의 서로 다른 숙소 3곳을 고객에게 제안합니다. 전송은 예약 확정이 아닙니다.</p></div>
+        <div><h3 className="text-base font-semibold">{caseId} 공급사 견적 추천</h3><p className="text-sm text-muted-foreground">시연용 가상 견적 · 같은 기간의 서로 다른 숙소 3곳을 고객에게 제안합니다. 전송은 예약 확정이 아닙니다.</p></div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" disabled={loading} onClick={() => { setPolls(0); void refresh(); }}><RefreshCw aria-hidden="true" />새로고침</Button>
           <Button type="button" disabled={sending || closed || offering || !!pendingOffer || (!retryKey && (loading || !!readError || inProgress))} onClick={() => void search()}><Search aria-hidden="true" />{sending ? "검색 접수 중…" : retryKey ? "같은 요청으로 접수 확인" : "대체 숙소 검색"}</Button>

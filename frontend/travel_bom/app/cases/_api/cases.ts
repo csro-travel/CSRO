@@ -90,3 +90,27 @@ export async function sendCaseMessage(
   }
   return message;
 }
+
+export async function sendAirbnbSearchGuide(caseId: string, searchId: string, listingIds: string[], signal: AbortSignal) {
+  // Reopening the same case and resubmitting the same snapshot and selection reuses the request ID.
+  const bytes = new TextEncoder().encode(JSON.stringify([caseId, searchId, listingIds]));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const hex = Array.from(digest.slice(0, 16), value => value.toString(16).padStart(2, "0")).join("");
+  const requestId = [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+  const response = await fetch(
+    `/demo/cases/${encodeURIComponent(caseId)}/airbnb-demo-searches/${searchId}/guides/${requestId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingIds }),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+    },
+  ).catch(() => { throw new Error("안내 전송 결과를 확인하지 못했습니다. 같은 후보로 다시 눌러 확인할 수 있습니다."); });
+  if (response.status !== 204) {
+    if (response.status === 502 || response.status === 504) {
+      throw new Error("안내 전송 결과를 확인하지 못했습니다. 같은 후보로 다시 눌러 확인할 수 있습니다.");
+    }
+    const problem = await response.json().catch(() => null);
+    throw new Error(problem?.detail || `숙소 안내 전송 실패 (HTTP ${response.status})`);
+  }
+}

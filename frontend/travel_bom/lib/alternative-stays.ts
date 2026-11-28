@@ -102,12 +102,15 @@ export const formatWon = (value?: number | null) => {
 export type AlternativeStay = {
   id: string
   name: string
-  image: string
   stay: string
   distanceKm: number
   totalPrice: number | null
   availability: string
   checkedAt: string
+  counselorChecks: string[]
+  listingUrl: string | null
+  score: number | null
+  searchId: string | null
 }
 
 export const alternativeStays: AlternativeStay[] = []

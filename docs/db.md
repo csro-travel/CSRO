@@ -12,6 +12,8 @@
 - 현재 물리 구조에 매핑하는 변경은 기존 스키마를 유지한다. 실제 테이블·컬럼·타입·제약을 바꾸려면 변경 이유와 양 팀 영향을 합의하고, [공통 Flyway 경로](../backend/src/main/resources/db/migration/)에 고유한 새 버전으로 작성해 팀장 PR 승인을 받는다.
 - 적용된 [V1](../backend/src/main/resources/db/migration/V1__initial_business_schema.sql)은 내용과 파일명을 보존한다. [YB-001 시드](../backend/src/main/resources/db/local/R__seed_yb001.sql)는 `local` 프로필의 별도 경로에 둔다.
 
+- [V3](../backend/src/main/resources/db/migration/V3__case_postprocessing.sql)에 사건별 후처리 초안과 확정 문서·요청 해시·업무 ID를 저장한다. 확정 시 신규 `case_tasks`와 문서를 같은 트랜잭션에 기록하며, `case_tasks` 구조와 종료 조건은 기존 규칙을 따른다.
+
 ## 별도 Mock 예약 저장소
 
 사용자 승인 [API-015/016·Mock 최소 계약](../backend/docs/api/API-015-016-PROPOSAL.md)에 따라 `compose.mock.yaml`을 명시적으로 실행하면 `127.0.0.1:25442/yeohaengbom_mock`, 사용자 `yb_mock`의 공급사 전용 PostgreSQL을 사용한다. 기본 업무 DB Compose·Spring Flyway와 데이터 소유권은 유지한다. 비밀번호는 Git 제외 `.env.mock` 또는 프로세스 환경으로 전달한다.

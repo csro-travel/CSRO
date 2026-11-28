@@ -136,6 +136,7 @@ export default function Cases() {
             </>}
             top={<CaseProcessBar detail={detail} />}
             caseId={detail.caseId}
+            detail={detail}
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
             onOfferSent={() => setChatRefresh(value => value + 1)}

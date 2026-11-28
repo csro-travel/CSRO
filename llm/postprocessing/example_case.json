@@ -1,0 +1,35 @@
+{
+  "case_id": "C-901",
+  "as_of": "2026-11-27T20:25:00+09:00",
+  "counselor": {"name": "김하늘(가명)", "id": "CS-014", "team": "상담운영팀"},
+  "customer": {"name": "이○○", "id": "CU-DEMO-028", "guests": 2, "channel": "사건 채팅", "request": "당일 입실, 2박 연속 숙박, 원 숙소 인근"},
+  "booking": {"id": "YB-DEMO-901", "property": "가온역 호텔", "room": "더블룸 1실", "check_in": "2026-11-27", "check_out": "2026-11-29", "paid_krw": 180000},
+  "search_criteria": {
+    "required": "2박 연속 재고, 성인 2인 수용, 당일 체크인",
+    "radius_km": 10,
+    "price_ceiling_krw": 216000,
+    "comparison": "세금 포함 총액, 직선거리, 실제 이동시간, 취소조건"
+  },
+  "offered_stays": [
+    {"id": "ALT-1", "name": "가온시티 호텔", "total_krw": 204000, "comparable_original_krw": 180000, "distance_km": 1.8, "drive_minutes": 10, "conditions": "더블룸, 23시까지 입실"},
+    {"id": "ALT-2", "name": "온유역 스테이", "total_krw": 196000, "comparable_original_krw": 180000, "distance_km": 3.4, "drive_minutes": 16, "conditions": "트윈룸, 22시까지 입실"},
+    {"id": "ALT-3", "name": "하람파크 호텔", "total_krw": 214000, "comparable_original_krw": 180000, "distance_km": 2.6, "drive_minutes": 13, "conditions": "더블룸, 23시까지 입실"}
+  ],
+  "replacement": {"selected_id": "ALT-1", "consent_at": "19:43 KST", "request_id": "REQ-DEMO-901", "confirmation_id": "ALT-DEMO-546", "booking_status": "확정", "checkin_status": "미확인"},
+  "evidence": [
+    {"id": "MSG-01", "detail": "18:40 고객이 현장에서 체크인 거부를 신고했다."},
+    {"id": "EV-01", "detail": "18:57 공급사가 오버부킹으로 11월 27일과 28일의 객실을 공급할 수 없다고 회신했다."},
+    {"id": "EV-02", "detail": "19:02 원 숙소가 양일 미제공과 내부 동급 객실 부재를 확인했다."},
+    {"id": "EV-03", "detail": "19:25 세 후보의 2박 견적과 이동 정보 확인."},
+    {"id": "MSG-03", "detail": "19:30 상담사가 위 세 후보를 사건 채팅으로 전달했다."},
+    {"id": "MSG-04", "detail": "19:43 고객이 가온시티 호텔 선택 및 대체 예약에 동의했다."},
+    {"id": "EV-04", "detail": "19:48 대체 예약 확정. 실제 입실은 미확인."},
+    {"id": "MSG-05", "detail": "교통비는 증빙 확인 후 검토한다고 안내했다. 영수증·지급 기록은 없다. 20:45 KST에 다시 안내하기로 했다."}
+  ],
+  "pending_items": ["실제 입실 확인", "교통비 증빙 확인", "원예약 미제공분 환불", "대체 숙소 차액 정산", "사과 포인트 검토 및 지급 확인"],
+  "policies": [
+    {"id": "OPS-ALT-004 v1.0 §§2–4", "detail": "필요한 숙박일 전체, 인원, 필수조건 확인. 10km 기본, 후보 부족 시 20km 확장. 해당 숙박분 120% 이내를 기본으로 하며 초과는 승인 검토."},
+    {"id": "OPS-CMP-005 v1.0 §§2–5", "detail": "원예약 미제공분은 실결제액과 미제공 증빙으로 환불 검토. 대체 숙소 차액과 직접 이동 실비는 분리 기록. 교통비는 영수증·이동 구간·목적을 확인해 예약당 20,000원까지 검토. 포인트는 대기·불편 구간 및 중복 지급을 확인하고 권한자가 승인·지급."},
+    {"id": "OPS-HO-007 v1.0 §§2–6", "detail": "고객의 동의와 확인 근거를 기록한다. 미완료 업무마다 담당자·기한을 기록하고 입실 등 실제 해결 상태를 별도로 확인한다."}
+  ]
+}

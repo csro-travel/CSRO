@@ -13,6 +13,9 @@ export const taskLabels = new Map([
   ["VERIFY_HOTEL", "호텔 직접 확인"],
   ["CHECKIN_CONFIRM", "대체 숙소 입실 확인"],
   ["ORIGINAL_FOLLOWUP", "원예약 후속 처리"],
+  ["TRANSPORT_REVIEW", "교통비 검토"],
+  ["REPLACEMENT_COST_REVIEW", "대체 숙소 차액 검토"],
+  ["POINTS_REVIEW", "사과 포인트 검토"],
 ]);
 
 export const supplierStatusLabels = new Map([

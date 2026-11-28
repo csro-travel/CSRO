@@ -31,11 +31,27 @@ public final class LocalChatDemo {
     private static final Pattern QUOTE_SEARCH_PATH = Pattern.compile("/api/v1/cases/[^/]+/quote-searches");
     private static final Pattern OFFERS_PATH = Pattern.compile("/api/v1/cases/[^/]+/offers");
     private static final Pattern SELECTION_PATH = Pattern.compile("/api/v1/cases/[^/]+/selection");
+    private static final Pattern AIRBNB_DEMO_SEARCH_PATH = Pattern.compile(
+            "/api/v1/cases/C-[0-9]{3,38}/airbnb-demo-searches/"
+                    + "[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}");
+    private static final String AIRBNB_SIMULATION_PATH =
+            "/api/v1/cases/C-[0-9]{3,38}/airbnb-demo-searches/simulations/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}";
+    private static final Pattern AIRBNB_SIMULATION_READ = Pattern.compile(AIRBNB_SIMULATION_PATH);
+    private static final Pattern AIRBNB_SIMULATION_WRITE = Pattern.compile(AIRBNB_SIMULATION_PATH + "/book");
+    private static final Pattern AIRBNB_DEMO_LATEST_PATH = Pattern.compile(
+            "/api/v1/cases/C-[0-9]{3,38}/airbnb-demo-searches/latest");
+    private static final Pattern AIRBNB_DEMO_SELECTION_PATH = Pattern.compile(
+            AIRBNB_DEMO_SEARCH_PATH.pattern() + "/selection");
+    private static final Pattern AIRBNB_DEMO_GUIDE_PATH = Pattern.compile(
+            AIRBNB_DEMO_SEARCH_PATH.pattern() + "/guides/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}");
     private static final Pattern REPLACEMENT_REQUEST_PATH = Pattern.compile("/api/v1/cases/[^/]+/replacement-bookings");
     private static final Pattern INCIDENT_REPORT_PATH = Pattern.compile("/api/v1/bookings/[^/]+/incident-reports");
     private static final Pattern REPLACEMENT_READ_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+");
     private static final Pattern BOOKING_READ_PATH = Pattern.compile("/api/v1/bookings/[^/]+");
     private static final Pattern CHECKIN_PATH = Pattern.compile("/api/v1/replacement-bookings/[^/]+/checkin-confirmations");
+    private static final String POSTPROCESSING_PATH = "/api/v1/cases/[^/]+/postprocessing";
+    private static final Pattern POSTPROCESSING_READ = Pattern.compile(POSTPROCESSING_PATH + "(?:/drafts/[^/]+/document)?");
+    private static final Pattern POSTPROCESSING_WRITE = Pattern.compile(POSTPROCESSING_PATH + "/drafts(?:/[^/]+/finalize)?");
     private static final Pattern TASK_PATH = Pattern.compile("/api/v1/cases/[^/]+/tasks/[^/]+");
     private static final Pattern CLOSURE_PATH = Pattern.compile("/api/v1/cases/[^/]+/closures");
     private static final Pattern EVIDENCE_PATH = Pattern.compile("/api/v1/cases/[^/]+/evidence");
@@ -109,13 +125,16 @@ public final class LocalChatDemo {
             String path = request.getServletPath();
             return switch (request.getMethod()) {
                 case "GET" -> !CASE_READ_PATH.matcher(path).matches() && !REPLACEMENT_READ_PATH.matcher(path).matches()
-                        && !BOOKING_READ_PATH.matcher(path).matches() && !CONSOLE_READ_PATH.matcher(path).matches();
-                case "POST" -> !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
+                        && !BOOKING_READ_PATH.matcher(path).matches() && !CONSOLE_READ_PATH.matcher(path).matches()
+                        && !AIRBNB_DEMO_LATEST_PATH.matcher(path).matches() && !AIRBNB_SIMULATION_READ.matcher(path).matches() && !POSTPROCESSING_READ.matcher(path).matches();
+                case "POST" -> !AIRBNB_SIMULATION_WRITE.matcher(path).matches() && !MESSAGES_PATH.matcher(path).matches() && !QUOTE_SEARCH_PATH.matcher(path).matches()
                         && !OFFERS_PATH.matcher(path).matches() && !REPLACEMENT_REQUEST_PATH.matcher(path).matches()
                         && !INCIDENT_REPORT_PATH.matcher(path).matches() && !CHECKIN_PATH.matcher(path).matches()
                         && !CLOSURE_PATH.matcher(path).matches() && !EVIDENCE_PATH.matcher(path).matches()
-                        && !ASSIST_DRAFT_PATH.matcher(path).matches();
-                case "PUT" -> !SELECTION_PATH.matcher(path).matches();
+                        && !ASSIST_DRAFT_PATH.matcher(path).matches() && !POSTPROCESSING_WRITE.matcher(path).matches();
+                case "PUT" -> !SELECTION_PATH.matcher(path).matches() && !AIRBNB_DEMO_SEARCH_PATH.matcher(path).matches()
+                        && !AIRBNB_DEMO_GUIDE_PATH.matcher(path).matches()
+                        && !AIRBNB_DEMO_SELECTION_PATH.matcher(path).matches();
                 case "PATCH" -> !TASK_PATH.matcher(path).matches();
                 default -> true;
             };
