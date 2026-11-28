@@ -26,6 +26,8 @@ export function caseProcess(detail: CaseDetail): { label: string; state: StepSta
     { label: "후속 기록 작성", state: task("ORIGINAL_FOLLOWUP", absent) },
     { label: "상담 종료", state: detail.status === "CLOSED" ? "done" : "todo" },
   ];
+  // A closed case has nothing left: nights the hotel never confirmed were covered by the replacement stay.
+  if (detail.status === "CLOSED") return steps.map(step => (step.state === "skip" ? step : { ...step, state: "done" }));
   // The first step still waiting, with nothing ahead of it in progress, is where the counselor is now.
   const first = steps.findIndex(step => step.state !== "done" && step.state !== "skip");
   if (first >= 0 && steps[first].state === "todo") steps[first].state = "current";
@@ -45,13 +47,13 @@ export function flash(selector: string) {
 }
 
 type Shown = "done" | "now" | "blocked" | "later" | "skip";
-const shown: Record<Shown, { word: string; dot: string; text: string }> = {
-  done: { word: "끝남", dot: "border-success bg-success text-white", text: "text-foreground" },
-  now: { word: "지금", dot: "border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
+const shown: Record<Shown, { dot: string; text: string }> = {
+  done: { dot: "border-success bg-success text-white", text: "text-[oklch(0.4_0.1_158)]" },
+  now: { dot: "scale-[1.2] border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
   // The current step has an open task: same place in the flow, shown in red.
-  blocked: { word: "지금", dot: "border-destructive bg-destructive text-white", text: "font-bold text-destructive" },
-  later: { word: "나중", dot: "border-input bg-background text-muted-foreground", text: "text-muted-foreground" },
-  skip: { word: "해당 없음", dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground opacity-50" },
+  blocked: { dot: "scale-[1.2] border-destructive bg-destructive text-white", text: "font-bold text-destructive" },
+  later: { dot: "border-border bg-border text-muted-foreground", text: "text-muted-foreground" },
+  skip: { dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground opacity-60" },
 };
 
 /** Where the counselor records each open task. A hotel check is recorded as evidence, the rest as a task note. */
@@ -64,9 +66,9 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
   const blocked = now >= 0 && steps[now].state === "action";
   const next = detail.status === "CLOSED" ? undefined : detail.tasks.find(task => task.taskId === detail.nextAction?.taskId) ?? detail.tasks[0];
   return (
-    <nav aria-label="상담 진행 단계" className="panel space-y-3 p-4">
+    <nav aria-label="상담 진행 단계" className="panel px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className={`text-lg leading-tight font-bold ${blocked ? "text-destructive" : ""}`}>
+        <p className={`text-base leading-tight font-bold ${blocked ? "text-destructive" : ""}`}>
           {now >= 0 ? <>지금: {steps[now].label} <span className="num text-sm font-medium text-muted-foreground">({now + 1}/{steps.length})</span></> : "모든 단계가 끝났습니다"}
         </p>
         {next && (
@@ -76,22 +78,28 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
         )}
         {next?.dueAt && <time dateTime={next.dueAt} className="num text-sm text-muted-foreground">기한 {formatDateTime(next.dueAt)}</time>}
       </div>
-      <ol className="flex min-w-0 gap-1">
-        {steps.map((step, index) => {
-          const state: Shown = index === now ? (blocked ? "blocked" : "now") : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
-          const style = shown[state];
-          return (
-            <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1 text-center ${style.text}`}>
-              <span className={`num flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${style.dot}`}>
-                {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
-              </span>
-              <span className="text-[0.8rem] leading-tight wrap-anywhere">{step.label}</span>
-              <span className="text-[0.8rem] leading-none font-normal">{style.word}</span>
-            </li>
-          );
-        })}
-      </ol>
+      {/* The track runs behind the markers, from the first to the last, filled up to the current step. */}
+      <div className="relative mt-3">
+        <div className="absolute top-[0.6875rem] right-[7.14%] left-[7.14%] h-1.5 overflow-hidden rounded-full bg-border" aria-hidden="true">
+          <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--warning))] transition-[width] duration-500"
+            style={{ width: `${now < 0 ? 100 : (now / (steps.length - 1)) * 100}%` }} />
+        </div>
+        <ol className="relative flex min-w-0">
+          {steps.map((step, index) => {
+            const state: Shown = index === now ? (blocked ? "blocked" : "now") : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
+            const style = shown[state];
+            return (
+              <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined}
+                className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md text-center ${style.text}`}>
+                <span className={`num flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-transform ${style.dot}`}>
+                  {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+                </span>
+                <span className="px-0.5 text-[0.8rem] leading-tight wrap-anywhere">{step.label}{state === "skip" && <span className="block text-[0.7rem]">해당 없음</span>}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </nav>
   );
 }

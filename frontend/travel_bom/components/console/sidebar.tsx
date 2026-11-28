@@ -46,10 +46,18 @@ const mobileLinks = [
 function Brand({ customer = false }: { customer?: boolean }) {
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-xl font-bold text-primary">
-        <Flower2 className="size-5" aria-hidden="true" />
-        여행봄
-      </p>
+      {/* Home is where a counselor starts. */}
+      {customer ? (
+        <p className="flex items-center gap-1.5 text-xl font-bold text-primary">
+          <Flower2 className="size-5" aria-hidden="true" />
+          여행봄
+        </p>
+      ) : (
+        <Link href="/" aria-label="여행봄 홈으로" className="flex w-fit items-center gap-1.5 rounded-md text-xl font-bold text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/30">
+          <Flower2 className="size-5" aria-hidden="true" />
+          여행봄
+        </Link>
+      )}
       <p className="mt-0.5 text-xs text-muted-foreground">{customer ? '고객 전용 · 내 예약 상담' : '숙박 예약 상담 지원 · 상담사'}</p>
     </div>
   )

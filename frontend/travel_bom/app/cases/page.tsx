@@ -135,6 +135,7 @@ export default function Cases() {
               {detail.priority === "URGENT" && detail.status !== "CLOSED" && <Badge tone="danger">긴급</Badge>}
               {state && <Badge tone={state.tone}>{state.label}</Badge>}
             </>}
+            top={<CaseProcessBar detail={detail} />}
             caseId={detail.caseId}
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
@@ -143,7 +144,6 @@ export default function Cases() {
               composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />} />}
           >
             <CaseDetails detail={detail} />
-            <CaseProcessBar detail={detail} />
             {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
             <div className="grid items-start gap-3 2xl:grid-cols-2">
               <CaseRiskBasis detail={detail} />

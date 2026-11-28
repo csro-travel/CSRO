@@ -13,9 +13,11 @@ const tabClassName =
  * One screen, no page scroll on desktop: case information scrolls on the left,
  * the conversation keeps its own scroll and composer on the right.
  */
-export function CaseDetailTabs({ title, badges, caseId, closed, children, chat, onBack, onOfferSent }: {
+export function CaseDetailTabs({ title, badges, top, caseId, closed, children, chat, onBack, onOfferSent }: {
   title: string;
   badges?: ReactNode;
+  /** Full-width strip between the title and the two columns, e.g. the process bar. */
+  top?: ReactNode;
   caseId: string;
   closed: boolean;
   children: ReactNode;
@@ -42,6 +44,8 @@ export function CaseDetailTabs({ title, badges, caseId, closed, children, chat, 
           </Tabs.Tab>
         </Tabs.List>
       </header>
+
+      {top && <div className="shrink-0">{top}</div>}
 
       <div className="grid min-w-0 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.85fr)]">
         <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1 [scrollbar-width:thin]">

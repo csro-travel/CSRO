@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BellRing, ChevronRight, Radar, Search, UserRound } from "lucide-react";
+import { ChevronRight, Radar, Search, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,13 +135,6 @@ export function CaseListView({
   return (
     <section className="space-y-3">
       <OverviewBar overview={overview} />
-
-      {newCaseIds.size > 0 && (
-        <p role="status" className="panel flex items-center gap-2 border-primary/40 bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground">
-          <BellRing className="size-4" aria-hidden="true" />
-          새 대응 건 {newCaseIds.size}건이 접수됐습니다: {[...newCaseIds].join(", ")}
-        </p>
-      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="처리 상태 필터" className="flex flex-wrap gap-1.5">
