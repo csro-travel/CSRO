@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Profile("local-chat-demo")
 @ConditionalOnProperty(name = "airbnb.demo.booking.enabled", havingValue = "true")
+// Web server only: in a one-shot run (migration, risk batch) the scheduler thread would keep the process alive.
+@ConditionalOnWebApplication
 @EnableScheduling
 @RestController
 @RequestMapping("/api/v1/cases/{caseId}/airbnb-demo-searches/simulations")
