@@ -37,7 +37,7 @@ export const reviewLabels = new Map([
 
 export const originLabels: Record<string, { label: string; detail: string; tone: BadgeTone }> = {
   RISK_RECHECK: { label: "사전 점검에서 발견", detail: "체크인 전 위험 점검이 고른 예약을 호텔에 재확인하다 문제가 확인됐습니다.", tone: "info" },
-  CUSTOMER_REPORT: { label: "고객 현장 신고", detail: "고객이 직접 체크인 문제를 신고했습니다. 위험 점검을 기다리지 않고 접수됩니다.", tone: "danger" },
+  CUSTOMER_REPORT: { label: "고객 신고로 접수", detail: "고객이 직접 체크인 문제를 신고했습니다. 위험 점검을 기다리지 않고 접수됩니다.", tone: "danger" },
   UNKNOWN: { label: "발생 경로 기록 없음", detail: "이 대응 건이 만들어진 경로를 식별할 기록이 없습니다.", tone: "outline" },
 };
 
@@ -64,7 +64,12 @@ export const policyLabels = new Map([
   ["F1_BASELINE", "기본 정책"], ["RECALL_50_F1", "재현율 50% 정책"], ["MAX_OBSERVED_RECALL", "재현율 우선 정책"],
 ]);
 
-const dayFormat = new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" });
+/** Why a policy's threshold sits where it does. Shown only behind "기준 보기". */
+export const policyNotes = new Map([
+  ["MAX_OBSERVED_RECALL", "검증에서 관측된 재현율이 가장 높았던 후보 중 가장 높은 임계값입니다. 놓치는 비용보다 한 번 더 확인하는 비용이 낮아 기준을 낮게 잡고, 선별된 예약은 자동 재확인으로 거릅니다."],
+]);
+
+const dayFormat =new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" });
 const dateTimeFormat = new Intl.DateTimeFormat("ko-KR", {
   month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Seoul",
 });
@@ -82,6 +87,24 @@ export function formatDateTime(value: string) {
 
 export function formatScore(value: number) {
   return value.toFixed(3);
+}
+
+/** The selection threshold on the 0–100 display scale: 80 and above is selected for recheck. */
+export const SIGNAL_LINE = 80;
+
+/**
+ * The raw score rescaled to 0–100 so that its policy threshold lands on 80.
+ * Display only: selection still compares the raw score with the raw threshold. Not a failure probability.
+ */
+export function signalPercent(score: number, threshold: number) {
+  const scaled = score < threshold
+    ? (score / threshold) * SIGNAL_LINE
+    : SIGNAL_LINE + ((score - threshold) / (1 - threshold)) * (100 - SIGNAL_LINE);
+  return Math.floor(Math.min(100, Math.max(0, scaled)));
+}
+
+export function formatSignal(score: number, threshold: number) {
+  return `${signalPercent(score, threshold)}%`;
 }
 
 export function formatFeature(name: string, value: number | boolean) {

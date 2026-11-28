@@ -11,10 +11,10 @@ import { CaseClosurePanel } from "./_components/case-closure-panel";
 import { CaseDetailTabs } from "./_components/case-detail-tabs";
 import { CaseDetails } from "./_components/case-details";
 import { CaseEvidenceList } from "./_components/case-evidence-list";
-import { CaseEvidencePanel } from "./_components/case-evidence-panel";
-import { CaseGuidance } from "./_components/case-guidance";
-import { CaseInsight } from "./_components/case-insight";
+import { CaseDraft } from "./_components/case-guidance";
+import { CaseRiskBasis } from "./_components/case-insight";
 import { CaseListView } from "./_components/case-list";
+import { CaseProcessBar } from "./_components/case-process";
 import type { CaseDetail, CaseList, CaseStatus } from "./_types/case";
 
 const LIST_REFRESH_MS = 10000;
@@ -32,7 +32,8 @@ export default function Cases() {
   const [detail, show] = useState<CaseDetail>();
   const [error, fail] = useState("");
   const [chatRefresh, setChatRefresh] = useState(0);
-  const [draft, setDraft] = useState({ text: "", nonce: 0 });
+  // Tagged with its case: a draft written for one customer is never placed in another case's composer.
+  const [draft, setDraft] = useState({ caseId: "", text: "", nonce: 0 });
   const [newCaseIds, setNewCaseIds] = useState<ReadonlySet<string>>(new Set());
   const [listLoadedAt, setListLoadedAt] = useState<string>();
   const [ready, setReady] = useState(false);
@@ -123,29 +124,32 @@ export default function Cases() {
     const state = detail ? caseStatusLabels[detail.status] : undefined;
     return (
       <main className="flex flex-col px-5 py-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
-        {error && !detail && <p role="alert" className="panel px-4 py-3 text-sm text-destructive">{error}</p>}
-        {!detail && !error && <p role="status" className="text-sm text-muted-foreground">대응 건을 불러오는 중…</p>}
+        {error && !detail && <p role="alert" className="panel px-4 py-3 text-sm text-accent-foreground">{error}</p>}
+        {!detail && !error && <p role="status" className="text-sm text-muted-foreground">상담 건을 불러오는 중…</p>}
         {error && !detail && <Button type="button" variant="outline" className="mt-3 self-start" onClick={() => openCase(undefined)}>상담 대응 목록으로</Button>}
         {detail && (
           <CaseDetailTabs
             key={detail.caseId}
             title={`${detail.caseId} · ${detail.booking.hotel.name}`}
             badges={<>
-              {detail.priority === "URGENT" && detail.status !== "CLOSED" && <Badge tone="danger">긴급</Badge>}
+              {detail.priority === "URGENT" && detail.status !== "CLOSED" && <Badge tone="urgent">긴급</Badge>}
               {state && <Badge tone={state.tone}>{state.label}</Badge>}
             </>}
+            top={<CaseProcessBar detail={detail} />}
             caseId={detail.caseId}
             detail={detail}
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
             onOfferSent={() => setChatRefresh(value => value + 1)}
-            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft} />}
+            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft.caseId === detail.caseId ? draft : undefined}
+              composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ caseId: detail.caseId, text, nonce: current.nonce + 1 }))} />} />}
           >
             <CaseDetails detail={detail} />
-            <CaseGuidance detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />
-            <CaseInsight detail={detail} />
-            <CaseEvidenceList detail={detail} />
-            <CaseEvidencePanel detail={detail} onChanged={() => setAttempt(value => value + 1)} />
+            {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
+            <div className="grid items-stretch gap-3 2xl:grid-cols-2">
+              <CaseRiskBasis detail={detail} />
+              <CaseEvidenceList detail={detail} onChanged={() => setAttempt(value => value + 1)} />
+            </div>
             <CaseClosurePanel detail={detail} onChanged={() => { setAttempt(value => value + 1); setChatRefresh(value => value + 1); }} />
           </CaseDetailTabs>
         )}
@@ -154,7 +158,7 @@ export default function Cases() {
   }
 
   return (
-    <main className="mx-auto max-w-[1500px] space-y-4 px-5 py-5">
+    <main className="space-y-3 px-5 py-4">
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div>
           <h1 className="text-xl font-bold">상담 대응</h1>

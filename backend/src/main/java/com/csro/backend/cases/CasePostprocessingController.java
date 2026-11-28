@@ -65,6 +65,7 @@ class CasePostprocessingController {
         body.setDetail(switch (code) {
             case "CASE_CLOSED" -> "종료된 사건에는 문서나 새 업무를 등록할 수 없습니다.";
             case "POSTPROCESSING_ALREADY_CHECKED_IN" -> "이미 입실이 확인되었습니다. 입실 확인 업무 선택을 해제해 주세요.";
+            case "POSTPROCESSING_REPLACEMENT_NOT_CONFIRMED" -> "확정된 대체 예약이 없습니다. 입실 확인 업무 선택을 해제하거나 대체 예약을 먼저 확정해 주세요.";
             case "POSTPROCESSING_CONFLICT" -> "이미 다른 내용으로 문서가 생성되었습니다. 저장된 문서를 확인해 주세요.";
             case "POSTPROCESSING_AGENT_UNAVAILABLE" -> "초안 또는 문서 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.";
             case null, default -> body.getTitle();

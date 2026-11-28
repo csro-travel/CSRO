@@ -8,6 +8,14 @@
     {
       "hotelId": "HOTEL-002",
       "path": "../examples/risk-events-demo-hotel-002.json"
+    },
+    {
+      "hotelId": "HOTEL-201",
+      "path": "../examples/risk-events-demo-hotel-201.json"
+    },
+    {
+      "hotelId": "HOTEL-202",
+      "path": "../examples/risk-events-demo-hotel-202.json"
     }
   ]
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { CaseSection } from "./case-section";
 import { useEffect, useRef, useState } from "react";
 import { CornerDownRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime, formatDay, taskLabels } from "@/lib/case-labels";
+import { formatDay } from "@/lib/case-labels";
 import { requestAssistDraft, type AssistDraft } from "../_api/assist";
 import type { CaseDetail } from "../_types/case";
 
@@ -14,21 +13,9 @@ export function ruleGuidance(detail: CaseDetail) {
   const days = (filter: (night: CaseDetail["nights"][number]) => boolean) => detail.nights.filter(filter).map(night => formatDay(night.stayDate));
   const unavailable = days(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE");
   const unknown = days(night => night.factStatus === "UNCONFIRMED");
-  const conflict = days(night => night.factStatus === "CONFLICT");
   const open = new Set(detail.tasks.map(task => task.type));
   const replacementBooked = open.has("CHECKIN_CONFIRM") || (detail.completedTasks ?? []).some(task => task.type === "CHECKIN_CONFIRM");
   const hotel = detail.booking.hotel.name;
-  const steps: string[] = [];
-
-  if (open.has("VERIFY_HOTEL") || conflict.length) {
-    steps.push(`호텔에 전화해 ${[...conflict, ...unknown].join(", ") || "숙박일"} 객실 제공 여부를 확인하고 아래 "호텔 확인 결과 등록"에 남깁니다.`);
-  }
-  if (open.has("CONTACT_CUSTOMER")) steps.push("고객에게 지금까지 확인된 사실과 확인 중인 사항을 구분해 안내합니다.");
-  if (unavailable.length && !replacementBooked) steps.push(`"대체 숙소" 탭에서 후보를 검색하고 3곳을 골라 고객에게 제안합니다.`);
-  if (open.has("CHECKIN_CONFIRM")) steps.push("고객이 대체 숙소에 입실하면 고객 화면의 입실 완료 확인을 누르도록 안내합니다.");
-  if (open.has("ORIGINAL_FOLLOWUP")) steps.push("원예약 호텔·공급사에 대체 숙박 사실을 알리고 처리 결과를 후속 업무에 기록합니다.");
-  if (!steps.length) steps.push(unknown.length ? `${unknown.join(", ")}은 아직 확인되지 않았습니다. 호텔 확인이 끝날 때까지 대응 건을 유지합니다.` : "남은 업무가 없습니다. 종료 조건을 확인하고 대응 건을 종료합니다.");
-
   let draft: string;
   if (replacementBooked && open.has("CHECKIN_CONFIRM")) {
     draft = "안녕하세요, 여행봄입니다. 대체 숙소 예약이 확정되었습니다. 숙소에 도착해 입실하신 뒤 상담 화면의 '입실 완료 확인'을 눌러 주시면 남은 절차를 마무리하겠습니다.";
@@ -41,12 +28,14 @@ export function ruleGuidance(detail: CaseDetail) {
   } else {
     draft = `안녕하세요, 여행봄입니다. 예약하신 ${hotel}의 객실 제공 여부를 확인하고 있습니다. 확인되는 대로 안내드리겠습니다.`;
   }
-  return { steps, draft };
+  return { draft };
 }
 
-/** Next actions and a customer message draft. The counselor edits and sends; nothing here changes case state. */
-export function CaseGuidance({ detail, onUseDraft }: { detail: CaseDetail; onUseDraft: (text: string) => void }) {
-  const closed = detail.status === "CLOSED";
+/**
+ * The customer message draft, shown right above the chat composer. It is never sent as it is:
+ * the counselor moves it into the composer, edits it there and sends. Nothing here changes case state.
+ */
+export function CaseDraft({ detail, onUseDraft }: { detail: CaseDetail; onUseDraft: (text: string) => void }) {
   const rules = ruleGuidance(detail);
   const [assist, setAssist] = useState<AssistDraft>();
   const [loading, setLoading] = useState(false);
@@ -54,7 +43,8 @@ export function CaseGuidance({ detail, onUseDraft }: { detail: CaseDetail; onUse
   const request = useRef<AbortController | null>(null);
   // A draft describes the case as it was; drop it when the stored facts change.
   const factsKey = `${detail.caseId}:${detail.updatedAt}:${detail.tasks.length}:${detail.evidence.length}`;
-  useEffect(() => { setAssist(undefined); setError(""); return () => request.current?.abort(); }, [factsKey]);
+  // The aborted request skips its own cleanup, so the loading flag is cleared here with it.
+  useEffect(() => { setAssist(undefined); setError(""); setLoading(false); return () => request.current?.abort(); }, [factsKey]);
 
   async function ask() {
     if (loading) return;
@@ -69,44 +59,27 @@ export function CaseGuidance({ detail, onUseDraft }: { detail: CaseDetail; onUse
     } finally { if (!controller.signal.aborted) setLoading(false); }
   }
 
-  if (closed) return null;
-  const steps = assist?.nextActions.length ? assist.nextActions : rules.steps;
+  if (detail.status === "CLOSED") return null;
   const draft = assist?.customerMessageDraft ?? rules.draft;
-  const next = detail.nextAction;
 
   return (
-    <CaseSection title="우선 조치" className="border-primary/30">
-      <div className="flex flex-wrap items-center gap-2">
-        {next && (
-          <Badge tone="brand">
-            {taskLabels.get(next.type) ?? next.type} · {next.dueAt ? `기한 ${formatDateTime(next.dueAt)}` : "기한 미정"}
-          </Badge>
-        )}
-        <Badge tone={assist?.source === "LLM" ? "info" : "outline"} className="ml-auto">
-          {assist?.source === "LLM" ? `AI 초안 · ${assist.model ?? "모델"}` : "규칙 기반 제안"}
-        </Badge>
-      </div>
-
-      {assist?.summary && <p className="text-sm leading-relaxed">{assist.summary}</p>}
-      <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed marker:text-muted-foreground">
-        {steps.map(step => <li key={step}>{step}</li>)}
-      </ol>
-
-      <div className="space-y-2 rounded-md bg-muted/60 p-3">
-        <p className="eyebrow">고객 안내 초안</p>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{draft}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => onUseDraft(draft)}>
-            <CornerDownRight aria-hidden="true" />채팅 입력창에 넣기
-          </Button>
+    <div aria-label="고객 안내 초안" className="space-y-1.5 rounded-md border border-dashed border-primary/40 bg-accent/40 p-2.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="text-sm font-semibold">고객 안내 초안</p>
+        <Badge tone="outline">미발송</Badge>
+        <Badge tone={assist?.source === "LLM" ? "info" : "outline"}>{assist?.source === "LLM" ? `AI 초안 · ${assist.model ?? "모델"}` : "규칙 기반"}</Badge>
+        <div className="ml-auto flex flex-wrap gap-1.5">
           <Button type="button" size="sm" variant="ghost" disabled={loading} onClick={() => void ask()}>
             <Sparkles aria-hidden="true" />{loading ? "AI 초안 만드는 중…" : assist ? "AI 초안 다시 받기" : "AI 초안 받기"}
           </Button>
+          <Button type="button" size="sm" onClick={() => onUseDraft(draft)}>
+            <CornerDownRight aria-hidden="true" />입력창에 넣어 수정
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground">초안은 제안입니다. 상담사가 확인·수정해 직접 보내며, 대응 건 상태는 바뀌지 않습니다.</p>
       </div>
+      <p className="scroll-area max-h-20 text-sm leading-relaxed whitespace-pre-wrap">{draft}</p>
       {assist?.warnings.map(warning => <p key={warning} className="text-xs text-muted-foreground">{warning}</p>)}
-      {error && <p role="alert" className="text-sm text-destructive">{error} 규칙 기반 제안을 그대로 쓸 수 있습니다.</p>}
-    </CaseSection>
+      {error && <p role="alert" className="text-xs text-accent-foreground">{error} 규칙 기반 초안을 그대로 쓸 수 있습니다.</p>}
+    </div>
   );
 }

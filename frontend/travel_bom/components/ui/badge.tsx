@@ -11,7 +11,9 @@ const badgeVariants = cva(
         neutral: 'bg-secondary text-secondary-foreground',
         outline: 'border bg-background text-muted-foreground',
         brand: 'bg-accent text-accent-foreground',
-        danger: 'bg-destructive/10 text-destructive',
+        // A confirmed problem, in the brand coral. Red is reserved for `urgent`.
+        danger: 'bg-primary/12 text-accent-foreground',
+        urgent: 'bg-destructive/10 text-destructive',
         warning: 'bg-warning/15 text-[oklch(0.42_0.1_70)]',
         success: 'bg-success/12 text-[oklch(0.4_0.1_158)]',
         info: 'bg-info/10 text-info',

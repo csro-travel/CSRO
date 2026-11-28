@@ -1,14 +1,15 @@
-import { CaseSection } from "./case-section";
+import Link from "next/link";
 import { Building2, Headset, Hotel, Info } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { evidenceSourceLabels, formatDateTime, formatDay, provisionLabels, reviewLabels, supplierStatusLabels } from "@/lib/case-labels";
 import type { CaseDetail, EvidenceRecord } from "../_types/case";
+import { HotelCallEntry } from "./case-evidence-panel";
 
 type Booking = CaseDetail["booking"];
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
 
-function parse(content: string | null): unknown {
+export function parse(content: string | null): unknown {
   if (!content) return null;
   try { return JSON.parse(content); } catch { return null; }
 }
@@ -40,7 +41,7 @@ function supplierSentence(payload: unknown, booking: Booking) {
 }
 
 /** What the hotel actually said for each night, when the reply carries a message. */
-function hotelQuotes(payload: unknown) {
+export function hotelQuotes(payload: unknown) {
   const quotes = new Map<string, string>();
   if (isRecord(payload) && Array.isArray(payload.nights)) {
     for (const night of payload.nights) {
@@ -52,8 +53,17 @@ function hotelQuotes(payload: unknown) {
 
 const reviewTones: Record<string, BadgeTone> = { ACCEPTED: "success", PENDING_REVIEW: "outline", REJECTED: "neutral" };
 const provisionTones: Record<string, string> = {
-  UNAVAILABLE: "font-semibold text-destructive", AVAILABLE: "font-semibold text-[oklch(0.38_0.1_158)]", UNKNOWN: "text-muted-foreground",
+  UNAVAILABLE: "font-semibold text-accent-foreground", AVAILABLE: "font-semibold text-[oklch(0.38_0.1_158)]", UNKNOWN: "text-muted-foreground",
 };
+
+/** Why a claim was or was not adopted, read from the stored claim and its review state. */
+function basis(assertion: EvidenceRecord["assertions"][number]) {
+  const { reportedProvisionStatus: reported, reviewStatus: review } = assertion;
+  if (review === "ACCEPTED" && reported === "UNAVAILABLE") return "명시적 제공 불가 확인됨";
+  if (review === "ACCEPTED" && reported === "AVAILABLE") return "명시적 제공 가능 확인됨";
+  if (review === "PENDING_REVIEW" && reported === "UNKNOWN") return "확인 중(미확정 유지)";
+  return null;
+}
 
 function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking }) {
   const payload = parse(record.originalContent);
@@ -62,7 +72,6 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
   // A manual record keeps the counselor's own call note as plain text.
   const note = payload === null && record.originalContent ? record.originalContent.trim() : isRecord(payload) ? text(payload.callNote) : null;
   const Icon = record.sourceType.startsWith("SUPPLIER") ? Building2 : record.sourceType === "MANUAL_HOTEL" ? Headset : Hotel;
-  const raw = payload === null ? record.originalContent : JSON.stringify(payload, null, 2);
 
   return (
     <li className="space-y-2 py-3 first:pt-0 last:pb-0" data-evidence-id={record.evidenceId}>
@@ -80,7 +89,7 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
           {supplier.line}.{" "}
           {supplier.differences.length === 0
             ? <span className="text-muted-foreground">우리 예약 정보와 일치합니다.</span>
-            : <span className="font-medium text-destructive">우리 예약 정보와 다릅니다: {supplier.differences.join(", ")}</span>}
+            : <span className="font-medium text-accent-foreground">우리 예약 정보와 다릅니다: {supplier.differences.join(", ")}</span>}
         </p>
       )}
 
@@ -95,7 +104,10 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
                   <q className="ml-2 text-muted-foreground before:content-['“'] after:content-['”']">{quotes.get(assertion.stayDate)}</q>
                 )}
               </span>
-              <Badge tone={reviewTones[assertion.reviewStatus] ?? "outline"}>{reviewLabels.get(assertion.reviewStatus) ?? "검토 상태 확인 필요"}</Badge>
+              <span className="flex flex-wrap items-center justify-end gap-1.5">
+                {basis(assertion) && <span className="text-xs text-muted-foreground">{basis(assertion)}</span>}
+                <Badge tone={reviewTones[assertion.reviewStatus] ?? "outline"}>{reviewLabels.get(assertion.reviewStatus) ?? "검토 상태 확인 필요"}</Badge>
+              </span>
             </li>
           ))}
         </ul>
@@ -104,31 +116,52 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
       {note && <blockquote className="border-l-2 pl-3 text-sm leading-relaxed text-muted-foreground">{note}</blockquote>}
       {!supplier && record.assertions.length === 0 && !note && <p className="text-sm text-muted-foreground">문장으로 풀 수 있는 내용이 없습니다. 원본 데이터를 확인하세요.</p>}
 
-      {raw && (
-        <details className="group text-xs">
-          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">원본 데이터(감사용)</summary>
-          <pre className="num mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 leading-relaxed whitespace-pre-wrap wrap-anywhere">{raw}</pre>
-        </details>
-      )}
     </li>
   );
 }
 
 /** Evidence as sentences first; the stored payload stays available, folded, for audit. */
-export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
+export function CaseEvidenceList({ detail, onChanged }: { detail: CaseDetail; onChanged: () => void }) {
   const { evidence, booking } = detail;
   const unauthenticated = evidence.some(record => !record.sourceAuthenticated && record.sourceType !== "MANUAL_HOTEL");
+  const replied = evidence.filter(record => !record.sourceType.startsWith("SUPPLIER"));
+  const latest = replied.map(record => record.receivedAt).filter((value): value is string => !!value).sort().at(-1);
+  const pending = detail.nights.filter(night => night.factStatus !== "VERIFIED").map(night => formatDay(night.stayDate));
   return (
-    <CaseSection title="검증 근거">
+    <section className="panel p-4" aria-label="호텔 측 회신">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-base font-semibold">
+          <Hotel className="size-4 text-muted-foreground" aria-hidden="true" />호텔 측 회신
+          <Badge tone="outline">실제 회신 · 시스템 추정 아님</Badge>
+        </h3>
         {unauthenticated && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Info className="size-3.5" aria-hidden="true" />
-            가상 공급사·호텔 응답(시연용) · 출처 인증 절차 없음
+            출처 인증 절차 없음
           </p>
         )}
-      {evidence.length
-        ? <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
-        : <p className="mt-2 text-sm text-muted-foreground">아직 받은 호텔·공급사 근거가 없습니다.</p>}
-    </CaseSection>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <Badge tone={replied.length ? "success" : "warning"} className="px-2.5 py-1 text-sm">{replied.length ? `회신 ${replied.length}건 수신` : "호텔 회신 없음"}</Badge>
+        {latest && <time dateTime={latest} className="num text-xs text-muted-foreground">최근 {formatDateTime(latest)}</time>}
+        {pending.length > 0
+          ? <Badge tone="warning" className="px-2.5 py-1 text-sm">후속 확인 필요 · {pending.join(", ")}</Badge>
+          : detail.nights.length > 0 && <Badge tone="neutral" className="px-2.5 py-1 text-sm">전 숙박일 확인 완료</Badge>}
+      </div>
+      <HotelCallEntry detail={detail} onChanged={onChanged} />
+      <div className="mt-2 flex justify-end text-xs">
+        <Link href={`/risk/evidence?booking=${encodeURIComponent(booking.bookingId)}`} className="shrink-0 text-primary underline-offset-4 hover:underline">
+          이 예약의 전체 재확인 기록
+        </Link>
+      </div>
+      {evidence.length ? (
+        <details className="group mt-3">
+          <summary className="cursor-pointer list-none text-xs font-medium text-primary select-none">
+            <span className="group-open:hidden">+ 회신 내용 보기 · {evidence.length}건</span><span className="hidden group-open:inline">− 회신 내용 닫기</span>
+          </summary>
+          <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
+        </details>
+      ) : <p className="mt-2 text-sm text-muted-foreground">아직 받은 호텔·공급사 근거가 없습니다.</p>}
+    </section>
   );
 }

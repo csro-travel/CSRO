@@ -13,7 +13,7 @@ export default function Bookings() {
   const items = state.data ?? [];
 
   return (
-    <ConsolePage title="예약 관리" state={state} wide
+    <ConsolePage title="예약 관리" state={state}
       description="공급사의 계약 상태와 숙박일별 객실 제공 여부를 나란히 봅니다. 예약이 확정돼 있어도 날짜별 상태는 따로 확인합니다.">
       {state.data && (items.length === 0 ? <EmptyState>등록된 예약이 없습니다.</EmptyState> : (
         <div className="panel overflow-x-auto">

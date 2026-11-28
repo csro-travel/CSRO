@@ -1,53 +1,19 @@
-import { CaseSection } from "./case-section";
-import { Activity, Radar, UserRound } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { useState, type ReactNode } from "react";
+import { BadgeCheck, ClipboardList, Cpu, Radar, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatDateTime, formatDay, formatFeature, formatScore, jobStatusLabels, originLabels, policyLabels, riskFeatureLabels, triggerLabels,
+  evidenceSourceLabels, formatDateTime, formatDay, jobStatusLabels, originLabels, provisionLabels, supplierStatusLabels, triggerLabels,
 } from "@/lib/case-labels";
-import type { AnalysisRun, CaseDetail, RiskSignal } from "../_types/case";
-
-const featureOrder = ["targetConfirmedBookingCount", "pastFailureRate90d", "reconfirmationOverdueRate7d", "inventoryUnavailableRate7d", "bookingVolumeGrowth7d", "isPeakDay"];
-
-function RiskBlock({ risk }: { risk: RiskSignal }) {
-  // Drawn on the full 0–1 range so a small score looks small.
-  const scale = 1;
-  return (
-    <div className="space-y-2 rounded-md bg-muted/60 p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-sm">
-          위험 신호 <strong className="num text-base">{formatScore(risk.score)}</strong>
-          <span className="ml-2 text-xs text-muted-foreground">선별 기준 {formatScore(risk.threshold)} 이상 · {policyLabels.get(risk.policy) ?? risk.policy}</span>
-        </p>
-        {risk.assessedAt && <time dateTime={risk.assessedAt} className="num text-xs text-muted-foreground">{formatDateTime(risk.assessedAt)} 평가</time>}
-      </div>
-      <div className="relative h-1.5 rounded-full bg-border" role="img" aria-label={`위험 신호 ${formatScore(risk.score)}, 선별 기준 ${formatScore(risk.threshold)}`}>
-        <span className="absolute inset-y-0 left-0 rounded-full bg-info" style={{ width: `${Math.min(100, (risk.score / scale) * 100)}%` }} />
-        <span className="absolute -inset-y-1 w-0.5 bg-foreground" style={{ left: `${Math.min(100, (risk.threshold / scale) * 100)}%` }} />
-      </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        이 호텔의 {risk.targetCheckInDate ? `${formatDay(risk.targetCheckInDate)} 체크인` : "체크인 날짜"}에 대한 신호입니다.
-        객실 미제공이 확정됐다는 뜻도, 이 고객의 실패 확률도 아닙니다. 재확인할 예약을 고르는 데만 썼습니다.
-      </p>
-      {risk.features && (
-        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
-          {featureOrder.filter(name => name in risk.features!).map(name => (
-            <div key={name} className="flex items-baseline justify-between gap-2 border-b border-dashed py-0.5">
-              <dt className="text-muted-foreground">{riskFeatureLabels[name] ?? name}</dt>
-              <dd className="num font-medium">{formatFeature(name, risk.features![name])}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      <p className="num text-[0.7rem] text-muted-foreground">모델 {risk.modelVersion} · 합성 데이터로 학습</p>
-    </div>
-  );
-}
+import type { AnalysisRun, CaseDetail } from "../_types/case";
 
 const runNames: Record<string, string> = {
   RECHECK: "공급사·호텔 자동 재확인",
   HOTEL_REPLY_ANALYSIS: "호텔 회신 문장 분석",
   QUOTE_RANKING: "대체 숙소 견적 비교",
-  COUNSELOR_ASSIST: "상담 안내 초안 생성",
+  COUNSELOR_ASSIST: "고객 안내 초안 생성",
 };
 const analysisStatuses = new Map([
   ["EXTRACTED", "날짜별 주장 추출"], ["AMBIGUOUS", "모호함 · 사람 확인 필요"], ["VALID", "비교 결과 유효"], ["REJECTED", "비교 결과 제외"],
@@ -62,48 +28,113 @@ function runDetail(run: AnalysisRun) {
       run.manualRequired ? "자동 확인 중단 · 상담사 직접 확인 필요" : null,
     ].filter(Boolean).join(" · ");
   }
-  return [run.status ? analysisStatuses.get(run.status) ?? run.status : null, run.evidenceId ? `근거 ${run.evidenceId}` : null].filter(Boolean).join(" · ");
+  return run.status ? analysisStatuses.get(run.status) ?? "" : "";
 }
 
-/** Why this case reached a counselor, the risk signal behind it, and what ran automatically. */
-export function CaseInsight({ detail }: { detail: CaseDetail }) {
-  const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
-  const runs = detail.analysisRuns ?? [];
-  const OriginIcon = detail.origin?.type === "CUSTOMER_REPORT" ? UserRound : Radar;
-  return (
-    <CaseSection title="사건 접수 경위">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={origin.tone}><OriginIcon aria-hidden="true" />{origin.label}</Badge>
-        {detail.createdAt && <time dateTime={detail.createdAt} className="num ml-auto text-xs text-muted-foreground">{formatDateTime(detail.createdAt)} 접수</time>}
-      </div>
-      <p className="text-sm leading-relaxed text-muted-foreground">{origin.detail}</p>
-      {detail.risk
-        ? <RiskBlock risk={detail.risk} />
-        : detail.origin?.type === "CUSTOMER_REPORT" && <p className="text-xs text-muted-foreground">이 예약은 위험 점검으로 선별되지 않았습니다. 연결된 위험 평가가 없습니다.</p>}
+type Step = { at?: string | null; title: ReactNode; body?: ReactNode; danger?: boolean };
 
-      <div className="border-t pt-3">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold"><Activity className="size-4 text-muted-foreground" aria-hidden="true" />자동 처리 이력</h3>
-        {runs.length ? (
-          <ol className="mt-2 space-y-2">
-            {runs.map((run, index) => {
-              const status = run.kind === "RECHECK" && run.status ? jobStatusLabels[run.status] : undefined;
-              return (
-                <li key={`${run.kind}:${run.at}:${index}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2 text-sm">
-                  <time dateTime={run.at ?? undefined} className="num pt-0.5 text-xs text-muted-foreground">{run.at ? formatDateTime(run.at) : "시각 없음"}</time>
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-1.5 font-medium">
-                      {runNames[run.kind] ?? run.kind}
-                      {status && <Badge tone={status.tone}>{status.label}</Badge>}
-                    </p>
-                    {runDetail(run) && <p className="text-xs text-muted-foreground">{runDetail(run)}</p>}
-                    {run.version && <p className="num text-[0.7rem] text-muted-foreground">{run.version}</p>}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        ) : <p className="mt-1 text-sm text-muted-foreground">이 대응 건에 기록된 자동 처리가 없습니다.</p>}
+function contractStatus(content: string | null) {
+  try {
+    const value: unknown = JSON.parse(content ?? "");
+    return typeof value === "object" && value !== null && "contractStatus" in value && typeof value.contractStatus === "string" ? value.contractStatus : null;
+  } catch { return null; }
+}
+
+/** Everything stored about how the case came to be, as one ordered list of steps. */
+function steps(detail: CaseDetail): Step[] {
+  const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
+  const list: Step[] = [];
+  if (detail.risk) list.push({ at: detail.risk.assessedAt, title: "위험 점검이 이 예약을 재확인 대상으로 골랐습니다" });
+  for (const report of detail.customerReports) {
+    list.push({ at: report.receivedAt, danger: true, title: <>고객이 체크인 문제를 신고했습니다{report.atHotel && <Badge tone="danger">호텔 현장</Badge>}</> });
+  }
+  for (const record of detail.evidence) {
+    const source = evidenceSourceLabels.get(record.sourceType) ?? "확인 기록";
+    if (record.sourceType.startsWith("SUPPLIER")) {
+      const status = contractStatus(record.originalContent);
+      list.push({ at: record.receivedAt, title: status ? `${source}: "${supplierStatusLabels.get(status) ?? status}"이라고 답했습니다` : `${source} 응답을 받았습니다` });
+    } else {
+      list.push({
+        at: record.receivedAt,
+        danger: record.assertions.some(assertion => assertion.reportedProvisionStatus === "UNAVAILABLE"),
+        title: record.assertions.length
+          ? `${source}: ${record.assertions.map(assertion => `${formatDay(assertion.stayDate)} ${provisionLabels.get(assertion.reportedProvisionStatus) ?? "확인 필요"}`).join(" · ")}`
+          : `${source}을 받았습니다`,
+      });
+    }
+  }
+  if (detail.createdAt) list.push({ at: detail.createdAt, title: <>상담 건이 접수됐습니다<Badge tone={origin.tone}>{origin.label}</Badge></> });
+  for (const run of detail.analysisRuns ?? []) {
+    const status = run.kind === "RECHECK" && run.status ? jobStatusLabels[run.status] : undefined;
+    list.push({
+      at: run.at,
+      title: <>{runNames[run.kind] ?? run.kind}{status && <Badge tone={status.tone}>{status.label}</Badge>}</>,
+      body: <>
+        {runDetail(run) && <p className="text-muted-foreground">{runDetail(run)}</p>}
+        {run.kind === "HOTEL_REPLY_ANALYSIS" && <Link href="/risk/analyses" className="text-primary underline-offset-4 hover:underline">분석 기록 보기</Link>}
+      </>,
+    });
+  }
+  // Stable sort: steps recorded at the same instant keep the order above; steps without a time go last.
+  const time = (step: Step) => (step.at ? new Date(step.at).getTime() : Number.POSITIVE_INFINITY);
+  return list.sort((left, right) => time(left) - time(right));
+}
+
+/**
+ * What is a confirmed fact against what the system only estimated, and how the case arrived.
+ * How the model chose the booking is not shown here; it lives on the risk assessment page.
+ */
+export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
+  const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
+  const OriginIcon = detail.origin?.type === "CUSTOMER_REPORT" ? UserRound : Radar;
+  const list = steps(detail);
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="panel flex flex-col gap-3.5 p-4" aria-label="확인된 내용">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="flex items-center gap-1.5 text-base font-semibold"><ClipboardList className="size-4 text-muted-foreground" aria-hidden="true" />확인된 내용</h3>
+        <Badge tone="outline"><OriginIcon aria-hidden="true" />{origin.label}</Badge>
       </div>
-    </CaseSection>
+
+      <ul className="space-y-1.5 text-sm">
+        <li className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-2">
+          <Badge tone="success"><BadgeCheck aria-hidden="true" />확인된 사실</Badge>
+          <span>위 판정은 호텔·공급사 회신 중 사실로 채택된 내용만 반영합니다.</span>
+        </li>
+        <li className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-2">
+          <Badge tone="outline"><Cpu aria-hidden="true" />시스템 추정</Badge>
+          {detail.risk
+            ? <span>사전 점검이 먼저 확인하도록 고른 예약입니다. 장애 확정이 아닙니다. <Link href="/risk/assessments" className="text-primary underline-offset-4 hover:underline">선별 근거 보기</Link></span>
+            : <span className="text-muted-foreground">이 예약에 연결된 위험 평가가 없습니다. 추정 없이 접수된 건입니다.</span>}
+        </li>
+      </ul>
+
+      <div aria-label="처리 이력" className="flex min-h-0 flex-1 flex-col text-xs">
+        <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}
+          className="w-fit cursor-pointer rounded font-medium text-primary outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/30">
+          {open ? "− 처리 이력 닫기" : "+ 처리 이력 보기"}
+        </button>
+        {open && (
+          // Positioned inside a growing box: the list takes the remaining height of the panel instead of stretching it.
+          <div className="relative mt-2.5 min-h-40 flex-1">
+            <div className="scroll-area absolute inset-0 pr-1">
+              {list.length ? (
+                <ol className="space-y-2">
+                  {list.map((step, index) => (
+                    <li key={index} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2">
+                      <time dateTime={step.at ?? undefined} className="num text-muted-foreground">{step.at ? formatDateTime(step.at) : "시각 없음"}</time>
+                      <div className="min-w-0 space-y-1">
+                        <p className={`flex flex-wrap items-center gap-1.5 text-sm font-medium ${step.danger ? "text-accent-foreground" : ""}`}>{step.title}</p>
+                        {step.body}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className="text-muted-foreground">이력을 보여 줄 기록이 없습니다.</p>}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

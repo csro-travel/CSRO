@@ -38,19 +38,18 @@ export function useConsoleData<T>(load: (signal: AbortSignal) => Promise<T>, int
 }
 
 /** Shared frame for the console pages: title, what the page is for, refresh state, then content. */
-export function ConsolePage({ title, description, state, children, wide = false }: {
+export function ConsolePage({ title, description, state, children }: {
   title: string;
-  description: ReactNode;
+  description?: ReactNode;
   state: { error: string; loadedAt?: string; loading: boolean; refresh: () => void | Promise<void>; data?: unknown };
   children: ReactNode;
-  wide?: boolean;
 }) {
   return (
-    <main className={`mx-auto space-y-4 px-5 py-5 ${wide ? "max-w-[1500px]" : "max-w-[1200px]"}`}>
+    <main className="space-y-3 px-5 py-4">
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h1 className="text-xl font-bold">{title}</h1>
-          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          {description && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {state.loadedAt && <span className="num">{formatDateTime(state.loadedAt)} 기준 · 15초마다 갱신</span>}
@@ -60,7 +59,7 @@ export function ConsolePage({ title, description, state, children, wide = false 
         </div>
       </header>
       {state.error && (
-        <p role="alert" className="panel border-destructive/40 px-4 py-3 text-sm text-destructive">
+        <p role="alert" className="panel border-primary/40 px-4 py-3 text-sm text-accent-foreground">
           {state.error}. {state.data ? "마지막으로 받은 내용을 보여 주고 있습니다." : "잠시 뒤 다시 시도합니다."}
         </p>
       )}

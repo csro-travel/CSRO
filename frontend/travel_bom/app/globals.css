@@ -35,6 +35,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-end: var(--primary-end);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -58,18 +59,20 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.63 0.185 33);
+  --primary: oklch(0.66 0.175 48);
+  /* Where the brand gradient ends: the same orange, drifting to amber. */
+  --primary-end: oklch(0.75 0.155 72);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.97 0.004 260);
   --secondary-foreground: oklch(0.25 0.01 260);
   --muted: oklch(0.975 0.003 260);
   --muted-foreground: oklch(0.52 0.012 260);
-  --accent: oklch(0.96 0.025 35);
-  --accent-foreground: oklch(0.55 0.18 33);
+  --accent: oklch(0.965 0.03 68);
+  --accent-foreground: oklch(0.5 0.14 50);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.005 260);
   --input: oklch(0.9 0.005 260);
-  --ring: oklch(0.63 0.185 33);
+  --ring: oklch(0.66 0.175 48);
   --success: oklch(0.55 0.12 158);
   --info: oklch(0.5 0.13 250);
   --warning: oklch(0.62 0.13 75);
@@ -169,14 +172,9 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Work-tool density: 14px body. */
+  /* 16px body: every rem-based size scales with it. */
   html {
-    font-size: 14px;
-  }
-  @media (max-width: 767px) {
-    html {
-      font-size: 15px;
-    }
+    font-size: 16px;
   }
 }
 
@@ -185,6 +183,10 @@
   .panel {
     @apply min-w-0 rounded-lg border bg-card;
   }
+  /* Filled brand surfaces are a soft orange-to-amber run, not one flat colour. */
+  .bg-brand {
+    background-image: linear-gradient(135deg, var(--primary), var(--primary-end));
+  }
   .eyebrow {
     @apply text-[0.78rem] font-medium tracking-wide text-muted-foreground;
   }
@@ -192,8 +194,9 @@
     @apply tabular-nums;
     font-feature-settings: 'tnum' 1;
   }
+  /* Positioned: visually hidden labels inside (absolutely placed) scroll with the area instead of stretching the page. */
   .scroll-area {
-    @apply min-h-0 overflow-y-auto overscroll-contain;
+    @apply relative min-h-0 overflow-y-auto overscroll-contain;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }

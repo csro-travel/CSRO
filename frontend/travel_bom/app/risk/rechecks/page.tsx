@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { NightStrip } from "@/components/console/night-strip";
 import { ConsolePage, EmptyState, useConsoleData } from "@/components/console/use-console-data";
-import { formatDateTime, formatScore, jobStatusLabels, policyLabels, triggerLabels } from "@/lib/case-labels";
+import { formatDateTime, formatScore, formatSignal, jobStatusLabels, SIGNAL_LINE, triggerLabels } from "@/lib/case-labels";
 import { getRecheckJobs, type RecheckJob } from "@/lib/console-api";
 
 function outcome(job: RecheckJob) {
@@ -24,8 +24,11 @@ export default function RecheckJobs() {
   const withCase = jobs.filter(job => job.caseId).length;
 
   return (
-    <ConsolePage title="자동 확인 작업" state={state} wide
-      description="위험 점검이 고른 예약과 고객이 신고한 예약을 공급사·호텔에 자동으로 다시 확인한 기록입니다. 전 숙박일이 정상으로 확인된 예약은 대응 건을 만들지 않고 여기에서 끝납니다.">
+    <ConsolePage title="자동 확인" state={state}
+      description={<>
+        <strong className="font-medium text-foreground">전 숙박일 제공 가능 시 자동 종료 · 1박 이상 제공 불가 검증 시 대응 건 생성</strong>
+        <Link href="/risk/analyses" className="ml-3 text-primary underline-offset-4 hover:underline">호텔 회신 분석 기록</Link>
+      </>}>
       {state.data && <>
         <dl className="grid gap-3 sm:grid-cols-4">
           {[
@@ -69,8 +72,9 @@ export default function RecheckJobs() {
                         <p>{triggerLabels.get(job.trigger) ?? job.trigger}</p>
                         {job.riskScore !== null && (
                           <p className="num text-xs text-muted-foreground">
-                            위험 신호 {formatScore(job.riskScore)}{job.threshold !== null && ` ≥ ${formatScore(job.threshold)}`}
-                            {job.policy && ` · ${policyLabels.get(job.policy) ?? job.policy}`}
+                            {job.threshold !== null
+                              ? `위험 신호 ${formatSignal(job.riskScore, job.threshold)} · 선별 기준 ${SIGNAL_LINE}%`
+                              : `위험 신호 원점수 ${formatScore(job.riskScore)}`}
                           </p>
                         )}
                       </td>
@@ -81,6 +85,8 @@ export default function RecheckJobs() {
                           {status?.label ?? job.status}
                           {job.failedAttempts > 0 && ` · 실패 ${job.failedAttempts}회`}
                           {job.errorCode && <span className="num"> · {job.errorCode}</span>}
+                          {" · "}
+                          <Link href={`/risk/evidence?booking=${encodeURIComponent(job.bookingId)}`} className="text-primary underline-offset-4 hover:underline">근거 보기</Link>
                         </p>
                       </td>
                       <td className="px-4 py-3">
