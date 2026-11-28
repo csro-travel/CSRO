@@ -40,8 +40,10 @@ function rememberRequest(caseId: string, key?: string) {
   } catch { /* No credentials or booking facts are written to browser storage. */ }
 }
 
-function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
+function QuoteGroup({ group, selectedIds, disabled, onToggle, onSendOne }: {
   group: CaseQuoteGroup; selectedIds: string[]; disabled: boolean; onToggle: (quoteId: string) => void;
+  /** Sends this one property as its own offer. */
+  onSendOne: (quoteId: string) => void;
 }) {
   const nights = Math.round((Date.parse(group.stay.checkOutDate) - Date.parse(group.stay.checkInDate)) / 86400000);
   // A strength badge goes to one quote only when its value is strictly the best; a tie gets none.
@@ -102,6 +104,10 @@ function QuoteGroup({ group, selectedIds, disabled, onToggle }: {
                     onCheckedChange={() => onToggle(quote.quoteId)} />
                   {quote.propertyName} 고객 제안에 포함
                 </label>
+                <Button type="button" variant="outline" size="sm" disabled={disabled || quote.expired === true || !quote.propertyId}
+                  onClick={() => onSendOne(quote.quoteId)}>
+                  <Send aria-hidden="true" />이 숙소만 전송
+                </Button>
               </li>
             );
           })}
@@ -227,8 +233,10 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent, airbnbCandidates,
   const group = data?.groups[chosen.group];
   const selectedQuotes = group?.quotes.filter(quote => chosen.ids.includes(quote.quoteId)) ?? [];
   const canOffer = !closed && !loading && !readError && !inProgress && data?.searchJob?.status === "COMPLETED" &&
-    selectedQuotes.length === 3 && selectedQuotes.every(quote => quote.propertyId && quote.expired !== true) &&
-    new Set(selectedQuotes.map(quote => quote.propertyId)).size === 3;
+    selectedQuotes.length >= 1 && selectedQuotes.length <= 3 && selectedQuotes.every(quote => quote.propertyId && quote.expired !== true) &&
+    new Set(selectedQuotes.map(quote => quote.propertyId)).size === selectedQuotes.length;
+  // One property sent on its own needs the same ready state, without a selection.
+  const canOfferOne = !closed && !loading && !readError && !inProgress && data?.searchJob?.status === "COMPLETED";
 
   const airbnbSearchId = airbnbCandidates[0]?.searchId;
   const listingIds = airbnbCandidates.map(stay => stay.id).sort();
@@ -260,9 +268,9 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent, airbnbCandidates,
     }
   }
 
-  async function offer() {
-    if (offeringNow.current || !offerStorageReady || (!pendingOffer && !canOffer)) return;
-    const intent: PendingIntent<OfferBody> = pendingOffer ?? { version: 1, key: crypto.randomUUID(), body: { quoteIds: [...chosen.ids] } };
+  async function offer(single?: string) {
+    if (offeringNow.current || !offerStorageReady || (!pendingOffer && !(single ? canOfferOne : canOffer))) return;
+    const intent: PendingIntent<OfferBody> = pendingOffer ?? { version: 1, key: crypto.randomUUID(), body: { quoteIds: single ? [single] : [...chosen.ids] } };
     try { persistIntent("offer", caseId, intent); }
     catch { setOfferError("요청을 안전하게 보관하지 못해 전송하지 않았습니다. 브라우저 저장소를 확인해 주세요."); return; }
     setPendingOffer(intent); setOffering(true); setOfferError(""); setNotice(""); offeringNow.current = true;
@@ -329,16 +337,16 @@ export function CaseQuotesPanel({ caseId, closed, onOfferSent, airbnbCandidates,
           {data.groups.map((group, index) => <QuoteGroup key={`${index}:${group.coverageMode}:${group.stay.checkInDate}:${group.stay.checkOutDate}`} group={group}
             selectedIds={chosen.group === index ? chosen.ids : []}
             disabled={closed || offering || !!pendingOffer || !offerStorageReady || loading || inProgress || data.searchJob?.status !== "COMPLETED"}
-            onToggle={quoteId => toggleQuote(index, quoteId)} />)}
+            onToggle={quoteId => toggleQuote(index, quoteId)} onSendOne={quoteId => void offer(quoteId)} />)}
         </>}
       </>}
       <div className="space-y-2 border-t pt-4">
         <p className="text-sm">고객에게 보낼 숙소 {chosen.ids.length}/3곳 · 다른 기간 그룹을 선택하면 기존 선택이 바뀝니다.</p>
-        <p className="text-xs text-muted-foreground">순위·강점 배지·추천 사유는 상담사용입니다. 고객 제안 카드에는 숙소명·기간·거리·가격만 나갑니다. 숙소 이미지·상세 페이지 링크·이동 시간은 견적 데이터에 없어 표시하지 않으며, 제안은 서로 다른 숙소 3곳 단위로만 전송됩니다.</p>
+        <p className="text-xs text-muted-foreground">순위·강점 배지·추천 사유는 상담사용입니다. 고객 제안 카드에는 숙소명·기간·거리·가격만 나갑니다. 한 번에 1~3곳을 보낼 수 있고, 새 제안을 보내면 이전 제안은 고객이 선택할 수 없게 됩니다.</p>
         <Button type="button" size="lg"
           disabled={offering || !offerStorageReady || (!pendingOffer && !canOffer)} onClick={() => void offer()}>
           <Send aria-hidden="true" />
-          {offering ? "제안 처리 확인 중…" : pendingOffer ? "같은 요청으로 제안 전송 확인" : "추천 숙소 3곳 전체 전송"}
+          {offering ? "제안 처리 확인 중…" : pendingOffer ? "같은 요청으로 제안 전송 확인" : chosen.ids.length === 3 ? "추천 숙소 3곳 전체 전송" : `선택한 숙소 ${chosen.ids.length}곳 전송`}
         </Button>
       </div>
     </section>

@@ -10,7 +10,7 @@
 {"quoteIds":["QUOTE-A-search1","QUOTE-C-search1","QUOTE-B-search1"]}
 ```
 
-저장된 견적 ID 정확히 3개를 전송 순서대로 받는다. 입력의 고객 ID·호텔명·가격·기간·판단 시각은 받지 않는다. 세 ID는 서로 다른 숙소 3곳이고, 같은 사건의 최신 완료 검색에서 같은 기간·인원·객실 수 그룹에 속해야 한다. 공급사 원문·KRW·금액·정원·재고와 서버 판단 시각의 유효성을 검사한다. 전체 기간 우선, 부분 기간은 현재 장애가 검증된 숙박일만 허용한다. 비교 Agent 실패 시에도 검증된 공급사 견적으로 수동 제안할 수 있다.
+저장된 견적 ID 1~3개를 전송 순서대로 받는다([변경 제안](OFFER-PARTIAL-PROPOSAL.md)으로 정확히 3개에서 완화). 입력의 고객 ID·호텔명·가격·기간·판단 시각은 받지 않는다. 세 ID는 서로 다른 숙소 3곳이고, 같은 사건의 최신 완료 검색에서 같은 기간·인원·객실 수 그룹에 속해야 한다. 공급사 원문·KRW·금액·정원·재고와 서버 판단 시각의 유효성을 검사한다. 전체 기간 우선, 부분 기간은 현재 장애가 검증된 숙박일만 허용한다. 비교 Agent 실패 시에도 검증된 공급사 견적으로 수동 제안할 수 있다.
 
 새 제안, 3개 항목, OFFER 채팅 메시지, 감사 기록을 같은 트랜잭션에 저장한다. 기존 ACTIVE 제안은 SUPERSEDED, 기존 현재 선택은 superseded_at만 기록해 이력으로 남긴다. 견적·발송 항목의 상품·가격은 수정하지 않는다.
 
@@ -46,7 +46,7 @@
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
-| 400 | INVALID_OFFER_REQUEST / INVALID_SELECTION_REQUEST / INVALID_CASE_ID | JSON·키·ID·정확히 3개 조건 오류 |
+| 400 | INVALID_OFFER_REQUEST / INVALID_SELECTION_REQUEST / INVALID_CASE_ID | JSON·키·ID·1~3개 조건 오류 |
 | 401 | UNAUTHENTICATED | 인증 주체 없음·비활성 사용자 |
 | 403 | FORBIDDEN_ROLE | 상담사/고객 역할 불일치 |
 | 404 | CASE_NOT_FOUND | 사건 없음·고객의 타인 사건 |
