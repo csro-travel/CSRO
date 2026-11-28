@@ -34,7 +34,7 @@ export const reviewLabels = new Map([
 
 export const originLabels: Record<string, { label: string; detail: string; tone: BadgeTone }> = {
   RISK_RECHECK: { label: "사전 점검에서 발견", detail: "체크인 전 위험 점검이 고른 예약을 호텔에 재확인하다 문제가 확인됐습니다.", tone: "info" },
-  CUSTOMER_REPORT: { label: "고객 현장 신고", detail: "고객이 직접 체크인 문제를 신고했습니다. 위험 점검을 기다리지 않고 접수됩니다.", tone: "danger" },
+  CUSTOMER_REPORT: { label: "고객 신고로 접수", detail: "고객이 직접 체크인 문제를 신고했습니다. 위험 점검을 기다리지 않고 접수됩니다.", tone: "danger" },
   UNKNOWN: { label: "발생 경로 기록 없음", detail: "이 대응 건이 만들어진 경로를 식별할 기록이 없습니다.", tone: "outline" },
 };
 
