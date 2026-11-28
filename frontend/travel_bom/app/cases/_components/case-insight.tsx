@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { BadgeCheck, Cpu, Radar, ShieldAlert, UserRound } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import {
-  evidenceSourceLabels, formatDateTime, formatDay, formatFeature, formatScore, jobStatusLabels, originLabels, policyLabels, policyNotes, provisionLabels,
+  evidenceSourceLabels, formatDateTime, formatDay, formatFeature, formatScore, formatSignal, jobStatusLabels, SIGNAL_LINE, signalPercent, originLabels, policyLabels, policyNotes, provisionLabels,
   riskFeatureLabels, supplierStatusLabels, triggerLabels,
 } from "@/lib/case-labels";
 import type { AnalysisRun, CaseDetail, RiskSignal } from "../_types/case";
@@ -16,11 +16,11 @@ const featureOrder = ["targetConfirmedBookingCount", "pastFailureRate90d", "reco
 function RiskDetails({ risk }: { risk: RiskSignal }) {
   return (
     <div className="space-y-2 rounded-md bg-muted/60 p-3">
-      <div className="relative h-1.5 rounded-full bg-border" role="img" aria-label={`위험 신호 ${formatScore(risk.score)}, 선별 기준 ${formatScore(risk.threshold)}`}>
-        {/* Drawn on the full 0–1 range so a small score looks small. */}
-        <span className="absolute inset-y-0 left-0 rounded-full bg-info" style={{ width: `${Math.min(100, risk.score * 100)}%` }} />
-        <span className="absolute -inset-y-1 w-0.5 bg-foreground" style={{ left: `${Math.min(100, risk.threshold * 100)}%` }} />
+      <div className="relative h-1.5 rounded-full bg-border" role="img" aria-label={`위험 신호 ${formatSignal(risk.score, risk.threshold)}, 선별 기준 ${SIGNAL_LINE}%`}>
+        <span className="absolute inset-y-0 left-0 rounded-full bg-info" style={{ width: `${signalPercent(risk.score, risk.threshold)}%` }} />
+        <span className="absolute -inset-y-1 w-0.5 bg-foreground" style={{ left: `${SIGNAL_LINE}%` }} />
       </div>
+      <p className="num text-muted-foreground">선별 기준이 {SIGNAL_LINE}%가 되도록 환산한 값입니다. 원점수 {formatScore(risk.score)} · 원래 선별 기준 {formatScore(risk.threshold)}</p>
       {policyNotes.has(risk.policy) && <p className="leading-relaxed">{policyNotes.get(risk.policy)}</p>}
       <p className="leading-relaxed text-muted-foreground">
         이 호텔의 {risk.targetCheckInDate ? `${formatDay(risk.targetCheckInDate)} 체크인` : "체크인 날짜"}에 대한 신호입니다.
@@ -172,7 +172,7 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
           <li className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-2">
             <Badge tone="info"><Cpu aria-hidden="true" />시스템 추정</Badge>
             {risk
-              ? <span>위험 신호 <strong className="num">{formatScore(risk.score)}</strong>가 선별 기준 <span className="num">{formatScore(risk.threshold)}</span> 이상이라 재확인 대상으로 골랐습니다. 장애 확정이 아닙니다.</span>
+              ? <span>위험 신호 <strong className="num">{formatSignal(risk.score, risk.threshold)}</strong>가 선별 기준 <span className="num">{SIGNAL_LINE}%</span> 이상이라 재확인 대상으로 골랐습니다. 장애 확정도 장애 확률도 아닙니다.</span>
               : <span className="text-muted-foreground">이 예약에 연결된 위험 평가가 없습니다. 추정 없이 접수된 건입니다.</span>}
           </li>
         </ul>

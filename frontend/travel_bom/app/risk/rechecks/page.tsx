@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { NightStrip } from "@/components/console/night-strip";
 import { ConsolePage, EmptyState, useConsoleData } from "@/components/console/use-console-data";
-import { formatDateTime, formatScore, jobStatusLabels, triggerLabels } from "@/lib/case-labels";
+import { formatDateTime, formatScore, formatSignal, jobStatusLabels, SIGNAL_LINE, triggerLabels } from "@/lib/case-labels";
 import { getRecheckJobs, type RecheckJob } from "@/lib/console-api";
 
 function outcome(job: RecheckJob) {
@@ -71,7 +71,11 @@ export default function RecheckJobs() {
                       <td className="px-4 py-3">
                         <p>{triggerLabels.get(job.trigger) ?? job.trigger}</p>
                         {job.riskScore !== null && (
-                          <p className="num text-xs text-muted-foreground">위험 신호 {formatScore(job.riskScore)}</p>
+                          <p className="num text-xs text-muted-foreground">
+                            {job.threshold !== null
+                              ? `위험 신호 ${formatSignal(job.riskScore, job.threshold)} · 선별 기준 ${SIGNAL_LINE}%`
+                              : `위험 신호 원점수 ${formatScore(job.riskScore)}`}
+                          </p>
                         )}
                       </td>
                       <td className="px-4 py-3"><NightStrip size="sm" nights={job.nights} /></td>

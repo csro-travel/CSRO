@@ -86,6 +86,24 @@ export function formatScore(value: number) {
   return value.toFixed(3);
 }
 
+/** The selection threshold on the 0–100 display scale: 80 and above is selected for recheck. */
+export const SIGNAL_LINE = 80;
+
+/**
+ * The raw score rescaled to 0–100 so that its policy threshold lands on 80.
+ * Display only: selection still compares the raw score with the raw threshold. Not a failure probability.
+ */
+export function signalPercent(score: number, threshold: number) {
+  const scaled = score < threshold
+    ? (score / threshold) * SIGNAL_LINE
+    : SIGNAL_LINE + ((score - threshold) / (1 - threshold)) * (100 - SIGNAL_LINE);
+  return Math.floor(Math.min(100, Math.max(0, scaled)));
+}
+
+export function formatSignal(score: number, threshold: number) {
+  return `${signalPercent(score, threshold)}%`;
+}
+
 export function formatFeature(name: string, value: number | boolean) {
   if (typeof value === "boolean") return value ? "예" : "아니오";
   if (name === "targetConfirmedBookingCount") return `${value}건`;
