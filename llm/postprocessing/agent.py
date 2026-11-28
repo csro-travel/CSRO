@@ -28,7 +28,7 @@ def create_draft_agent(model: str) -> Agent:
             "사건 경과, 확인된 결과, 미확인 사항, 적용 규정과 근거 ID를 본문에 적으세요. "
             "담당 상담사, 고객, 원예약, 공급 불가 사유, 실제 검색 조건, 고객에게 전달한 후보, "
             "고객 선택 및 동의, 가격 차이와 직선거리, 대체 예약과 입실 상태를 포함하세요. "
-            "simulation이 true인 선택과 예약은 시연 기록으로 표시하고 실제 고객 동의나 예약으로 단정하지 마세요. "
+            "simulation이 true인 선택, 예약 및 입실은 시연 기록으로 표시하고 실제 고객 동의나 예약·입실로 단정하지 마세요. "
             "검색 결과와 실제 고객 제안을 구분하고, 제공되지 않은 값은 미확인으로 적으세요. "
             "예약 확정과 입실, 비용 안내와 승인·지급을 구분하세요. "
             "후속 업무 하나에는 독립적으로 완료할 수 있는 조치 하나만 적으세요. "
@@ -147,7 +147,11 @@ async def generate_document(
     plan = result.final_output_as(DocumentPlan, raise_if_incorrect_type=True)
     returned_ids = [block_id for section in plan.sections for block_id in section.block_ids]
     if returned_ids != list(blocks):
-        raise ValueError("문서 구성에 본문 블록 누락, 중복 또는 순서 변경이 있습니다.")
+        return CaseDocument(
+            title="사건 처리 문서",
+            sections=[DocumentSection(heading="상담사 검토 본문", paragraphs=paragraphs)],
+            selected_follow_ups=selected_follow_ups,
+        )
     return CaseDocument(
         title=plan.title,
         sections=[

@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { getCaseMessages } from "../_api/cases";
 
 const taskTypes = [
   ["CHECKIN_CONFIRM", "대체 숙소 입실 확인"],
@@ -14,14 +13,34 @@ const taskTypes = [
   ["VERIFY_HOTEL", "숙소 확인"],
 ] as const;
 
-type Suggestion = { description: string; evidence_refs: string[]; policy_refs: string[] };
+type Suggestion = { description: string };
 type Draft = {
   draftId: string;
   draft: { draft_text: string; follow_up_suggestions: Suggestion[] };
   finalized: boolean;
+  checkinConfirmed?: boolean;
   taskIds: string[];
 };
-type Choice = { type: string; assignToMe: boolean; required: boolean; dueAt: string };
+type Choice = { type: string; assignToMe: boolean; required: boolean; dueDate: string };
+
+const seoulDate = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
+function defaultChoice(dueDate = seoulDate.format(new Date())): Choice {
+  return { type: "", assignToMe: true, required: true, dueDate };
+}
+
+function isCompletedCheckin(task: Suggestion, draft: Draft) {
+  return draft.checkinConfirmed && /(?:입실|체크인).{0,12}확인/.test(task.description);
+}
+
+function defaultChoices(draft: Draft): Partial<Record<number, Choice>> {
+  if (draft.finalized) return {};
+  const today = seoulDate.format(new Date());
+  return Object.fromEntries(draft.draft.follow_up_suggestions.flatMap((task, index) =>
+    isCompletedCheckin(task, draft) ? [] : [[index, defaultChoice(today)]]));
+}
 
 async function readResult<T>(response: Response): Promise<T> {
   if (response.ok) return response.json();
@@ -45,7 +64,6 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
   const [busy, setBusy] = useState<"draft" | "finalize" | "download">();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [messageEvidence, setMessageEvidence] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +75,7 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
         if (!controller.signal.aborted) {
           setDraft(data);
           setReviewedText(data.draft.draft_text);
+          setChoices(defaultChoices(data));
         }
       } catch {
         if (!controller.signal.aborted) setError("저장된 후처리 문서를 조회하지 못했습니다.");
@@ -66,40 +85,6 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
     })();
     return () => controller.abort();
   }, [path]);
-
-  useEffect(() => {
-    setMessageEvidence(new Map());
-    if (!draft || draft.finalized) return;
-    const pending = new Set(
-      draft.draft.follow_up_suggestions.flatMap(task => task.evidence_refs)
-        .filter(reference => reference.startsWith("MSG-")),
-    );
-    if (!pending.size) return;
-
-    const controller = new AbortController();
-    void (async () => {
-      const quotes = new Map<string, string>();
-      let cursor: string | undefined;
-      try {
-        while (pending.size && !controller.signal.aborted) {
-          const page = await getCaseMessages(caseId, controller.signal, cursor);
-          for (const message of page.items) {
-            if (pending.delete(message.messageId) && message.body?.trim()) {
-              quotes.set(message.messageId, '"' + message.body.trim() + '"');
-            }
-          }
-          const next = page.pagination.hasMoreBefore ? page.pagination.nextBeforeMessageId : null;
-          if (!next || next === cursor) break;
-          cursor = next;
-        }
-      } finally {
-        if (!controller.signal.aborted) setMessageEvidence(quotes);
-      }
-    })().catch(() => {
-      // Keep the available quotes and use the existing reference for unresolved messages.
-    });
-    return () => controller.abort();
-  }, [caseId, draft]);
 
   async function run(kind: NonNullable<typeof busy>, action: () => Promise<void>) {
     if (operation.current) return;
@@ -116,6 +101,21 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
     }
   }
 
+  async function openDraft() {
+    if (!draft) return;
+    setError("");
+    dialog.current?.showModal();
+    try {
+      const response = await fetch(path, { headers: { "X-Demo-Read": "1" } });
+      if (!response.ok || response.status === 204) return;
+      const current = await readResult<Draft>(response);
+      if (current.draftId !== draft.draftId || !current.checkinConfirmed) return;
+      setDraft(previous => previous?.draftId === current.draftId ? { ...previous, checkinConfirmed: true } : previous);
+    } catch {
+      // The server also checks the current check-in state when saving.
+    }
+  }
+
   function generateDraft() {
     return run("draft", async () => {
       requestId.current ??= crypto.randomUUID();
@@ -126,7 +126,7 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
       const data = await readResult<Draft>(response);
       setDraft(data);
       setReviewedText(data.draft.draft_text);
-      setChoices({});
+      setChoices(defaultChoices(data));
     });
   }
 
@@ -134,8 +134,10 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
     event.preventDefault();
     if (!draft) return;
     return run("finalize", async () => {
-      const tasks = Object.entries(choices).flatMap(([key, choice]) => choice ? [{
-        ...choice, index: Number(key), dueAt: choice.dueAt ? `${choice.dueAt}:00+09:00` : null,
+      const tasks = Object.entries(choices).flatMap(([key, choice]) => choice &&
+        !isCompletedCheckin(draft.draft.follow_up_suggestions[Number(key)], draft) &&
+        !(draft.checkinConfirmed && choice.type === "CHECKIN_CONFIRM") ? [{
+        type: choice.type, assignToMe: choice.assignToMe, required: choice.required, index: Number(key), dueAt: choice.dueDate ? `${choice.dueDate}T23:59:59+09:00` : null,
       }] : []);
       const data = await readResult<{ taskIds: string[] }>(await fetch(
         `${path}/drafts/${draft.draftId}/finalize`, {
@@ -176,10 +178,7 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
             <span role="status" className="text-xs text-muted-foreground">문서 저장 완료 · 연결 업무 {draft.taskIds.length}건</span>
           </>
         ) : draft ? (
-          <Button variant="outline" disabled={closed || !!busy} onClick={() => {
-            setError("");
-            dialog.current?.showModal();
-          }}>초안 열기</Button>
+          <Button variant="outline" disabled={closed || !!busy} onClick={() => void openDraft()}>초안 열기</Button>
         ) : !closed && (
           <Button variant="outline" disabled={loading || !!busy} onClick={generateDraft}>초안 생성</Button>
         )}
@@ -201,29 +200,34 @@ export function CasePostprocessing({ caseId, closed, onSaved }: {
             </label>
             <section aria-label="등록할 후속 업무" className="space-y-2">
               <h3 className="text-sm font-semibold">등록할 후속 업무</h3>
+              {draft?.checkinConfirmed && <p role="status" className="text-sm text-muted-foreground">대체 숙소 입실 확인 완료</p>}
               {draft?.draft.follow_up_suggestions.map((task, index) => {
                 const choice = choices[index];
+                if (isCompletedCheckin(task, draft)) return (
+                  <div key={index} className="rounded-lg border p-3 text-sm">
+                    {task.description} <span className="text-muted-foreground">· 완료</span>
+                  </div>
+                );
                 return (
                   <div key={index} className="space-y-2 rounded-lg border p-3 text-sm">
                     <label className="flex gap-2">
                       <input type="checkbox" checked={!!choice} onChange={event => {
-                        const value = event.target.checked ? { type: "", assignToMe: true, required: false, dueAt: "" } : undefined;
+                        const value = event.target.checked ? defaultChoice() : undefined;
                         setChoices(current => ({ ...current, [index]: value }));
                       }} />
                       {task.description}
                     </label>
-                    <p className="text-xs text-muted-foreground">{[...task.evidence_refs.map(reference => messageEvidence.get(reference) ?? reference), ...task.policy_refs].join(" · ")}</p>
                     {choice && <div className="flex flex-wrap gap-3">
                       <label className="space-x-2">유형
                         <select required value={choice.type} onChange={event => updateChoice(index, { type: event.target.value, required: event.target.value === "CHECKIN_CONFIRM" || choice.required })}
                           className="rounded border bg-background p-1">
                           <option value="">선택</option>
-                          {taskTypes.map(([type, name]) => <option key={type} value={type}>{name}</option>)}
+                          {taskTypes.map(([type, name]) => <option key={type} value={type} disabled={draft.checkinConfirmed && type === "CHECKIN_CONFIRM"}>{name}</option>)}
                         </select>
                       </label>
-                      <label className="space-x-2">기한(KST)
-                        <input type="datetime-local" value={choice.dueAt}
-                          onChange={event => updateChoice(index, { dueAt: event.target.value })}
+                      <label className="space-x-2">기한
+                        <input type="date" value={choice.dueDate}
+                          onChange={event => updateChoice(index, { dueDate: event.target.value })}
                           className="rounded border bg-background p-1" />
                       </label>
                       <label className="flex items-center gap-1">

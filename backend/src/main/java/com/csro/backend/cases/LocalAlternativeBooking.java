@@ -169,6 +169,55 @@ class LocalAlternativeBooking {
                 """).query(String.class).list();
     }
 
+    private static final String DUE_CHECKINS = """
+            FROM replacement_requests r
+            JOIN cases c ON c.id=r.case_id
+            JOIN bookings original ON original.id=c.booking_id
+            JOIN users customer ON customer.id=original.customer_id AND customer.role='CUSTOMER' AND customer.is_active
+            JOIN bookings demo ON demo.supplier_code='AIRBNB_DEMO' AND demo.supplier_booking_id=r.supplier_booking_id
+            JOIN alternative_selections s ON s.id=r.selection_id AND s.case_id=c.id AND s.superseded_at IS NULL
+            WHERE r.status='CONFIRMED' AND r.request_code LIKE 'ADB-%' AND c.status<>'CLOSED'
+              AND r.confirmed_at <= clock_timestamp() - interval '5 seconds'
+              AND NOT EXISTS (SELECT 1 FROM checkin_confirmations i WHERE i.replacement_request_id=r.id
+                              AND i.confirmation_status IN ('CUSTOMER_CONFIRMED','PROVIDER_VERIFIED'))
+            """;
+
+    List<String> dueCheckins() {
+        return jdbc.sql("SELECT c.case_code " + DUE_CHECKINS + " ORDER BY r.confirmed_at, r.id LIMIT 50").query(String.class).list();
+    }
+
+    @Transactional
+    public void checkIn(String caseId) {
+        var ctx = context(caseId, true);
+        var confirmation = jdbc.sql("""
+                INSERT INTO checkin_confirmations (case_id, booking_id, target_type, replacement_request_id,
+                    source_type, confirmation_status, confirmed_by, idempotency_key, request_hash, checkin_at, created_at)
+                SELECT c.id, original.id, 'REPLACEMENT', r.id, 'CUSTOMER', 'CUSTOMER_CONFIRMED', original.customer_id,
+                    'AIRBNB-DEMO-CHECKIN-' || r.id, encode(sha256(convert_to(r.request_code, 'UTF8')), 'hex'), now(), now()
+                """ + DUE_CHECKINS + """
+                  AND c.case_code=:case
+                ORDER BY r.confirmed_at, r.id LIMIT 1
+                RETURNING id
+                """).param("case", caseId).query(Long.class).optional();
+        if (confirmation.isEmpty()) return;
+        long id = confirmation.orElseThrow();
+        jdbc.sql("""
+                UPDATE case_tasks SET status='DONE', completed_at=now(), updated_at=now(), completion_note=:note
+                WHERE case_id=:case AND task_type='CHECKIN_CONFIRM' AND status IN ('TODO','IN_PROGRESS')
+                """).param("case", ctx.id()).param("note", "Airbnb 시연 입실 확인 CHK-" + id).update();
+        jdbc.sql("""
+                INSERT INTO chat_messages (message_code, case_id, sender_user_id, sender_type, message_type, body, sent_at)
+                VALUES (:code,:case,:customer,'CUSTOMER','TEXT','입실 완료! (앱 자동 알림 · 시연)',now())
+                """).param("code", "MSG-ADB-CHECKIN-" + id).param("case", ctx.id())
+                .param("customer", ctx.customer()).update();
+        jdbc.sql("""
+                INSERT INTO case_actions (case_id, booking_id, actor_id, action_type, details, acted_at)
+                SELECT id, booking_id, NULL, 'CHECKIN_CONFIRMED',
+                    jsonb_build_object('protocol','AIRBNB_DEMO','simulation',true,'checkinConfirmationId',:checkin), now()
+                FROM cases WHERE id=:case
+                """).param("case", ctx.id()).param("checkin", "CHK-" + id).update();
+    }
+
     @Transactional
     public void selectFirst(String caseId) {
         var ctx = context(caseId, true);

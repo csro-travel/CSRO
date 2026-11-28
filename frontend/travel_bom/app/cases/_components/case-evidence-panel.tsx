@@ -1,7 +1,7 @@
 "use client";
 
+import { CaseSection } from "./case-section";
 import { useRef, useState } from "react";
-import { PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -40,9 +40,8 @@ export function CaseEvidencePanel({ detail, onChanged }: { detail: CaseDetail; o
   }
 
   return (
-    <section className="panel space-y-3 p-4" aria-label="호텔 직접 확인 기록">
+    <CaseSection title="호텔 확인 결과 등록">
       <div>
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold"><PhoneCall className="size-4 text-muted-foreground" aria-hidden="true" />호텔 직접 확인 기록</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           호텔과 통화한 결과를 숙박일별로 남깁니다. 미확인 숙박일에 처음 확인된 결과만 사실로 반영되고, 이미 확인된 사실과 다르면 상충으로 표시됩니다.
         </p>
@@ -64,6 +63,6 @@ export function CaseEvidencePanel({ detail, onChanged }: { detail: CaseDetail; o
         </Button>
         {message && <p role="status" className="text-sm">{message}</p>}
       </div>
-    </section>
+    </CaseSection>
   );
 }

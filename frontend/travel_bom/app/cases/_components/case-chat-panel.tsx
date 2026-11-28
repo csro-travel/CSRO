@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { SendHorizontal } from "lucide-react";
+import { CircleCheck, SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { AirbnbDemoBookingCard } from "./airbnb-demo-booking-card";
@@ -63,6 +63,7 @@ function MessageItem({ message, state, customer, selecting, selectionBlocked, on
   selectionBlocked: boolean; onSelect: (offerId: string, quoteId: string) => void;
 }) {
   const { body, offer, senderType, sentAt } = message;
+  const demoCheckin = senderType === "CUSTOMER" && message.messageId.startsWith("MSG-ADB-CHECKIN-");
   const airbnbGuide = body && senderType === "COUNSELOR" && message.messageType === "TEXT"
     ? parseAirbnbGuide(body) : null;
   const active = offer !== null && (state ? state.activeOfferId === offer.offerId : offer.status === "ACTIVE");
@@ -80,7 +81,13 @@ function MessageItem({ message, state, customer, selecting, selectionBlocked, on
           {formatTimestamp(sentAt, messageTimeFormat) ?? sentAt}
         </time>
       </div>
-      {airbnbGuide ? (
+      {demoCheckin ? (
+        <div className="flex min-w-36 flex-col items-center gap-2 rounded-xl border bg-background px-5 py-4 text-center">
+          <CircleCheck className="size-8 text-primary" aria-hidden="true" />
+          <p className="font-semibold">입실 완료!</p>
+          <span className="text-xs text-muted-foreground">앱 자동 알림 · 시연</span>
+        </div>
+      ) : airbnbGuide ? (
         <div className="space-y-3 text-sm">
           <p>{airbnbGuide.introduction}</p>
           <ol className="space-y-2">

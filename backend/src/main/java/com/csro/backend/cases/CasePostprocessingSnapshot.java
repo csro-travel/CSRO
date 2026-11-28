@@ -51,7 +51,7 @@ class CasePostprocessingSnapshot {
                         FROM replacement_requests r WHERE r.case_id=c.id
                         UNION ALL
                         SELECT jsonb_build_object('id', 'CHECKIN-' || i.id, 'status', i.confirmation_status,
-                            'checkin_at', i.checkin_at), i.created_at
+                            'checkin_at', i.checkin_at, 'simulation', coalesce(i.idempotency_key LIKE 'AIRBNB-DEMO-CHECKIN-%', false)), i.created_at
                         FROM checkin_confirmations i WHERE i.case_id=c.id
                     ) evidence
                 ), '[]'::jsonb),

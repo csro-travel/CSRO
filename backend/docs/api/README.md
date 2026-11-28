@@ -37,7 +37,7 @@ API-003의 `origin`과 API-004의 `origin`·`createdAt`·`risk`·`analysisRuns`�
 
 ## 사건 후처리 로컬 상담 연동
 
-- `GET /api/v1/cases/{caseId}/postprocessing`는 최신 초안과 확정 여부를 반환한다. 초안이 없으면 204다.
+- `GET /api/v1/cases/{caseId}/postprocessing`는 최신 초안과 확정 여부, 현재 대체 숙소 입실 확인 여부인 `checkinConfirmed`를 반환한다. 초안이 없으면 204다.
 - `POST /api/v1/cases/{caseId}/postprocessing/drafts`는 `requestId` UUID로 초안을 생성한다. 현재 화면은 사건당 문서 한 건을 편집·확정하며 기존 결과가 있으면 이를 반환한다.
 - `POST /api/v1/cases/{caseId}/postprocessing/drafts/{draftId}/finalize`는 `reviewedText`와 `tasks`를 받는다. 업무 항목은 제안 인덱스 `index`, `type`, `assignToMe`, 선택 기한 `dueAt`, 명시적인 `required`를 사용한다. 같은 초안과 동일 요청은 최초 결과를 반환하고 다른 요청은 409다.
 - `GET /api/v1/cases/{caseId}/postprocessing/drafts/{draftId}/document`는 해당 사건에 저장된 DOCX를 반환한다. 모든 경로는 상담사 권한이 필요하다.

@@ -1,3 +1,4 @@
+import { CaseSection } from "./case-section";
 import { Building2, Headset, Hotel, Info } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { evidenceSourceLabels, formatDateTime, formatDay, provisionLabels, reviewLabels, supplierStatusLabels } from "@/lib/case-labels";
@@ -118,19 +119,16 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
   const { evidence, booking } = detail;
   const unauthenticated = evidence.some(record => !record.sourceAuthenticated && record.sourceType !== "MANUAL_HOTEL");
   return (
-    <section className="panel p-4" aria-label="확인 근거">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">확인 근거</h3>
+    <CaseSection title="검증 근거">
         {unauthenticated && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Info className="size-3.5" aria-hidden="true" />
             가상 공급사·호텔 응답(시연용) · 출처 인증 절차 없음
           </p>
         )}
-      </div>
       {evidence.length
         ? <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
         : <p className="mt-2 text-sm text-muted-foreground">아직 받은 호텔·공급사 근거가 없습니다.</p>}
-    </section>
+    </CaseSection>
   );
 }

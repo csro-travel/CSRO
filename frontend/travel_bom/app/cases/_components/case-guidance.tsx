@@ -1,7 +1,8 @@
 "use client";
 
+import { CaseSection } from "./case-section";
 import { useEffect, useRef, useState } from "react";
-import { CornerDownRight, ListChecks, Sparkles } from "lucide-react";
+import { CornerDownRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatDay, taskLabels } from "@/lib/case-labels";
@@ -20,7 +21,7 @@ export function ruleGuidance(detail: CaseDetail) {
   const steps: string[] = [];
 
   if (open.has("VERIFY_HOTEL") || conflict.length) {
-    steps.push(`호텔에 전화해 ${[...conflict, ...unknown].join(", ") || "숙박일"} 객실 제공 여부를 확인하고 아래 "호텔 직접 확인 기록"에 남깁니다.`);
+    steps.push(`호텔에 전화해 ${[...conflict, ...unknown].join(", ") || "숙박일"} 객실 제공 여부를 확인하고 아래 "호텔 확인 결과 등록"에 남깁니다.`);
   }
   if (open.has("CONTACT_CUSTOMER")) steps.push("고객에게 지금까지 확인된 사실과 확인 중인 사항을 구분해 안내합니다.");
   if (unavailable.length && !replacementBooked) steps.push(`"대체 숙소" 탭에서 후보를 검색하고 3곳을 골라 고객에게 제안합니다.`);
@@ -74,9 +75,8 @@ export function CaseGuidance({ detail, onUseDraft }: { detail: CaseDetail; onUse
   const next = detail.nextAction;
 
   return (
-    <section className="panel space-y-3 border-primary/30 p-4" aria-label="지금 할 일">
+    <CaseSection title="우선 조치" className="border-primary/30">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold"><ListChecks className="size-4 text-primary" aria-hidden="true" />지금 할 일</h3>
         {next && (
           <Badge tone="brand">
             {taskLabels.get(next.type) ?? next.type} · {next.dueAt ? `기한 ${formatDateTime(next.dueAt)}` : "기한 미정"}
@@ -107,6 +107,6 @@ export function CaseGuidance({ detail, onUseDraft }: { detail: CaseDetail; onUse
       </div>
       {assist?.warnings.map(warning => <p key={warning} className="text-xs text-muted-foreground">{warning}</p>)}
       {error && <p role="alert" className="text-sm text-destructive">{error} 규칙 기반 제안을 그대로 쓸 수 있습니다.</p>}
-    </section>
+    </CaseSection>
   );
 }

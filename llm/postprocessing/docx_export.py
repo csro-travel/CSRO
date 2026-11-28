@@ -97,7 +97,7 @@ def export_docx(report: CaseDocument, case_input: dict, output: Path | BinaryIO)
     document.add_paragraph(
         f"{'시연 선택 기록' if replacement.get('simulation') else '고객 동의'} {_text(replacement.get('consent_at'))} · 요청번호 {_text(replacement.get('request_id'))} "
         f"· 확정번호 {_text(replacement.get('confirmation_id'))} · 예약 {_text(replacement.get('booking_status'))} "
-        f"· 실제 입실 {_text(replacement.get('checkin_status'))}"
+        f"· {'시연 입실' if replacement.get('simulation') else '실제 입실'} {_text(replacement.get('checkin_status'))}"
     )
 
     for section in report.sections:

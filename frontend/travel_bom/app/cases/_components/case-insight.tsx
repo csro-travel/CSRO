@@ -1,3 +1,4 @@
+import { CaseSection } from "./case-section";
 import { Activity, Radar, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -70,9 +71,8 @@ export function CaseInsight({ detail }: { detail: CaseDetail }) {
   const runs = detail.analysisRuns ?? [];
   const OriginIcon = detail.origin?.type === "CUSTOMER_REPORT" ? UserRound : Radar;
   return (
-    <section className="panel space-y-3 p-4" aria-label="대응 건이 올라온 이유와 자동 처리 이력">
+    <CaseSection title="사건 접수 경위">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold">올라온 이유</h3>
         <Badge tone={origin.tone}><OriginIcon aria-hidden="true" />{origin.label}</Badge>
         {detail.createdAt && <time dateTime={detail.createdAt} className="num ml-auto text-xs text-muted-foreground">{formatDateTime(detail.createdAt)} 접수</time>}
       </div>
@@ -104,6 +104,6 @@ export function CaseInsight({ detail }: { detail: CaseDetail }) {
           </ol>
         ) : <p className="mt-1 text-sm text-muted-foreground">이 대응 건에 기록된 자동 처리가 없습니다.</p>}
       </div>
-    </section>
+    </CaseSection>
   );
 }
