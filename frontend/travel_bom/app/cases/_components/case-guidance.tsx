@@ -13,21 +13,9 @@ export function ruleGuidance(detail: CaseDetail) {
   const days = (filter: (night: CaseDetail["nights"][number]) => boolean) => detail.nights.filter(filter).map(night => formatDay(night.stayDate));
   const unavailable = days(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE");
   const unknown = days(night => night.factStatus === "UNCONFIRMED");
-  const conflict = days(night => night.factStatus === "CONFLICT");
   const open = new Set(detail.tasks.map(task => task.type));
   const replacementBooked = open.has("CHECKIN_CONFIRM") || (detail.completedTasks ?? []).some(task => task.type === "CHECKIN_CONFIRM");
   const hotel = detail.booking.hotel.name;
-  const steps: string[] = [];
-
-  if (open.has("VERIFY_HOTEL") || conflict.length) {
-    steps.push(`호텔에 전화해 ${[...conflict, ...unknown].join(", ") || "숙박일"} 객실 제공 여부를 확인하고 "수동 확인 및 후속 조치 기록"에 남깁니다.`);
-  }
-  if (open.has("CONTACT_CUSTOMER")) steps.push("고객에게 지금까지 확인된 사실과 확인 중인 사항을 구분해 안내합니다.");
-  if (unavailable.length && !replacementBooked) steps.push(`"대체 숙소 추천" 탭에서 후보를 검색하고 3곳을 골라 고객에게 제안합니다.`);
-  if (open.has("CHECKIN_CONFIRM")) steps.push("고객이 대체 숙소에 입실하면 고객 화면의 입실 완료 확인을 누르도록 안내합니다.");
-  if (open.has("ORIGINAL_FOLLOWUP")) steps.push("원예약 호텔·공급사에 대체 숙박 사실을 알리고 처리 결과를 후속 기록에 남깁니다.");
-  if (!steps.length) steps.push(unknown.length ? `${unknown.join(", ")}은 아직 확인되지 않았습니다. 호텔 확인이 끝날 때까지 상담을 유지합니다.` : "남은 업무가 없습니다. 종료 조건을 확인하고 상담을 종료합니다.");
-
   let draft: string;
   if (replacementBooked && open.has("CHECKIN_CONFIRM")) {
     draft = "안녕하세요, 여행봄입니다. 대체 숙소 예약이 확정되었습니다. 숙소에 도착해 입실하신 뒤 상담 화면의 '입실 완료 확인'을 눌러 주시면 남은 절차를 마무리하겠습니다.";
@@ -40,7 +28,7 @@ export function ruleGuidance(detail: CaseDetail) {
   } else {
     draft = `안녕하세요, 여행봄입니다. 예약하신 ${hotel}의 객실 제공 여부를 확인하고 있습니다. 확인되는 대로 안내드리겠습니다.`;
   }
-  return { steps, draft };
+  return { draft };
 }
 
 /**

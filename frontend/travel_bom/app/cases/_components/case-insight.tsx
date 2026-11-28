@@ -7,7 +7,6 @@ import {
   riskFeatureLabels, supplierStatusLabels, triggerLabels,
 } from "@/lib/case-labels";
 import type { AnalysisRun, CaseDetail, RiskSignal } from "../_types/case";
-import { ruleGuidance } from "./case-guidance";
 
 const featureOrder = ["targetConfirmedBookingCount", "pastFailureRate90d", "reconfirmationOverdueRate7d", "inventoryUnavailableRate7d", "bookingVolumeGrowth7d", "isPeakDay"];
 
@@ -154,14 +153,6 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
           </li>
         </ul>
       </Block>
-
-      {detail.status !== "CLOSED" && (
-        <Block title="권장 대응 방향 · 규칙 기반 안내이며 실제 처리 상태는 후속 기록에서 확인">
-          <ol className="list-decimal space-y-1 pl-5 text-sm leading-relaxed marker:text-muted-foreground">
-            {ruleGuidance(detail).steps.map(step => <li key={step}>{step}</li>)}
-          </ol>
-        </Block>
-      )}
 
       <details className="group text-xs">
         <summary className="cursor-pointer list-none font-medium text-primary select-none">

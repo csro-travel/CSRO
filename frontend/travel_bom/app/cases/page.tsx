@@ -142,8 +142,8 @@ export default function Cases() {
             chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft}
               composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />} />}
           >
-            <CaseProcessBar detail={detail} />
             <CaseDetails detail={detail} />
+            <CaseProcessBar detail={detail} />
             {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
             <div className="grid items-start gap-3 2xl:grid-cols-2">
               <CaseRiskBasis detail={detail} />

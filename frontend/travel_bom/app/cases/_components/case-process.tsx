@@ -1,16 +1,9 @@
-import { Check } from "lucide-react";
+import { ArrowDown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatDateTime, taskLabels } from "@/lib/case-labels";
 import type { CaseDetail } from "../_types/case";
 
 type StepState = "done" | "current" | "action" | "todo" | "skip";
-
-const stateLabels: Record<StepState, string> = { done: "완료", current: "진행 중", action: "처리 필요", todo: "미완료", skip: "해당 없음" };
-const stateStyles: Record<StepState, { dot: string; text: string }> = {
-  done: { dot: "border-success bg-success text-white", text: "text-foreground" },
-  current: { dot: "border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
-  action: { dot: "border-destructive bg-destructive/10 text-destructive", text: "font-bold text-destructive" },
-  todo: { dot: "border-input bg-background text-muted-foreground", text: "text-muted-foreground" },
-  skip: { dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground" },
-};
 
 /** Each step is read from the stored case: night facts, open and completed tasks, automatic runs. */
 export function caseProcess(detail: CaseDetail): { label: string; state: StepState }[] {
@@ -51,21 +44,50 @@ export function flash(selector: string) {
   return true;
 }
 
+type Shown = "done" | "now" | "blocked" | "later" | "skip";
+const shown: Record<Shown, { word: string; dot: string; text: string }> = {
+  done: { word: "끝남", dot: "border-success bg-success text-white", text: "text-foreground" },
+  now: { word: "지금", dot: "border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
+  // The current step has an open task: same place in the flow, shown in red.
+  blocked: { word: "지금", dot: "border-destructive bg-destructive text-white", text: "font-bold text-destructive" },
+  later: { word: "나중", dot: "border-input bg-background text-muted-foreground", text: "text-muted-foreground" },
+  skip: { word: "해당 없음", dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground opacity-50" },
+};
+
+/** Where the counselor records each open task. A hotel check is recorded as evidence, the rest as a task note. */
+const taskTarget = (type: string) => (type === "VERIFY_HOTEL" ? '[aria-label="수동 확인 및 후속 조치 기록"]' : `[data-task-type="${type}"]`);
+
+/** The stage as one sentence, the seven steps in three visible states, and one button to the next open task. */
 export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
   const steps = caseProcess(detail);
+  const now = steps.findIndex(step => step.state !== "done" && step.state !== "skip");
+  const blocked = now >= 0 && steps[now].state === "action";
+  const next = detail.status === "CLOSED" ? undefined : detail.tasks.find(task => task.taskId === detail.nextAction?.taskId) ?? detail.tasks[0];
   return (
-    <nav aria-label="상담 진행 단계" className="panel px-3 py-2.5">
+    <nav aria-label="상담 진행 단계" className="panel space-y-3 p-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className={`text-lg leading-tight font-bold ${blocked ? "text-destructive" : ""}`}>
+          {now >= 0 ? <>지금: {steps[now].label} <span className="num text-sm font-medium text-muted-foreground">({now + 1}/{steps.length})</span></> : "모든 단계가 끝났습니다"}
+        </p>
+        {next && (
+          <Button type="button" size="sm" className="ml-auto" onClick={() => flash(taskTarget(next.type))}>
+            다음 할 일: {taskLabels.get(next.type) ?? "남은 업무 확인"}<ArrowDown aria-hidden="true" />
+          </Button>
+        )}
+        {next?.dueAt && <time dateTime={next.dueAt} className="num text-sm text-muted-foreground">기한 {formatDateTime(next.dueAt)}</time>}
+      </div>
       <ol className="flex min-w-0 gap-1">
         {steps.map((step, index) => {
-          const style = stateStyles[step.state];
+          const state: Shown = index === now ? (blocked ? "blocked" : "now") : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
+          const style = shown[state];
           return (
-            <li key={step.label} data-process-step={index + 1} aria-current={step.state === "current" ? "step" : undefined}
-              className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1 text-center">
+            <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined}
+              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1 text-center ${style.text}`}>
               <span className={`num flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${style.dot}`}>
-                {step.state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+                {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
               </span>
-              <span className={`text-xs leading-tight wrap-anywhere ${style.text}`}>{step.label}</span>
-              <span className={`text-[0.7rem] leading-none ${step.state === "action" ? "font-semibold text-destructive" : "text-muted-foreground"}`}>{stateLabels[step.state]}</span>
+              <span className="text-[0.8rem] leading-tight wrap-anywhere">{step.label}</span>
+              <span className="text-[0.8rem] leading-none font-normal">{style.word}</span>
             </li>
           );
         })}
