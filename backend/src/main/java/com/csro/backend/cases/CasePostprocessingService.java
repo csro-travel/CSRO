@@ -146,6 +146,16 @@ class CasePostprocessingService {
                         if (!taskIds.contains(existing)) taskIds.add(existing);
                         continue;
                     }
+                    // Without a confirmed replacement there is nothing to check in to; the task would read as a booking.
+                    boolean replacementConfirmed = jdbc.sql("""
+                        SELECT EXISTS (
+                            SELECT 1 FROM replacement_requests r
+                            JOIN alternative_selections s ON s.id=r.selection_id
+                            WHERE r.case_id=:case AND r.status='CONFIRMED' AND s.superseded_at IS NULL
+                        )
+                        """).param("case", context.caseKey()).query(Boolean.class).single();
+                    if (!replacementConfirmed)
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "POSTPROCESSING_REPLACEMENT_NOT_CONFIRMED");
                     boolean checkinRecorded = jdbc.sql("""
                         SELECT EXISTS (
                             SELECT 1 FROM checkin_confirmations i

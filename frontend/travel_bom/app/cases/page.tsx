@@ -32,7 +32,8 @@ export default function Cases() {
   const [detail, show] = useState<CaseDetail>();
   const [error, fail] = useState("");
   const [chatRefresh, setChatRefresh] = useState(0);
-  const [draft, setDraft] = useState({ text: "", nonce: 0 });
+  // Tagged with its case: a draft written for one customer is never placed in another case's composer.
+  const [draft, setDraft] = useState({ caseId: "", text: "", nonce: 0 });
   const [newCaseIds, setNewCaseIds] = useState<ReadonlySet<string>>(new Set());
   const [listLoadedAt, setListLoadedAt] = useState<string>();
   const [ready, setReady] = useState(false);
@@ -140,8 +141,8 @@ export default function Cases() {
             closed={detail.status === "CLOSED"}
             onBack={() => openCase(undefined)}
             onOfferSent={() => setChatRefresh(value => value + 1)}
-            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft}
-              composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ text, nonce: current.nonce + 1 }))} />} />}
+            chat={<CaseChatPanel caseId={detail.caseId} closed={detail.status === "CLOSED"} refreshVersion={chatRefresh} insertDraft={draft.caseId === detail.caseId ? draft : undefined}
+              composerTop={<CaseDraft detail={detail} onUseDraft={text => setDraft(current => ({ caseId: detail.caseId, text, nonce: current.nonce + 1 }))} />} />}
           >
             <CaseDetails detail={detail} />
             {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}

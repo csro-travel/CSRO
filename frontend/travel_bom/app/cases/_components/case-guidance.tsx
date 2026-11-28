@@ -43,7 +43,8 @@ export function CaseDraft({ detail, onUseDraft }: { detail: CaseDetail; onUseDra
   const request = useRef<AbortController | null>(null);
   // A draft describes the case as it was; drop it when the stored facts change.
   const factsKey = `${detail.caseId}:${detail.updatedAt}:${detail.tasks.length}:${detail.evidence.length}`;
-  useEffect(() => { setAssist(undefined); setError(""); return () => request.current?.abort(); }, [factsKey]);
+  // The aborted request skips its own cleanup, so the loading flag is cleared here with it.
+  useEffect(() => { setAssist(undefined); setError(""); setLoading(false); return () => request.current?.abort(); }, [factsKey]);
 
   async function ask() {
     if (loading) return;
