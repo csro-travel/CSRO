@@ -8,6 +8,26 @@
     {
       "hotelId": "HOTEL-002",
       "path": "../examples/risk-events-demo-hotel-002.json"
+    },
+    {
+      "hotelId": "HOTEL-201",
+      "path": "../examples/risk-events-demo-hotel-201.json"
+    },
+    {
+      "hotelId": "HOTEL-202",
+      "path": "../examples/risk-events-demo-hotel-202.json"
+    },
+    {
+      "hotelId": "HOTEL-203",
+      "path": "../examples/risk-events-demo-hotel-203.json"
+    },
+    {
+      "hotelId": "HOTEL-204",
+      "path": "../examples/risk-events-demo-hotel-204.json"
+    },
+    {
+      "hotelId": "HOTEL-205",
+      "path": "../examples/risk-events-demo-hotel-205.json"
     }
   ]
 }
