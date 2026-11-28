@@ -35,6 +35,15 @@ API-003의 `origin`과 API-004의 `origin`·`createdAt`·`risk`·`analysisRuns`�
 
 공통 ML 평가·저장 및 PR #14의 Job 성공 처리를 연결한 범위는 [공통 경로](ML-RISK-COMMON-PATH.md)를 참고한다. 시연 1·3용 예약 시드와 합성 관측은 [시연 시드](DEMO-SEEDS.md)를 참고한다.
 
+## 사건 후처리 로컬 상담 연동
+
+- `GET /api/v1/cases/{caseId}/postprocessing`는 최신 초안과 확정 여부를 반환한다. 초안이 없으면 204다.
+- `POST /api/v1/cases/{caseId}/postprocessing/drafts`는 `requestId` UUID로 초안을 생성한다. 현재 화면은 사건당 문서 한 건을 편집·확정하며 기존 결과가 있으면 이를 반환한다.
+- `POST /api/v1/cases/{caseId}/postprocessing/drafts/{draftId}/finalize`는 `reviewedText`와 `tasks`를 받는다. 업무 항목은 제안 인덱스 `index`, `type`, `assignToMe`, 선택 기한 `dueAt`, 명시적인 `required`를 사용한다. 같은 초안과 동일 요청은 최초 결과를 반환하고 다른 요청은 409다.
+- `GET /api/v1/cases/{caseId}/postprocessing/drafts/{draftId}/document`는 해당 사건에 저장된 DOCX를 반환한다. 모든 경로는 상담사 권한이 필요하다.
+- 문서와 선택 업무는 Spring에서 함께 저장한다. Python 내부 호출은 행 잠금 밖에서 실행한다. 독립 API-007 등록 경로는 상세 검토 대상으로 남아 있다.
+- 내부 경로는 `POST /internal/v1/case-postprocessing/drafts` 및 `POST /internal/v1/case-postprocessing/documents`다. 공유 토큰과 실행 방법은 [후처리 Agent](../../../llm/postprocessing/README.md)를 참조한다.
+
 ## API-011 구현 메모
 
 `CaseController`와 `CaseQueries`에서 [Notion API-011 검토안](https://app.notion.com/p/ab66adbd23b3830daa1481395fa135b5)을 구현한다. 인증 주체는 기존 사건 조회의 Servlet `Principal` 또는 격리 `local-demo`에서 설정된다. 운영용 Bearer 검증은 공통 인증 계층 연결 후 사용할 수 있다.

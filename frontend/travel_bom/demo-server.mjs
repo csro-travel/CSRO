@@ -74,6 +74,11 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
     if (!req.url.startsWith('/demo/cases') && !req.url.startsWith('/demo/replacement-bookings') && !req.url.startsWith('/demo/bookings') && !req.url.startsWith('/demo/console/')) return handle(req, res)
 
     const headers = { Authorization: 'Bearer ' + token }
+    const postprocessingRead = canSendMessages && req.method === 'GET' &&
+      req.headers['x-demo-read'] === '1' && req.headers['sec-fetch-site'] === 'same-origin' &&
+      /^\/demo\/cases\/C-[0-9]{3,38}\/postprocessing(?:\/drafts\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/document)?$/.test(req.url)
+    const postprocessingWrite = canSendMessages && req.method === 'POST' &&
+      /^\/demo\/cases\/C-[0-9]{3,38}\/postprocessing\/drafts(?:\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/finalize)?$/.test(req.url)
     const options = { method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(5000) }
     const simulation = canSaveAirbnbSearch && canSendMessages &&
       /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/simulations\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}(?:\/book)?$/.test(req.url)
@@ -99,7 +104,8 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       // Assist drafts are suggestions that change no case state, so no Idempotency-Key; the Agent may take longer than other calls.
       const assist = req.method === 'POST' && canRequestAssist && /^\/demo\/cases\/C-[0-9]{3,38}\/assist-drafts$/.test(req.url)
       if (assist) options.signal = AbortSignal.timeout(30000)
-      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin && !assist && !airbnbSearch && !airbnbGuide && !airbnbSelection && !simulationBook) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
+      if (postprocessingWrite) options.signal = AbortSignal.timeout(70000)
+      if ((!message && !quoteSearch && !offer && !selection && !replacement && !incident && !task && !closure && !checkin && !assist && !airbnbSearch && !airbnbGuide && !airbnbSelection && !simulationBook && !postprocessingWrite) || req.headers.origin !== origin || req.headers['sec-fetch-site'] !== 'same-origin') {
         res.writeHead(403).end()
         return
       }
@@ -119,7 +125,7 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
       headers['Content-Type'] = contentType
       options.body = req
       options.duplex = 'half'
-    } else if (!simulationRead && !(canSaveAirbnbSearch && req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
+    } else if (!simulationRead && !postprocessingRead && !(canSaveAirbnbSearch && req.method === 'GET' && req.headers['x-demo-read'] === '1' &&
         req.headers['sec-fetch-site'] === 'same-origin' &&
         /^\/demo\/cases\/C-[0-9]{3,38}\/airbnb-demo-searches\/latest$/.test(req.url)) && !(canReadReplacement && allowsReplacementRead(req)) && !(counselorMode && allowsConsoleRead(req)) && !(customerMode ? allowsCustomerRead(req) : allowsCaseRead(req))) {
       res.writeHead(403).end()
@@ -128,7 +134,9 @@ export function createDemoServer({ port, backendPort, token, chatWrites = false,
 
     try {
       const upstream = await fetchUpstream('http://' + host + ':' + backendPort + req.url.replace('/demo/', '/api/v1/'), options)
-      const body = await upstream.text()
+      const body = postprocessingRead && upstream.ok && req.url.endsWith('/document')
+        ? Buffer.from(await upstream.arrayBuffer())
+        : await upstream.text()
       const responseHeaders = { 'Content-Type': upstream.headers.get('content-type') || 'application/json', 'Cache-Control': 'no-store' }
       if (replacement && upstream.status === 202) {
         const location = upstream.headers.get('location')

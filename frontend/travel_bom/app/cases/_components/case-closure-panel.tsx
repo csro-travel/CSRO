@@ -11,6 +11,7 @@ import { ClosureError, closeCase, completeTask, confirmCheckin, type CloseBlocke
 import type { CaseDetail, CaseTask } from "../_types/case";
 import type { ReplacementBooking } from "../_types/replacement";
 import { taskNames } from "./case-details";
+import { CasePostprocessing } from "./case-postprocessing";
 
 const closeReasons = new Map([["REPLACEMENT_CHECKED_IN", "대체 숙소 입실 확인 후 종료"]]);
 const dateTime = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" });
@@ -90,6 +91,7 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
         {detail.tasks.length ? (
           <ul className="divide-y">{detail.tasks.map(task => <TaskRow key={task.taskId} caseId={detail.caseId} task={task} closed={closed} onDone={taskDone} />)}</ul>
         ) : <p className="text-sm text-muted-foreground">남은 업무 없음</p>}
+        <CasePostprocessing key={detail.caseId} caseId={detail.caseId} closed={closed} onSaved={onChanged} />
         <div className="space-y-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">입실 확인, 필요한 숙박일 보장, 필수 업무 완료를 모두 확인한 뒤에만 종료됩니다.</p>
           <Button type="button" disabled={closing} onClick={() => void close()}>{closing ? "종료 조건 확인 중…" : "대응 건 종료"}</Button>
@@ -97,6 +99,7 @@ export function CaseClosurePanel({ detail, onChanged }: { detail: CaseDetail; on
           {blockers.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm">{blockers.map(item => <li key={item.code}>{blockerText(item)}</li>)}</ul>}
         </div>
       </>}
+      {closed && <CasePostprocessing key={detail.caseId} caseId={detail.caseId} closed onSaved={onChanged} />}
     </section>
   );
 }
