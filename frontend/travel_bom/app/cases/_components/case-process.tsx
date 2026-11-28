@@ -49,7 +49,7 @@ export function flash(selector: string) {
 type Shown = "done" | "now" | "blocked" | "later" | "skip";
 const shown: Record<Shown, { dot: string; text: string }> = {
   done: { dot: "border-success bg-success text-white", text: "text-[oklch(0.4_0.1_158)]" },
-  now: { dot: "scale-[1.2] border-primary bg-primary text-primary-foreground", text: "font-bold text-primary" },
+  now: { dot: "scale-[1.2] border-primary bg-brand text-primary-foreground", text: "font-bold text-accent-foreground" },
   // The current step has an open task: same place in the flow, shown in red.
   blocked: { dot: "scale-[1.2] border-primary bg-primary text-white", text: "font-bold text-accent-foreground" },
   later: { dot: "border-border bg-border text-muted-foreground", text: "text-muted-foreground" },
@@ -102,7 +102,7 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
       {/* The track runs behind the markers, from the first to the last, filled up to the current step. */}
       <div className="relative mt-3">
         <div className="absolute top-[0.6875rem] right-[7.14%] left-[7.14%] h-1.5 overflow-hidden rounded-full bg-border" aria-hidden="true">
-          <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--warning))] transition-[width] duration-500"
+          <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--primary-end))] transition-[width] duration-500"
             style={{ width: `${now < 0 ? 100 : (now / (steps.length - 1)) * 100}%` }} />
         </div>
         <ol className="relative flex min-w-0">
