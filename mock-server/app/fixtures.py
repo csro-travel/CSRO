@@ -17,12 +17,12 @@ SCENARIOS = {
 # Demo 1: nine more confirmed bookings at HOTEL-002, all available like YB-002.
 SCENARIOS.update({f"SUP-BOOK-{n}": {"booking": f"YB-{n}", "property": "HOTEL-002",
                                     "reconfirmation": f"RC-{n}", "mode": "AVAILABLE"} for n in range(101, 110)})
-# Queue variety for the counselor screens: five more first-night failures found by the risk batch
-# (one booking per hotel) and three more pending hotels reached only by a customer report.
+# Queue variety for the counselor screens: two more first-night failures found by the risk batch
+# (one booking per hotel) and one more pending hotel reached only by a customer report.
 SCENARIOS.update({f"SUP-BOOK-{n}": {"booking": f"YB-{n}", "property": f"HOTEL-{n}",
-                                    "reconfirmation": f"RC-{n}", "mode": "FIRST_NIGHT_FAILURE"} for n in range(201, 206)})
+                                    "reconfirmation": f"RC-{n}", "mode": "FIRST_NIGHT_FAILURE"} for n in range(201, 203)})
 SCENARIOS.update({f"SUP-BOOK-{n}": {"booking": f"YB-{n}", "property": f"HOTEL-{n}",
-                                    "reconfirmation": f"RC-{n}", "mode": "PENDING"} for n in range(301, 304)})
+                                    "reconfirmation": f"RC-{n}", "mode": "PENDING"} for n in range(301, 302)})
 
 
 def lookup(supplier_booking_id: str) -> dict | None:

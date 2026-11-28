@@ -35,16 +35,10 @@ BEGIN
         -- Mock hotel reply: first night unavailable, the rest unknown. Found by the risk batch.
         ('201', '애월 선셋 리조트', assessed_reserved_at),
         ('202', '성산 일출 호텔', assessed_reserved_at),
-        ('203', '중문 팜 리조트', assessed_reserved_at),
-        ('204', '함덕 비치 호텔', assessed_reserved_at),
-        ('205', '협재 블루 호텔', assessed_reserved_at),
         -- Mock hotel reply: 202 pending, so the automatic re-check runs out of attempts.
         ('301', '표선 스테이 호텔', reported_reserved_at),
-        ('302', '서귀포 올레 호텔', reported_reserved_at),
-        ('303', '제주 공항 호텔', reported_reserved_at),
-        -- Mock hotel reply: reservation not found (003), hotel service unavailable (005).
-        ('003', '제주 센트럴 호텔', reported_reserved_at),
-        ('005', '한림 포레스트 호텔', reported_reserved_at);
+        -- Mock hotel reply: reservation not found.
+        ('003', '제주 센트럴 호텔', reported_reserved_at);
 
     IF EXISTS (
         SELECT 1 FROM bookings b JOIN queue_seed s
