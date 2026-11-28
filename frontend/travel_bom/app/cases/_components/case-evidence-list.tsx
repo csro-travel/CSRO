@@ -8,7 +8,7 @@ type Booking = CaseDetail["booking"];
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
 
-function parse(content: string | null): unknown {
+export function parse(content: string | null): unknown {
   if (!content) return null;
   try { return JSON.parse(content); } catch { return null; }
 }
@@ -40,7 +40,7 @@ function supplierSentence(payload: unknown, booking: Booking) {
 }
 
 /** What the hotel actually said for each night, when the reply carries a message. */
-function hotelQuotes(payload: unknown) {
+export function hotelQuotes(payload: unknown) {
   const quotes = new Map<string, string>();
   if (isRecord(payload) && Array.isArray(payload.nights)) {
     for (const night of payload.nights) {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BadgeCheck, Cpu, Radar, ShieldAlert, UserRound } from "lucide-react";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   evidenceSourceLabels, formatDateTime, formatDay, formatFeature, formatScore, formatSignal, jobStatusLabels, SIGNAL_LINE, signalPercent, originLabels, policyLabels, policyNotes, provisionLabels,
   riskFeatureLabels, supplierStatusLabels, triggerLabels,
@@ -111,21 +111,6 @@ function steps(detail: CaseDetail): Step[] {
   return list.sort((left, right) => time(left) - time(right));
 }
 
-/** Risk factors read from the stored state. Nothing here is a model guess. */
-function factors(detail: CaseDetail) {
-  const count = (filter: (night: CaseDetail["nights"][number]) => boolean) => detail.nights.filter(filter).length;
-  const unavailable = count(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE");
-  const unknown = count(night => night.factStatus === "UNCONFIRMED");
-  const list: { label: string; tone: BadgeTone }[] = [];
-  if (unavailable) list.push({ label: `객실 제공 불가 ${unavailable}박`, tone: "danger" });
-  if (unavailable && detail.booking.supplierStatus === "CONFIRMED") list.push({ label: "예약 상태 불일치 · 공급사는 확정", tone: "danger" });
-  if (detail.customerReports.some(report => report.atHotel)) list.push({ label: "고객 호텔 현장 대기", tone: "danger" });
-  if ((detail.analysisRuns ?? []).some(run => run.kind === "RECHECK" && (run.manualRequired || run.status === "FAILED"))) list.push({ label: "호텔 자동 확인 실패", tone: "danger" });
-  if (count(night => night.factStatus === "CONFLICT")) list.push({ label: "회신 내용 상충", tone: "warning" });
-  if (unknown) list.push({ label: `미확인 숙박일 ${unknown}박`, tone: "warning" });
-  return list;
-}
-
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -145,7 +130,6 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
   const OriginIcon = detail.origin?.type === "CUSTOMER_REPORT" ? UserRound : Radar;
   const risk = detail.risk;
   const list = steps(detail);
-  const riskFactors = factors(detail);
   const versions = [...new Set((detail.analysisRuns ?? []).filter(run => run.version).map(run => `${runNames[run.kind] ?? run.kind} · ${run.version}`))];
   return (
     <section className="panel space-y-3.5 p-4" aria-label="위험 판단 및 탐지 근거">
@@ -155,12 +139,6 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
       </div>
 
       <p className="text-sm leading-relaxed font-medium">{origin.detail}</p>
-
-      <Block title="주요 위험 요인">
-        {riskFactors.length
-          ? <ul className="flex flex-wrap gap-1.5">{riskFactors.map(factor => <li key={factor.label}><Badge tone={factor.tone} className="px-2.5 py-1 text-sm">{factor.label}</Badge></li>)}</ul>
-          : <p className="text-sm text-muted-foreground">지금 확인된 위험 요인이 없습니다.</p>}
-      </Block>
 
       <Block title="시스템 판단 이유">
         <ul className="space-y-1.5 text-sm">
