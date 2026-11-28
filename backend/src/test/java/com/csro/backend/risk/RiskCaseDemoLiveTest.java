@@ -101,7 +101,7 @@ class RiskCaseDemoLiveTest {
         assertEquals("YB-001", detail.at("/booking/bookingId").asString());
         assertEquals("CONFIRMED", detail.at("/booking/supplierStatus").asString());
         assertEquals("OPEN", detail.required("status").asString());
-        assertEquals("URGENT", detail.required("priority").asString());
+        assertEquals("NORMAL", detail.required("priority").asString());
         assertEquals(1, detail.required("tasks").size());
         assertEquals("CONTACT_CUSTOMER", detail.at("/nextAction/type").asString());
         assertEquals("TODO", detail.at("/nextAction/status").asString());

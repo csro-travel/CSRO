@@ -223,7 +223,7 @@ public class BookingReconfirmationEvidenceService {
                     WITH candidate AS (SELECT nextval(pg_get_serial_sequence('cases', 'id')) AS id)
                     INSERT INTO cases (id, case_code, booking_id, status, priority)
                     SELECT id, 'C-' || lpad(id::text, greatest(3, length(id::text)), '0'), :bookingId,
-                        'OPEN', 'URGENT' FROM candidate
+                        'OPEN', 'NORMAL' FROM candidate
                     ON CONFLICT DO NOTHING
                     RETURNING id, case_code
                     """).param("bookingId", bookingId)
