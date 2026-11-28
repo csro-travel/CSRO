@@ -54,7 +54,8 @@ export function CaseDetailTabs({ title, badges, top, caseId, closed, detail, chi
               대체 숙소 추천
             </Tabs.Tab>
           </Tabs.List>
-          <div className="min-w-0 pt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1 [scrollbar-width:thin]">
+          {/* Positioned, so visually hidden labels inside (absolutely placed) scroll with this area instead of stretching the page. */}
+          <div className="relative min-w-0 pt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1 [scrollbar-width:thin]">
             <Tabs.Panel value="case" keepMounted className="space-y-3 pb-1 outline-none">
               {children}
             </Tabs.Panel>

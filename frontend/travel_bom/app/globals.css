@@ -194,8 +194,9 @@
     @apply tabular-nums;
     font-feature-settings: 'tnum' 1;
   }
+  /* Positioned: visually hidden labels inside (absolutely placed) scroll with the area instead of stretching the page. */
   .scroll-area {
-    @apply min-h-0 overflow-y-auto overscroll-contain;
+    @apply relative min-h-0 overflow-y-auto overscroll-contain;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
