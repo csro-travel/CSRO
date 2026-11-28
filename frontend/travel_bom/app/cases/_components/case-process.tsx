@@ -46,14 +46,13 @@ export function flash(selector: string) {
   return true;
 }
 
-type Shown = "done" | "now" | "blocked" | "later" | "skip";
+type Shown = "done" | "now" | "later" | "skip";
+// One blue on white for the whole bar: filled where the work is done or under way, white where it is still ahead.
 const shown: Record<Shown, { dot: string; text: string }> = {
-  done: { dot: "border-success bg-success text-white", text: "text-[oklch(0.4_0.1_158)]" },
-  now: { dot: "scale-[1.2] border-primary bg-brand text-primary-foreground", text: "font-bold text-accent-foreground" },
-  // The current step has an open task: same place in the flow, shown in red.
-  blocked: { dot: "scale-[1.2] border-primary bg-primary text-white", text: "font-bold text-accent-foreground" },
-  later: { dot: "border-border bg-border text-muted-foreground", text: "text-muted-foreground" },
-  skip: { dot: "border-dashed border-input bg-background text-muted-foreground", text: "text-muted-foreground opacity-60" },
+  done: { dot: "border-info bg-info text-white", text: "text-info" },
+  now: { dot: "scale-[1.2] border-info bg-info text-white ring-4 ring-info/20", text: "font-bold text-info" },
+  later: { dot: "border-info/35 bg-background text-info/70", text: "text-muted-foreground" },
+  skip: { dot: "border-dashed border-info/35 bg-background text-info/50", text: "text-muted-foreground opacity-60" },
 };
 
 /** Where each step is handled: the tab it lives on and the area to point at. */
@@ -84,16 +83,15 @@ const taskTarget = (type: string) => (type === "VERIFY_HOTEL" ? '[aria-label="�
 export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
   const steps = caseProcess(detail);
   const now = steps.findIndex(step => step.state !== "done" && step.state !== "skip");
-  const blocked = now >= 0 && steps[now].state === "action";
   const next = detail.status === "CLOSED" ? undefined : detail.tasks.find(task => task.taskId === detail.nextAction?.taskId) ?? detail.tasks[0];
   return (
     <nav aria-label="상담 진행 단계" className="panel px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className={`text-base leading-tight font-bold ${blocked ? "text-accent-foreground" : ""}`}>
+        <p className="text-base leading-tight font-bold text-info">
           {now >= 0 ? <>지금: {steps[now].label} <span className="num text-sm font-medium text-muted-foreground">({now + 1}/{steps.length})</span></> : "모든 단계가 끝났습니다"}
         </p>
         {next && (
-          <Button type="button" size="sm" className="ml-auto" onClick={() => flash(taskTarget(next.type))}>
+          <Button type="button" size="sm" className="ml-auto bg-info bg-none hover:brightness-110" onClick={() => flash(taskTarget(next.type))}>
             다음 할 일: {taskLabels.get(next.type) ?? "남은 업무 확인"}<ArrowDown aria-hidden="true" />
           </Button>
         )}
@@ -101,22 +99,22 @@ export function CaseProcessBar({ detail }: { detail: CaseDetail }) {
       </div>
       {/* The track runs behind the markers, from the first to the last, filled up to the current step. */}
       <div className="relative mt-3">
-        <div className="absolute top-[0.6875rem] right-[7.14%] left-[7.14%] h-1.5 overflow-hidden rounded-full bg-border" aria-hidden="true">
-          <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--primary-end))] transition-[width] duration-500"
+        <div className="absolute top-[0.6875rem] right-[7.14%] left-[7.14%] h-1.5 overflow-hidden rounded-full bg-info/15" aria-hidden="true">
+          <div className="h-full rounded-full bg-info transition-[width] duration-500"
             style={{ width: `${now < 0 ? 100 : (now / (steps.length - 1)) * 100}%` }} />
         </div>
         <ol className="relative flex min-w-0">
           {steps.map((step, index) => {
-            const state: Shown = index === now ? (blocked ? "blocked" : "now") : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
+            const state: Shown = index === now ? "now" : step.state === "done" ? "done" : step.state === "skip" ? "skip" : "later";
             const style = shown[state];
             return (
               <li key={step.label} data-process-step={index + 1} aria-current={index === now ? "step" : undefined} className="min-w-0 flex-1">
                 <button type="button" title={`${step.label} 영역으로 이동`} onClick={() => goToStep(index)}
                   className={`group flex w-full cursor-pointer flex-col items-center gap-1.5 rounded-md pb-1 text-center outline-none focus-visible:ring-3 focus-visible:ring-ring/40 ${style.text}`}>
-                  <span className={`num flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-transform group-hover:ring-4 group-hover:ring-primary/20 ${style.dot}`}>
+                  <span className={`num flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-transform group-hover:ring-4 group-hover:ring-info/20 ${style.dot}`}>
                     {state === "done" ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
                   </span>
-                  <span className="rounded px-1 text-[0.8rem] leading-tight wrap-anywhere group-hover:bg-accent group-hover:text-accent-foreground">{step.label}{state === "skip" && <span className="block text-[0.7rem]">해당 없음</span>}</span>
+                  <span className="rounded px-1 text-[0.8rem] leading-tight wrap-anywhere group-hover:bg-info/10 group-hover:text-info">{step.label}{state === "skip" && <span className="block text-[0.7rem]">해당 없음</span>}</span>
                 </button>
               </li>
             );

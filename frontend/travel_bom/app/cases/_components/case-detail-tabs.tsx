@@ -40,7 +40,7 @@ export function CaseDetailTabs({ title, badges, top, caseId, closed, children, c
 
       <div className="grid min-w-0 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.85fr)]">
         <div className="flex min-w-0 flex-col lg:min-h-0">
-          <Tabs.List aria-label="상담 상세" className="flex shrink-0 justify-end gap-1 border-b border-border px-2">
+          <Tabs.List aria-label="상담 상세" className="flex shrink-0 justify-start gap-1 border-b border-border px-2">
             <Tabs.Tab value="case" className={tabClassName}>
               <FileText aria-hidden="true" className="size-[1.125rem] shrink-0" />
               상담 정보

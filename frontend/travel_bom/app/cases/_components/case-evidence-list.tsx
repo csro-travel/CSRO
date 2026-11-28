@@ -72,7 +72,6 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
   // A manual record keeps the counselor's own call note as plain text.
   const note = payload === null && record.originalContent ? record.originalContent.trim() : isRecord(payload) ? text(payload.callNote) : null;
   const Icon = record.sourceType.startsWith("SUPPLIER") ? Building2 : record.sourceType === "MANUAL_HOTEL" ? Headset : Hotel;
-  const raw = payload === null ? record.originalContent : JSON.stringify(payload, null, 2);
 
   return (
     <li className="space-y-2 py-3 first:pt-0 last:pb-0" data-evidence-id={record.evidenceId}>
@@ -117,12 +116,6 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
       {note && <blockquote className="border-l-2 pl-3 text-sm leading-relaxed text-muted-foreground">{note}</blockquote>}
       {!supplier && record.assertions.length === 0 && !note && <p className="text-sm text-muted-foreground">문장으로 풀 수 있는 내용이 없습니다. 원본 데이터를 확인하세요.</p>}
 
-      {raw && (
-        <details className="group text-xs">
-          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">+ 원본 데이터(감사용)</summary>
-          <pre className="num mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 leading-relaxed whitespace-pre-wrap wrap-anywhere">{raw}</pre>
-        </details>
-      )}
     </li>
   );
 }
@@ -156,15 +149,7 @@ export function CaseEvidenceList({ detail, onChanged }: { detail: CaseDetail; on
           : detail.nights.length > 0 && <Badge tone="neutral" className="px-2.5 py-1 text-sm">전 숙박일 확인 완료</Badge>}
       </div>
       <HotelCallEntry detail={detail} onChanged={onChanged} />
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
-        <details className="min-w-0 flex-1">
-          <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">+ 채택 기준 확인</summary>
-          <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
-            <li>호텔·공급사가 말한 내용은 주장이고, &lsquo;사실로 채택&rsquo;된 항목만 숙박일 상태에 반영됩니다.</li>
-            <li>제공 가능·제공 불가를 분명히 답한 숙박일만 채택합니다. 미확인·응답 대기·오류는 제공 불가로 처리하지 않고 미확인으로 둡니다.</li>
-            <li>이미 확인된 사실과 다른 답이 오면 덮어쓰지 않고 상충으로 표시합니다.</li>
-          </ul>
-        </details>
+      <div className="mt-2 flex justify-end text-xs">
         <Link href={`/risk/evidence?booking=${encodeURIComponent(booking.bookingId)}`} className="shrink-0 text-primary underline-offset-4 hover:underline">
           이 예약의 전체 재확인 기록
         </Link>
@@ -172,7 +157,7 @@ export function CaseEvidenceList({ detail, onChanged }: { detail: CaseDetail; on
       {evidence.length ? (
         <details className="group mt-3">
           <summary className="cursor-pointer list-none text-xs font-medium text-primary select-none">
-            <span className="group-open:hidden">+ 회신 원문 보기 · {evidence.length}건</span><span className="hidden group-open:inline">− 회신 원문 닫기</span>
+            <span className="group-open:hidden">+ 회신 내용 보기 · {evidence.length}건</span><span className="hidden group-open:inline">− 회신 내용 닫기</span>
           </summary>
           <ul className="mt-3 divide-y">{evidence.map(record => <Record_ key={record.evidenceId} record={record} booking={booking} />)}</ul>
         </details>

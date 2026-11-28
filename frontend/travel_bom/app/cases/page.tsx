@@ -144,7 +144,7 @@ export default function Cases() {
           >
             <CaseDetails detail={detail} />
             {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
-            <div className="grid items-start gap-3 2xl:grid-cols-2">
+            <div className="grid items-stretch gap-3 2xl:grid-cols-2">
               <CaseRiskBasis detail={detail} />
               <CaseEvidenceList detail={detail} onChanged={() => setAttempt(value => value + 1)} />
             </div>
