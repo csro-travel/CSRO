@@ -1,7 +1,7 @@
 import { CalendarDays, Users, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { NightStrip } from "@/components/console/night-strip";
-import { formatDateTime, formatDay, supplierStatusLabels, taskLabels } from "@/lib/case-labels";
+import { formatDateTime, formatDay, nightTone, supplierStatusLabels, taskLabels, type NightTone } from "@/lib/case-labels";
 import type { CaseDetail } from "../_types/case";
 
 /** Kept for the closure and chat panels that name tasks the same way. */
@@ -9,21 +9,38 @@ export const taskNames = taskLabels;
 
 const reportNames = new Map([["CHECKIN_FAILED", "체크인 실패 신고"]]);
 
-export function problemSummary(detail: CaseDetail) {
-  const unavailable = detail.nights.filter(night => night.factStatus === "VERIFIED" && night.fulfillmentStatus === "UNAVAILABLE");
-  if (unavailable.length) return `${unavailable.map(night => formatDay(night.stayDate)).join(", ")} 객실을 제공할 수 없다는 사실이 확인됐습니다.`;
-  if (detail.nights.some(night => night.factStatus === "CONFLICT")) return "객실 제공 여부에 대한 근거가 서로 엇갈립니다.";
-  if (detail.customerReports.length) return "고객이 체크인 문제를 신고했고, 호텔 확인은 아직 끝나지 않았습니다.";
-  return "숙박일별 객실 제공 여부를 확인하고 있습니다.";
+const verdicts: Record<NightTone, { label: string; unit: string; style: string }> = {
+  unavailable: { label: "문제 확인됨", unit: "불가", style: "border-destructive/40 bg-destructive/10 text-destructive" },
+  conflict: { label: "근거 상충", unit: "상충", style: "border-warning/50 bg-warning/15 text-[oklch(0.42_0.1_70)]" },
+  // Hatched like an unconfirmed night: not yet a fact, and never to be read as "fine".
+  unknown: { label: "확인 중", unit: "미확인", style: "border-dashed border-input bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--muted)_5px_10px)] text-foreground" },
+  available: { label: "문제 없음", unit: "제공 가능", style: "border-success/40 bg-success/12 text-[oklch(0.38_0.1_158)]" },
+};
+const severity: NightTone[] = ["unavailable", "conflict", "unknown", "available"];
+
+/** The one-line answer to "is this really a problem", read from the stored night states. The worst state leads. */
+export function caseVerdict(nights: CaseDetail["nights"]) {
+  const count = (tone: NightTone) => nights.filter(night => nightTone(night) === tone).length;
+  const lead = severity.find(tone => count(tone) > 0) ?? "unknown";
+  const rest = lead === "available"
+    ? [`${nights.length}박 모두 제공 가능`]
+    : severity.filter(tone => tone !== "available" && count(tone) > 0).map(tone => `${count(tone)}박 ${verdicts[tone].unit}`);
+  return { tone: lead, ...verdicts[lead], detail: rest.join(", ") || "숙박일 정보 없음" };
 }
 
 /** Booking facts and the night-by-night state: the first thing a counselor reads. */
 export function CaseDetails({ detail }: { detail: CaseDetail }) {
   const { booking, customerReports, nights } = detail;
   const unknown = nights.filter(night => night.factStatus === "UNCONFIRMED").length;
+  const verdict = caseVerdict(nights);
+  const atHotel = detail.status !== "CLOSED" && customerReports.some(report => report.atHotel);
   return (
     <section className="panel space-y-3 p-4" aria-label="예약과 대응 건 요약">
-      <p className="text-base leading-snug font-semibold">{problemSummary(detail)}</p>
+      <p data-verdict={verdict.tone} className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-md border px-3.5 py-2.5 ${verdict.style}`}>
+        <strong className="text-xl leading-tight font-bold">{verdict.label}</strong>
+        <span className="num text-base font-semibold">· {verdict.detail}</span>
+        {atHotel && <Badge tone="danger" className="ml-auto bg-destructive px-2.5 py-1 text-sm text-white">긴급 · 고객 호텔 현장</Badge>}
+      </p>
       <NightStrip nights={nights} />
       {unknown > 0 && <p className="text-xs text-muted-foreground">빗금 친 {unknown}박은 아직 확인되지 않았습니다. 정상이라는 뜻이 아닙니다.</p>}
       <dl className="flex flex-wrap gap-x-5 gap-y-1.5 border-t pt-3 text-sm">
@@ -57,10 +74,7 @@ export function CaseDetails({ detail }: { detail: CaseDetail }) {
         <ul className="space-y-1 border-t pt-3 text-sm">
           {customerReports.map(report => (
             <li key={report.reportId} className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <span>
-                {reportNames.get(report.issueType) ?? "고객 신고"}
-                {report.atHotel && <Badge tone="danger" className="ml-2">고객이 호텔 현장에 있음</Badge>}
-              </span>
+              <span>{reportNames.get(report.issueType) ?? "고객 신고"}</span>
               <time dateTime={report.receivedAt} className="num text-xs text-muted-foreground">접수 {formatDateTime(report.receivedAt)}</time>
             </li>
           ))}

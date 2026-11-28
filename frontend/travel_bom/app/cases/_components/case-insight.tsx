@@ -7,7 +7,6 @@ import {
   riskFeatureLabels, supplierStatusLabels, triggerLabels,
 } from "@/lib/case-labels";
 import type { AnalysisRun, CaseDetail, RiskSignal } from "../_types/case";
-import { problemSummary } from "./case-details";
 import { ruleGuidance } from "./case-guidance";
 
 const featureOrder = ["targetConfirmedBookingCount", "pastFailureRate90d", "reconfirmationOverdueRate7d", "inventoryUnavailableRate7d", "bookingVolumeGrowth7d", "isPeakDay"];
@@ -155,7 +154,7 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
         <Badge tone={origin.tone}><OriginIcon aria-hidden="true" />{origin.label}</Badge>
       </div>
 
-      <p className="text-sm leading-relaxed font-medium">{origin.detail} {problemSummary(detail)}</p>
+      <p className="text-sm leading-relaxed font-medium">{origin.detail}</p>
 
       <Block title="주요 위험 요인">
         {riskFactors.length
@@ -167,7 +166,7 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
         <ul className="space-y-1.5 text-sm">
           <li className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-2">
             <Badge tone="success"><BadgeCheck aria-hidden="true" />확인된 사실</Badge>
-            <span>{problemSummary(detail)} 호텔·공급사 회신으로 채택된 내용만 반영합니다.</span>
+            <span>위 판정은 호텔·공급사 회신 중 사실로 채택된 내용만 반영합니다.</span>
           </li>
           <li className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-2">
             <Badge tone="info"><Cpu aria-hidden="true" />시스템 추정</Badge>
