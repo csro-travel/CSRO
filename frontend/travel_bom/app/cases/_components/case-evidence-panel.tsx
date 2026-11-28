@@ -20,6 +20,8 @@ const choices = [
 export function HotelCallEntry({ detail, onChanged }: { detail: CaseDetail; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [phone, setPhone] = useState("");
+  const [link, setLink] = useState("");
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
@@ -29,12 +31,18 @@ export function HotelCallEntry({ detail, onChanged }: { detail: CaseDetail; onCh
   const nights = pending.filter(night => statuses[night.stayDate]).map(night => ({ stayDate: night.stayDate, reportedProvisionStatus: statuses[night.stayDate] }));
 
   async function submit() {
-    if (sending || !note.trim() || !nights.length) return;
+    if (sending || !nights.length) return;
     key.current ??= crypto.randomUUID();
     setSending(true); setMessage("");
+    // The record needs a note. Contact details handed over go in first; an empty note is stored as "not entered".
+    const callNote = [
+      phone.trim() && `호텔 전화 ${phone.trim()}`,
+      link.trim() && `호텔 링크 ${link.trim()}`,
+      note.trim() || "통화 내용 미입력",
+    ].filter(Boolean).join(" · ");
     try {
-      const result = await recordHotelEvidence(detail.caseId, key.current, { callNote: note.trim(), nights });
-      key.current = null; setNote(""); setStatuses({}); setOpen(false);
+      const result = await recordHotelEvidence(detail.caseId, key.current, { callNote, nights });
+      key.current = null; setNote(""); setPhone(""); setLink(""); setStatuses({}); setOpen(false);
       setMessage(result.caseStatus === "WAITING" ? "기록했습니다. 확인되지 않은 숙박일이 남아 상담 상태가 확인 대기로 바뀌었습니다." : "기록했습니다.");
       onChanged();
     } catch (cause) {
@@ -75,14 +83,23 @@ export function HotelCallEntry({ detail, onChanged }: { detail: CaseDetail; onCh
               </li>
             ))}
           </ul>
+          <fieldset className="space-y-1.5 rounded-md bg-muted/60 p-2.5">
+            <legend className="float-left mb-1.5 w-full text-xs font-medium">다음 담당자에게 넘길 호텔 연락처 <span className="font-normal text-muted-foreground">선택</span></legend>
+            <div className="flex w-full flex-wrap gap-2">
+              <Input aria-label="호텔 전화번호" type="tel" value={phone} maxLength={30} disabled={sending} onChange={event => setPhone(event.target.value)}
+                placeholder="호텔 전화번호" className="w-44 bg-background" />
+              <Input aria-label="호텔 링크" type="url" value={link} maxLength={300} disabled={sending} onChange={event => setLink(event.target.value)}
+                placeholder="호텔 홈페이지·예약 페이지 링크" className="min-w-48 flex-1 bg-background" />
+            </div>
+          </fieldset>
           <div className="flex flex-wrap gap-2">
-            <Input aria-label="호텔 통화 내용" value={note} maxLength={2000} disabled={sending} onChange={event => setNote(event.target.value)}
-              placeholder="통화 상대·시각·호텔이 말한 내용" className="min-w-48 flex-1" />
-            <Button type="button" disabled={sending || !note.trim() || !nights.length} onClick={() => void submit()}>
+            <Input aria-label="호텔 통화 내용" value={note} maxLength={1600} disabled={sending} onChange={event => setNote(event.target.value)}
+              placeholder="호텔이 말한 내용 (선택)" className="min-w-48 flex-1" />
+            <Button type="button" disabled={sending || !nights.length} onClick={() => void submit()}>
               {sending ? "기록 중…" : "저장"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">가능·불가로 답한 날짜는 사실로 반영되고, 이미 확인된 내용과 다르면 상충으로 표시됩니다.</p>
+          <p className="text-xs text-muted-foreground">날짜별 답만 골라도 저장됩니다. 가능·불가로 답한 날짜는 사실로 반영되고, 이미 확인된 내용과 다르면 상충으로 표시됩니다.</p>
         </div>
       )}
       {message && <p role="status" className="mt-2 text-sm">{message}</p>}

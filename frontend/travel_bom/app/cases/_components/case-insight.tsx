@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BadgeCheck, ClipboardList, Cpu, Radar, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -86,8 +88,9 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
   const origin = originLabels[detail.origin?.type ?? "UNKNOWN"] ?? originLabels.UNKNOWN;
   const OriginIcon = detail.origin?.type === "CUSTOMER_REPORT" ? UserRound : Radar;
   const list = steps(detail);
+  const [open, setOpen] = useState(false);
   return (
-    <section className="panel space-y-3.5 p-4" aria-label="확인된 내용">
+    <section className="panel flex flex-col gap-3.5 p-4" aria-label="확인된 내용">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="flex items-center gap-1.5 text-base font-semibold"><ClipboardList className="size-4 text-muted-foreground" aria-hidden="true" />확인된 내용</h3>
         <Badge tone="outline"><OriginIcon aria-hidden="true" />{origin.label}</Badge>
@@ -106,26 +109,32 @@ export function CaseRiskBasis({ detail }: { detail: CaseDetail }) {
         </li>
       </ul>
 
-      <details className="group text-xs" aria-label="처리 이력">
-        <summary className="cursor-pointer list-none font-medium text-primary select-none">
-          <span className="group-open:hidden">+ 처리 이력 보기</span><span className="hidden group-open:inline">− 처리 이력 닫기</span>
-        </summary>
-        <div className="mt-2.5">
-            {list.length ? (
-              <ol className="space-y-2">
-                {list.map((step, index) => (
-                  <li key={index} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2">
-                    <time dateTime={step.at ?? undefined} className="num text-muted-foreground">{step.at ? formatDateTime(step.at) : "시각 없음"}</time>
-                    <div className="min-w-0 space-y-1">
-                      <p className={`flex flex-wrap items-center gap-1.5 text-sm font-medium ${step.danger ? "text-accent-foreground" : ""}`}>{step.title}</p>
-                      {step.body}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : <p className="text-muted-foreground">이력을 보여 줄 기록이 없습니다.</p>}
-        </div>
-      </details>
+      <div aria-label="처리 이력" className="flex min-h-0 flex-1 flex-col text-xs">
+        <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}
+          className="w-fit cursor-pointer rounded font-medium text-primary outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/30">
+          {open ? "− 처리 이력 닫기" : "+ 처리 이력 보기"}
+        </button>
+        {open && (
+          // Positioned inside a growing box: the list takes the remaining height of the panel instead of stretching it.
+          <div className="relative mt-2.5 min-h-40 flex-1">
+            <div className="scroll-area absolute inset-0 pr-1">
+              {list.length ? (
+                <ol className="space-y-2">
+                  {list.map((step, index) => (
+                    <li key={index} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2">
+                      <time dateTime={step.at ?? undefined} className="num text-muted-foreground">{step.at ? formatDateTime(step.at) : "시각 없음"}</time>
+                      <div className="min-w-0 space-y-1">
+                        <p className={`flex flex-wrap items-center gap-1.5 text-sm font-medium ${step.danger ? "text-accent-foreground" : ""}`}>{step.title}</p>
+                        {step.body}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className="text-muted-foreground">이력을 보여 줄 기록이 없습니다.</p>}
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
