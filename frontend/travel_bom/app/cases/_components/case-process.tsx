@@ -78,7 +78,7 @@ function goToStep(index: number) {
 }
 
 /** Where the counselor records each open task. A hotel check is recorded as evidence, the rest as a task note. */
-const taskTarget = (type: string) => (type === "VERIFY_HOTEL" ? '[aria-label="수동 확인 및 후속 조치 기록"]' : `[data-task-type="${type}"]`);
+const taskTarget = (type: string) => (type === "VERIFY_HOTEL" ? '[aria-label="호텔 통화 결과"]' : `[data-task-type="${type}"]`);
 
 /** The stage as one sentence, the seven steps in three visible states, and one button to the next open task. */
 export function CaseProcessBar({ detail }: { detail: CaseDetail }) {

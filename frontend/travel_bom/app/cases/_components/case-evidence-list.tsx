@@ -3,6 +3,7 @@ import { Building2, Headset, Hotel, Info } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { evidenceSourceLabels, formatDateTime, formatDay, provisionLabels, reviewLabels, supplierStatusLabels } from "@/lib/case-labels";
 import type { CaseDetail, EvidenceRecord } from "../_types/case";
+import { HotelCallEntry } from "./case-evidence-panel";
 
 type Booking = CaseDetail["booking"];
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -127,7 +128,7 @@ function Record_({ record, booking }: { record: EvidenceRecord; booking: Booking
 }
 
 /** Evidence as sentences first; the stored payload stays available, folded, for audit. */
-export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
+export function CaseEvidenceList({ detail, onChanged }: { detail: CaseDetail; onChanged: () => void }) {
   const { evidence, booking } = detail;
   const unauthenticated = evidence.some(record => !record.sourceAuthenticated && record.sourceType !== "MANUAL_HOTEL");
   const replied = evidence.filter(record => !record.sourceType.startsWith("SUPPLIER"));
@@ -154,6 +155,7 @@ export function CaseEvidenceList({ detail }: { detail: CaseDetail }) {
           ? <Badge tone="warning" className="px-2.5 py-1 text-sm">후속 확인 필요 · {pending.join(", ")}</Badge>
           : detail.nights.length > 0 && <Badge tone="neutral" className="px-2.5 py-1 text-sm">전 숙박일 확인 완료</Badge>}
       </div>
+      <HotelCallEntry detail={detail} onChanged={onChanged} />
       <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
         <details className="min-w-0 flex-1">
           <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">+ 채택 기준 확인</summary>

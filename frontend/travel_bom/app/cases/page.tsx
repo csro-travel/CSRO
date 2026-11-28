@@ -11,7 +11,6 @@ import { CaseClosurePanel } from "./_components/case-closure-panel";
 import { CaseDetailTabs } from "./_components/case-detail-tabs";
 import { CaseDetails } from "./_components/case-details";
 import { CaseEvidenceList } from "./_components/case-evidence-list";
-import { CaseEvidencePanel } from "./_components/case-evidence-panel";
 import { CaseDraft } from "./_components/case-guidance";
 import { CaseRiskBasis } from "./_components/case-insight";
 import { CaseListView } from "./_components/case-list";
@@ -147,9 +146,8 @@ export default function Cases() {
             {/* Side by side on wide screens: what the hotel actually said next to why the system flagged it. */}
             <div className="grid items-start gap-3 2xl:grid-cols-2">
               <CaseRiskBasis detail={detail} />
-              <CaseEvidenceList detail={detail} />
+              <CaseEvidenceList detail={detail} onChanged={() => setAttempt(value => value + 1)} />
             </div>
-            <CaseEvidencePanel detail={detail} onChanged={() => setAttempt(value => value + 1)} />
             <CaseClosurePanel detail={detail} onChanged={() => { setAttempt(value => value + 1); setChatRefresh(value => value + 1); }} />
           </CaseDetailTabs>
         )}
