@@ -26,6 +26,9 @@ function request(instance, target, { method = 'GET', headers = {}, body } = {}) 
       res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }))
     })
     req.on('error', reject)
+    // Node sends no framing for a body on GET/HEAD/DELETE/OPTIONS; unframed bytes read as a second,
+    // malformed request and reset the socket. Declare the length so the refusal itself is what is tested.
+    if (body !== undefined) req.setHeader('Content-Length', Buffer.byteLength(body))
     req.end(body)
   })
 }

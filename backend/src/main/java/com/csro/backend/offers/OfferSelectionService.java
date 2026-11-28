@@ -66,8 +66,8 @@ public class OfferSelectionService {
     public SendResult send(Principal principal, String caseId, List<String> quoteIds, String key,
                            OffsetDateTime effectiveAt, boolean syntheticDemo) {
         caseId(caseId);
-        if (quoteIds == null || quoteIds.size() != 3 || quoteIds.stream().anyMatch(id -> !identifier(id, 80))
-                || new HashSet<>(quoteIds).size() != 3 || !key(key) || effectiveAt == null)
+        if (quoteIds == null || quoteIds.isEmpty() || quoteIds.size() > 3 || quoteIds.stream().anyMatch(id -> !identifier(id, 80))
+                || new HashSet<>(quoteIds).size() != quoteIds.size() || !key(key) || effectiveAt == null)
             throw bad("INVALID_OFFER_REQUEST");
         List<String> ordered = List.copyOf(quoteIds);
         String hash = digest(JSON.writeValueAsString(Map.of("quoteIds", ordered)));
@@ -91,7 +91,7 @@ public class OfferSelectionService {
             protectReplacement(context.caseKey());
             Search job = latestCompleted(context);
             List<Quote> quotes = quotes(context.caseKey(), ordered);
-            requireQuotes(quotes.size() == 3 && quotes.stream().map(Quote::hotelKey).distinct().count() == 3);
+            requireQuotes(quotes.size() == ordered.size() && quotes.stream().map(Quote::hotelKey).distinct().count() == ordered.size());
             Group group = validateContext(context, job, quotes, effectiveAt, syntheticDemo, true);
             requireFreshAfterFailure(context.caseKey(), job);
 
@@ -119,7 +119,7 @@ public class OfferSelectionService {
                     INSERT INTO chat_messages (message_code,case_id,sender_user_id,sender_type,message_type,body,offer_id,sent_at)
                     VALUES (:code,:caseKey,:actor,'COUNSELOR','OFFER',:body,:offer,:now)
                     """).param("code", messageId).param("caseKey", context.caseKey()).param("actor", actor.id())
-                    .param("body", "대체 숙소 3곳을 확인해 주세요. 선택은 예약 확정이 아니며 견적 차이는 실제 추가 부담금이 아닙니다.")
+                    .param("body", "대체 숙소 " + ordered.size() + "곳을 확인해 주세요. 선택은 예약 확정이 아니며 견적 차이는 실제 추가 부담금이 아닙니다.")
                     .param("offer", offerKey).param("now", sentAt).update();
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("protocol", PROTOCOL); details.put("offerId", offerId); details.put("messageId", messageId);
@@ -172,7 +172,8 @@ public class OfferSelectionService {
                     """).param("offer", offerKey).param("caseKey", context.caseKey()).query(String.class).list();
             if (!sentIds.contains(quoteId)) throw conflict("QUOTE_NOT_OFFERED");
             List<Quote> quotes = quotes(context.caseKey(), sentIds);
-            requireQuotes(quotes.size() == 3 && quotes.stream().map(Quote::hotelKey).distinct().count() == 3);
+            requireQuotes(!sentIds.isEmpty() && sentIds.size() <= 3 && quotes.size() == sentIds.size()
+                    && quotes.stream().map(Quote::hotelKey).distinct().count() == sentIds.size());
             Search job = completed(context, quotes.getFirst().jobId());
             validateContext(context, job, quotes, effectiveAt, syntheticDemo, false);
             requireFreshAfterFailure(context.caseKey(), job);

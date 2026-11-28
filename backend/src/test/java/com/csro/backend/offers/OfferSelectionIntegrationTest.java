@@ -120,8 +120,18 @@ class OfferSelectionIntegrationTest {
     }
 
     @Test
+    void oneOrTwoPropertiesCanBeOfferedAndOnlyTheSentOnesSelected() {
+        var one = service.send(COUNSELOR, fixture.caseCode(), List.of(choices().getFirst()), "one", AT, true);
+        assertCode(409, "QUOTE_NOT_OFFERED", () -> select(one.offerId(), choices().get(1), "not-sent"));
+        assertEquals(choices().getFirst(), select(one.offerId(), choices().getFirst(), "one-choice").quoteId());
+        var two = service.send(COUNSELOR, fixture.caseCode(), choices().subList(0, 2), "two", AT, true);
+        assertCode(409, "OFFER_NOT_ACTIVE", () -> select(one.offerId(), choices().getFirst(), "old-offer"));
+        assertEquals(choices().get(1), select(two.offerId(), choices().get(1), "two-choice").quoteId());
+    }
+
+    @Test
     void rejectsWrongCountSamePropertyForeignCaseAndOldSearchWithoutPartialWrites() {
-        assertCode(400, "INVALID_OFFER_REQUEST", () -> service.send(COUNSELOR, fixture.caseCode(), choices().subList(0,2), "two", AT, true));
+        assertCode(400, "INVALID_OFFER_REQUEST", () -> service.send(COUNSELOR, fixture.caseCode(), List.of(), "none", AT, true));
         assertCode(400, "INVALID_OFFER_REQUEST", () -> service.send(COUNSELOR, fixture.caseCode(),
                 List.of(choices().getFirst(), choices().getFirst(), choices().getLast()), "duplicate", AT, true));
         var foreign = createFixture();

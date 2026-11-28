@@ -173,7 +173,7 @@ class BookingReconfirmationEvidenceIntegrationTest {
                   "stayDates": ["2026-11-10", "2026-11-11", "2026-11-12"]
                 }' AS jsonb)
                 """).param("requestJson", requestJson).query(Boolean.class).single());
-        assertEquals(List.of("C-001/OPEN/URGENT/CONTACT_CUSTOMER/TODO"), caseTasks("YB-001"));
+        assertEquals(List.of("C-001/OPEN/NORMAL/CONTACT_CUSTOMER/TODO"), caseTasks("YB-001"));
     }
 
     @Test

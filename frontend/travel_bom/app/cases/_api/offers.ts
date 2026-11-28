@@ -28,7 +28,7 @@ export function loadPendingIntent<T extends OfferBody | SelectionBody>(kind: "of
   }
   const body = value.body;
   const valid = kind === "offer"
-    ? Object.keys(body).length === 1 && Array.isArray(body.quoteIds) && body.quoteIds.length === 3 && body.quoteIds.every(isText) && new Set(body.quoteIds).size === 3
+    ? Object.keys(body).length === 1 && Array.isArray(body.quoteIds) && body.quoteIds.length >= 1 && body.quoteIds.length <= 3 && body.quoteIds.every(isText) && new Set(body.quoteIds).size === body.quoteIds.length
     : Object.keys(body).length === 2 && isText(body.offerId) && isText(body.quoteId);
   if (!valid) throw Error("보관된 요청 본문을 확인할 수 없습니다. 새 요청을 보내기 전에 담당자에게 확인해 주세요.");
   return value as PendingIntent<T>;

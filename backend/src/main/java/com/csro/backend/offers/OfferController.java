@@ -41,7 +41,7 @@ public class OfferController {
         String code = "INVALID_OFFER_REQUEST";
         requireFields(body, Set.of("quoteIds"), key, code);
         JsonNode ids = body.get("quoteIds");
-        if (ids == null || !ids.isArray() || ids.size() != 3) throw invalid(code);
+        if (ids == null || !ids.isArray() || ids.size() < 1 || ids.size() > 3) throw invalid(code);
         var quoteIds = new ArrayList<String>();
         for (JsonNode id : ids) quoteIds.add(identifier(id, 80, code));
         return ResponseEntity.status(HttpStatus.CREATED).header("Cache-Control", "private, no-store")

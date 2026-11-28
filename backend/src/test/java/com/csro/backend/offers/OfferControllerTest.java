@@ -59,7 +59,8 @@ class OfferControllerTest {
 
     @Test
     void untrustedFactsCoercionsMalformedBodiesAndMissingKeysCannotReachWrites() throws Exception {
-        for (String body : new String[]{"{", "null", "{\"quoteIds\":[\"QA\",\"QB\",1]}",
+        for (String body : new String[]{"{", "null", "{\"quoteIds\":[\"QA\",\"QB\",1]}", "{\"quoteIds\":[]}",
+                "{\"quoteIds\":[\"QA\",\"QB\",\"QC\",\"QD\"]}",
                 "{\"quoteIds\":[\"QA\",\"QB\",\"QC\"],\"asOf\":\"2026-11-09\"}"}) {
             mvc.perform(post("/api/v1/cases/C-001/offers").principal(COUNSELOR)
                             .header("Idempotency-Key", "send-1").contentType("application/json").content(body))
