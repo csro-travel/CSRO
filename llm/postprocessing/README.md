@@ -22,6 +22,8 @@ OpenAI Agents SDK로 사건 초안을 생성하고, 상담사가 검토한 본�
   상담사 확인본은 같은 `case_id`, `reviewed_text`, `selected_follow_ups`로 제출한다.
   두 번째 호출에는 상담사 검토 본문만 전달한다. Agent가 정한 제목·섹션에
   검토 본문을 원래 순서로 넣고, 선택한 업무를 문서에 그대로 옮긴다.
+  Agent의 구성안이 본문 블록을 누락하거나 중복·재배치하면 검토 본문 전체를
+  한 섹션에 원래 순서대로 넣어 문서를 생성한다.
 - Spring 연동은 아래 내부 서버를 사용한다. Spring과 Python에 동일한
   `POSTPROCESSING_SERVICE_TOKEN`을 환경 변수로 설정한다. Spring의
   `POSTPROCESSING_AGENT_URL` 기본값은 `http://127.0.0.1:8002`이다.

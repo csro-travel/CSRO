@@ -219,6 +219,8 @@ $env:CSRO_DEMO_SPRING_PORT = '18082'
 $env:CSRO_LOCAL_DEMO = 'true'
 $env:CSRO_CHAT_DEMO_PROXY = 'true'
 $env:CSRO_AIRBNB_DEMO_PROXY = 'true'
+$env:CSRO_CLOSURE_DEMO_PROXY = 'true'
+$env:CSRO_ASSIST_DEMO_PROXY = 'true'
 $env:CSRO_CUSTOMER_DEMO_PROXY = 'false'
 $env:CSRO_DEMO_TOKEN = $env:CSRO_CHAT_DEMO_TOKEN
 node .\demo-server.mjs
@@ -226,7 +228,7 @@ node .\demo-server.mjs
 
 [상담 사건 목록](http://127.0.0.1:3100/cases)을 엽니다. 조회가 401이면 프록시의 `CSRO_DEMO_TOKEN`과 실행 중인 Spring의 `CSRO_CHAT_DEMO_TOKEN`이 일치하는지 확인합니다. 같은 원래 세션에서 두 서버를 시작하면 토큰을 공유할 수 있습니다.
 
-Airbnb 시연 후보 3곳을 보낸 뒤 약 5초가 지나면 첫 후보 선택이 기록됩니다. 화면 표시에는 채팅 조회 주기만큼 더 걸릴 수 있습니다. **예약 진행**으로 시연 예약을 만들고, **후속 업무 → 초안 생성**에서 문서를 검토하고 DOCX를 내려받을 수 있습니다. 메시지 근거는 큰따옴표로 인용되며 내부 근거 ID는 검증에 사용합니다.
+Airbnb 시연 후보 3곳을 보낸 뒤 약 5초가 지나면 첫 후보 선택이 기록됩니다. 화면 표시에는 채팅 조회 주기만큼 더 걸릴 수 있습니다. **예약 진행**으로 시연 예약을 만들고, **후속 업무 → 초안 생성**에서 문서를 검토하고 DOCX를 내려받을 수 있습니다. 초안 본문의 메시지 근거는 큰따옴표로 인용합니다. 프록시의 CSRO_CLOSURE_DEMO_PROXY 설정은 업무 완료, 호텔 확인 결과 등록, 사건 종결 요청을 활성화합니다.
 
 종료할 때 서버 창에서 `Ctrl+C`를 누릅니다. 시연 DB 컨테이너는 메모리 볼륨을 사용하므로 `docker stop csro-local-chat-demo-db`를 실행하면 해당 시연 데이터가 사라집니다.
 

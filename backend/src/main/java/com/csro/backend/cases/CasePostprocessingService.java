@@ -57,7 +57,7 @@ class CasePostprocessingService {
         this.agent = RestClient.builder().baseUrl(agentUrl).requestFactory(factory).build();
     }
 
-    record Draft(UUID draftId, JsonNode draft, boolean finalized, JsonNode taskIds) {}
+    record Draft(UUID draftId, JsonNode draft, boolean finalized, JsonNode taskIds, boolean checkinConfirmed) {}
     record TaskChoice(Integer index, String type, Boolean assignToMe, OffsetDateTime dueAt, Boolean required) {}
     record Submission(String reviewedText, List<TaskChoice> tasks) {}
     record Finalized(UUID draftId, JsonNode taskIds) {}
@@ -115,8 +115,10 @@ class CasePostprocessingService {
         body.set("case_input", stored.input());
         body.put("reviewed_text", request.reviewedText());
         var selected = body.putArray("selected_follow_ups");
+        boolean alreadyCheckedIn = checkinConfirmed(context.caseKey());
         for (var task : request.tasks()) {
             if (task.index() >= suggestions.size() || !suggestions.get(task.index()).isObject()) throw invalid();
+            if (alreadyCheckedIn && "CHECKIN_CONFIRM".equals(task.type())) continue;
             var suggestion = (tools.jackson.databind.node.ObjectNode) suggestions.get(task.index()).deepCopy();
             if (task.assignToMe()) suggestion.put("owner", "담당 상담사");
             else suggestion.putNull("owner");
@@ -137,6 +139,7 @@ class CasePostprocessingService {
             List<String> taskIds = new ArrayList<>();
             for (var choice : request.tasks()) {
                 if ("CHECKIN_CONFIRM".equals(choice.type())) {
+                    if (checkinConfirmed(context.caseKey())) continue;
                     var pending = jdbc.sql("""
                         SELECT id FROM case_tasks WHERE case_id=:case AND task_type='CHECKIN_CONFIRM'
                             AND is_required AND status IN ('TODO','IN_PROGRESS') ORDER BY id LIMIT 1
@@ -156,17 +159,6 @@ class CasePostprocessingService {
                         """).param("case", context.caseKey()).query(Boolean.class).single();
                     if (!replacementConfirmed)
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "POSTPROCESSING_REPLACEMENT_NOT_CONFIRMED");
-                    boolean checkinRecorded = jdbc.sql("""
-                        SELECT EXISTS (
-                            SELECT 1 FROM checkin_confirmations i
-                            JOIN replacement_requests r ON r.id=i.replacement_request_id
-                            JOIN alternative_selections s ON s.id=r.selection_id
-                            WHERE i.case_id=:case AND s.superseded_at IS NULL
-                                AND i.confirmation_status IN ('CUSTOMER_CONFIRMED','PROVIDER_VERIFIED')
-                        )
-                        """).param("case", context.caseKey()).query(Boolean.class).single();
-                    if (checkinRecorded)
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "POSTPROCESSING_ALREADY_CHECKED_IN");
                 }
                 long id = jdbc.sql("""
                     INSERT INTO case_tasks (case_id, booking_id, task_type, assignee_id, due_at, is_required)
@@ -204,14 +196,27 @@ class CasePostprocessingService {
         return new Context(entry.id(), user.id(), entry.status());
     }
 
+    private boolean checkinConfirmed(long caseKey) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM checkin_confirmations i
+                    JOIN replacement_requests r ON r.id=i.replacement_request_id AND r.case_id=i.case_id
+                    JOIN alternative_selections s ON s.id=r.selection_id AND s.case_id=i.case_id
+                    WHERE i.case_id=:case AND s.superseded_at IS NULL
+                        AND i.confirmation_status IN ('CUSTOMER_CONFIRMED','PROVIDER_VERIFIED')
+                )
+                """).param("case", caseKey).query(Boolean.class).single();
+    }
+
     private Optional<Stored> find(Context context, UUID id) {
+        boolean checkedIn = checkinConfirmed(context.caseKey());
         return jdbc.sql("""
             SELECT draft::text, case_input::text, request_hash, task_ids::text
             FROM case_postprocessing WHERE case_id=:case AND draft_id=:id
             """).param("case", context.caseKey()).param("id", id).query((row, index) -> {
             String hash = row.getString(3);
             return new Stored(new Draft(id, json.readTree(row.getString(1)), hash != null,
-                    hash == null ? json.createArrayNode() : json.readTree(row.getString(4))),
+                    hash == null ? json.createArrayNode() : json.readTree(row.getString(4)), checkedIn),
                     json.readTree(row.getString(2)), hash);
         }).optional();
     }

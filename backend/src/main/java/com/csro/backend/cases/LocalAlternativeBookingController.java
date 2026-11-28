@@ -52,4 +52,15 @@ class LocalAlternativeBookingController {
             }
         }
     }
+
+    @Scheduled(fixedDelay = 500)
+    void checkInConfirmedBookings() {
+        for (String caseId : booking.dueCheckins()) {
+            try {
+                booking.checkIn(caseId);
+            } catch (RuntimeException exception) {
+                log.warn("Could not process a due Airbnb demo check-in");
+            }
+        }
+    }
 }
