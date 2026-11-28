@@ -161,7 +161,7 @@ public class CaseQueries {
                 UNION ALL
                 SELECT q.analyzed_at,3,q.id,jsonb_build_object('kind','QUOTE_RANKING','status',q.validation_status,
                     'version',q.ranking_version,'at',q.analyzed_at)
-                FROM quote_rankings q WHERE q.case_id=c.id
+                FROM quote_rankings q WHERE q.case_id=c.id AND q.ranking_kind='API_025'
                 UNION ALL
                 SELECT ad.acted_at,4,ad.id,jsonb_build_object('kind','COUNSELOR_ASSIST','status',ad.details->>'source',
                     'version',ad.details->>'model','at',ad.acted_at)
@@ -243,15 +243,15 @@ public class CaseQueries {
                 'latestReplacementBooking', (SELECT jsonb_build_object('replacementBookingId', r.request_code,
                     'selectionId', s.selection_code) FROM replacement_requests r
                     JOIN alternative_selections s ON s.id = r.selection_id AND s.case_id = r.case_id
-                    WHERE r.case_id = :caseKey ORDER BY r.id DESC LIMIT 1),
+                    WHERE r.case_id = :caseKey AND left(r.request_code, 4) <> 'ADB-' ORDER BY r.id DESC LIMIT 1),
                 'activeOfferId', (SELECT o.offer_code FROM offers o
-                    WHERE o.case_id = :caseKey AND o.status = 'ACTIVE'),
+                    WHERE o.case_id = :caseKey AND o.status = 'ACTIVE' AND left(o.offer_code, 6) <> 'ABSIM-'),
                 'currentSelection', (SELECT jsonb_build_object('selectionId', s.selection_code,
                     'offerId', o.offer_code, 'quoteId', q.quote_code, 'selectedAt', s.selected_at)
                     FROM alternative_selections s
                     JOIN offers o ON o.id = s.offer_id AND o.case_id = s.case_id
                     JOIN alternative_quotes q ON q.id = s.quote_id AND q.case_id = s.case_id
-                    WHERE s.case_id = :caseKey AND s.superseded_at IS NULL),
+                    WHERE s.case_id = :caseKey AND s.superseded_at IS NULL AND left(o.offer_code, 6) <> 'ABSIM-'),
                 'effectiveAt', CAST(:effectiveAt AS timestamptz),
                 'clockMode', CAST(:clockMode AS text),
                 'items', coalesce((

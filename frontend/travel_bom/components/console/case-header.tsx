@@ -1,4 +1,5 @@
 import { Loader2, Play } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { formatWon, type BookingCase } from '@/lib/alternative-stays'
 
 type CaseHeaderProps = {
@@ -42,19 +43,14 @@ export function CaseHeader({ bookingCase, searching, disabled, onSearch }: CaseH
         </dl>
       </div>
 
-      <button
-        type="button"
-        onClick={onSearch}
-        disabled={searching || disabled}
-        className="inline-flex h-14 shrink-0 items-center justify-center gap-3 rounded-xl bg-primary px-12 text-base font-bold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-70"
-      >
+      <Button type="button" onClick={onSearch} disabled={searching || disabled} className="h-11 shrink-0 gap-2 px-8 text-base font-bold">
         {searching ? (
           <Loader2 className="size-5 animate-spin" aria-hidden="true" />
         ) : (
           <Play className="size-5 fill-current" aria-hidden="true" />
         )}
         {searching ? '탐색 중...' : '대체 숙소 자동 탐색'}
-      </button>
+      </Button>
     </section>
   )
 }

@@ -88,3 +88,25 @@ CI는 위험 평가, 정책 기반 사건 조회, Job 재시도·복구와 배�
 `RiskAssessmentService`의 관측 준비·추론과 `RiskAssessmentStore`의 저장을 공통 경로로 사용한다. API-023 HTTP는 엄격한 `RiskMlClient` 한 구현을 거친다. `RiskRecheckService`는 선별된 예약의 평가·RECHECK 등록을 같은 트랜잭션에서 처리하고 HTTP는 잠금 밖에서 실행한다. PR #14(`2f26f6b`)의 성공 근거·사건·Job 완료 원자성과 실행권 검증을 유지한다.
 
 자동 배치에는 명시적으로 켠 합성 파일용 `RiskFileObservations`를 사용한다. Spring이 계산한 여섯 값과 대상 예약을 기존 Python 계산과 대조하며 실제 운영 관측 공급자를 구현한 것은 아니다. 고객 API·ML/Mock HTTP 계약·Flyway·기준 모델은 변경하지 않는다. [실행과 한계](../backend/docs/api/ML-RISK-COMMON-PATH.md)
+
+## 상담사 로컬 Airbnb 검색 및 안내
+
+기존 상담사 전용 `/api/v1/cases/{caseCode}/airbnb-demo-searches` 아래의 검색 저장 PUT은
+추천 후보를 최대 5곳까지 저장한다. `GET /latest`는 현재 예약의 기간·인원과 일치하는 마지막
+완료 검색의 `searchId`, `finishedAt`, `result`, `selectedListingIds`, `sentSelections`를 반환하며,
+해당 검색이 없으면 204를 반환한다. 새 검색이 정상 저장되면 그 검색이 화면의 현재 결과가 된다.
+기존 완료 검색과 발송 이력은 보존한다.
+
+`PUT /{searchId}/selection`은 현재 완료 검색에 속한 서로 다른 후보 ID 0~3개를 `listingIds`로 받는다.
+`case_actions`의 해당 검색 `AIRBNB_SELECTION_DRAFT`를 갱신하고 204를 반환한다.
+이전 검색에 대한 선택 저장은 409로 응답하며 고객 채팅은 생성하지 않는다.
+
+`PUT /{searchId}/guides/{requestId}`는 같은 검색에 저장된 서로 다른 Airbnb 숙소 ID 3개를
+`listingIds`로 받고, 성공과 동일 요청 재실행에는 204를 반환한다. 같은 사건·요청 번호로
+다른 검색 또는 후보를 보내면 409다. 숙소명·가격·링크·요약은 서버의 검색 기록에서 읽고,
+채팅과 `case_actions`의 `AIRBNB_GUIDE_SENT` 기록을 한 트랜잭션으로 저장한다.
+고객 채팅은 기존 API-011에서 읽으며 예약 상태는 바꾸지 않는다.
+
+시연 전용 예약 실행에서 신규 예약의 번호는 `YB-{제안 UUID}`이며, 내부 접수 번호와 과거 예약번호는 유지한다.
+상담사는 예약 완료 카드에서 **고객에게 안내**를 눌러 기존 채팅 입력창에 안내문을 넣고 수정한 뒤 전송할 수 있다.
+[로컬 실행](../llm/alternative-search/README.md)

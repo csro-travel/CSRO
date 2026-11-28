@@ -1,4 +1,5 @@
 import { Check, ChevronDown, Clock3, CircleAlert, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 type SearchStatusProps = {
@@ -46,19 +47,20 @@ export function SearchStatus({
         </div>
       </div>
 
-      {state === 'success' && <button
+      {state === 'success' && <Button
         type="button"
+        variant="outline"
+        size="lg"
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls="comparison-results"
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
       >
         <ChevronDown
           className={cn('size-4 transition-transform', expanded && 'rotate-180')}
           aria-hidden="true"
         />
         {expanded ? '결과 접기' : '탐색된 숙소 보기'}
-      </button>}
+      </Button>}
     </section>
   )
 }

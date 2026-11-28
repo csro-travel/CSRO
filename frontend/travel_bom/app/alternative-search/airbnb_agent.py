@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 import asyncio
 import json
 import math
+import os
 import re
 from typing import Any, AsyncIterator
 
@@ -10,18 +11,11 @@ from typing import Any, AsyncIterator
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from .policy import (
-    calculate_score,
-    collect_approval_reasons,
-    collect_unconfirmed_items,
-    has_hard_failure,
-)
+from .candidate_review_agent import CandidateReviewAgent
 from .schemas import (
     AlternativeCandidate,
-    CandidateChecks,
     HotelOrigin,
     SearchPolicy,
-    VerificationStatus,
 )
 
 
@@ -133,35 +127,6 @@ def _extract_listing_url(
     return str(url) if url else None
 
 
-def _analyze_details(
-        payload: dict[str, Any],
-) -> tuple[bool, bool, str, float]:
-    detail_sections = payload.get("details") or []
-    has_amenities = False
-    has_policy = False
-    amenity_groups: list[Any] = []
-
-    for section in detail_sections:
-        if not isinstance(section, dict):
-            continue
-        section_id = section.get("id")
-        if section_id == "AMENITIES_DEFAULT":
-            has_amenities = True
-            groups = section.get("seeAllAmenitiesGroups")
-            if isinstance(groups, dict):
-                amenity_groups = list(groups.values())
-            elif isinstance(groups, list):
-                amenity_groups = groups
-        elif section_id == "POLICIES_DEFAULT":
-            has_policy = True
-
-    cancellation_summary = (
-        "정책 섹션 수신 · 취소 규정 미확인" if has_policy else "취소 규정 미확인"
-    )
-    # 그룹 수는 필수 편의시설 충족을 의미하지 않으므로 점수 근거로 사용하지 않는다.
-    amenity_ratio = 0.0
-    return has_amenities, has_policy, cancellation_summary, amenity_ratio
-
 def _extract_json_from_mcp_result(result: Any) -> dict[str, Any]:
     """MCP 응답의 text 콘텐츠에서 JSON 객체를 추출한다."""
     if getattr(result, "isError", False):
@@ -198,7 +163,7 @@ class AirbnbMcpClient:
     def __init__(
             self,
             *,
-            command: str = "npx",
+            command: str | None = None,
             args: list[str] | None = None,
             timeout_seconds: float = 60.0,
     ) -> None:
@@ -206,7 +171,7 @@ class AirbnbMcpClient:
             raise ValueError("A positive supplier timeout is required")
         self.timeout_seconds = timeout_seconds
         self.server_params = StdioServerParameters(
-            command=command,
+            command=command or ("npx.cmd" if os.name == "nt" else "npx"),
             args=args
             if args is not None
             else ["-y", "@openbnb/mcp-server-airbnb"],
@@ -291,8 +256,10 @@ class AirbnbMcpClient:
 
 
 class AirbnbAlternativeSearchAgent:
-    def __init__(self, mcp_client: AirbnbMcpClient | None = None) -> None:
+    def __init__(self, mcp_client: AirbnbMcpClient | None = None,
+                 candidate_review: CandidateReviewAgent | None = None) -> None:
         self.mcp_client = mcp_client or AirbnbMcpClient()
+        self.candidate_review = candidate_review or CandidateReviewAgent()
 
     async def search_and_verify(
             self,
@@ -302,7 +269,7 @@ class AirbnbAlternativeSearchAgent:
             radius_km: float,
             max_detail_checks: int = 8,
     ) -> tuple[list[AlternativeCandidate], int]:
-        candidates: list[AlternativeCandidate] = []
+        pending_reviews: list[dict[str, Any]] = []
 
         async with self.mcp_client.session() as session:
             raw_items = await self.mcp_client.search_listings(
@@ -338,73 +305,21 @@ class AirbnbAlternativeSearchAgent:
                 if not details:
                     continue
 
-                has_amenities, has_policy, cancel_summary, amenity_ratio = (
-                    _analyze_details(details)
-                )
-                total_price = _parse_total_price_krw(item)
-                listing_url = _extract_listing_url(item, details)
-
-                # 응답에 실제 인원 수용 정보가 없으므로 확정으로 처리하지 않는다.
-                checks = CandidateChecks(
-                    full_stay_available=VerificationStatus.UNCONFIRMED,
-                    guest_capacity_ok=VerificationStatus.UNCONFIRMED,
-                    # A URL alone verifies neither the address nor the listing identity.
-                    address_and_listing_verified=VerificationStatus.UNCONFIRMED,
-                    room_and_checkin_verified=VerificationStatus.UNCONFIRMED,
-                    accessibility_and_amenities_ok=(
-                        VerificationStatus.UNCONFIRMED
-                        if has_amenities
-                        else VerificationStatus.UNCONFIRMED
-                    ),
-                    # A generic policies section may contain only house/check-in rules.
-                    cancellation_policy_verified=VerificationStatus.UNCONFIRMED,
-                )
-
-                unconfirmed = collect_unconfirmed_items(checks)
-                if total_price is None:
-                    unconfirmed.append("세금·수수료 포함 총액 미확인")
-
-                approval_reasons = collect_approval_reasons(
-                    distance_km=distance,
-                    total_price=total_price,
-                    preferred_max_amount=policy.preferred_max_amount,
-                    primary_radius_km=policy.primary_radius_km,
-                    unconfirmed_items=unconfirmed,
-                )
-
-                score = calculate_score(
-                    distance_km=distance,
-                    total_price=total_price,
-                    preferred_max_amount=policy.preferred_max_amount,
-                    checks=checks,
-                    amenities_confirmed_ratio=amenity_ratio,
-                    flexible_cancellation=False,
-                )
-
-                candidate = AlternativeCandidate(
+                pending_reviews.append(dict(
                     listing_id=listing_id,
-                    name=_extract_name(item),
-                    address=None,
-                    listing_url=listing_url,
-                    source="airbnb_mcp",
-                    checked_at=datetime.now(timezone.utc),
+                    listing_name=_extract_name(item),
+                    listing_url=_extract_listing_url(item, details),
+                    item=item,
+                    details=details,
+                    policy=policy,
                     distance_km=distance,
-                    total_price_krw=total_price,
-                    price_diff_krw=(
-                        total_price - policy.original_total_amount
-                        if total_price is not None
-                        else None
-                    ),
-                    cancellation_summary=cancel_summary,
-                    checks=checks,
-                    unconfirmed_items=unconfirmed,
-                    approval_required_reasons=approval_reasons,
-                    score_breakdown=score,
-                )
+                    total_price=_parse_total_price_krw(item),
+                    search_scope="full_stay",
+                ))
 
-                if not has_hard_failure(candidate.checks):
-                    candidates.append(candidate)
-
+        candidates = await asyncio.gather(*(
+            self.candidate_review.review(**review) for review in pending_reviews
+        ))
         return candidates, len(raw_items)
 
 def _build_search_location(origin: HotelOrigin) -> str:

@@ -145,3 +145,92 @@
 - [로컬 실행·테스트·문제 해결 가이드](docs/local-development.md)
 
 <!-- TODO: Figma · 화면 설계 · 시연 영상 · 최종 발표 자료 · 팀 회고 링크 -->
+
+## 10. Airbnb 탐색 및 사건 후처리 로컬 시연
+
+Windows PowerShell 기준입니다. JDK 21, Python, Node.js 및 pnpm, Docker Desktop이 필요합니다. 아래 명령은 저장소 루트에서 같은 PowerShell 세션으로 실행합니다. Python 3.14.3에서 의존성과 두 FastAPI 앱 로드를 확인했습니다.
+
+### 1. Python 설치 및 실행 환경 설정
+
+```powershell
+$repo = (Get-Location).Path
+if (-not (Test-Path .\.venv\Scripts\python.exe)) { python -m venv .venv }
+$python = Join-Path $repo '.venv\Scripts\python.exe'
+& $python -m pip install -r requirements.txt
+& $python -m pip check
+
+$env:OPENAI_API_KEY = (Get-Credential -UserName 'OpenAI' -Message 'Password 칸에 OpenAI API 키 입력').GetNetworkCredential().Password
+$env:GOOGLE_MAPS_API_KEY = (Get-Credential -UserName 'Google Maps' -Message 'Password 칸에 Google Maps API 키 입력').GetNetworkCredential().Password
+$env:POSTPROCESSING_SERVICE_TOKEN = [guid]::NewGuid().ToString('N')
+$env:POSTPROCESSING_AGENT_URL = 'http://127.0.0.1:8003'
+$env:CSRO_CHAT_DEMO_TOKEN = [guid]::NewGuid().ToString('N')
+$env:AIRBNB_DEMO_BOOKING_ENABLED = 'true'
+Remove-Item Env:CSRO_DEMO_TOKEN -ErrorAction SilentlyContinue
+Remove-Item Env:CSRO_CUSTOMER_DEMO_TOKEN -ErrorAction SilentlyContinue
+```
+
+Google Maps 키는 실제 숙소 검색에 사용합니다. 후처리 초안과 문서 생성에는 OpenAI 키가 필요합니다. 후처리 공유 토큰은 Python과 Spring에 전달하고, 상담사 시연 토큰은 Spring과 프록시에 전달합니다. 키와 토큰은 현재 세션 및 그 세션에서 시작한 프로세스에만 설정합니다.
+
+### 2. 전용 PostgreSQL 준비 및 두 Agent 실행
+
+처음 시작할 때는 아래 명령으로 전용 DB를 실행합니다. 이미 같은 이름의 컨테이너가 실행 중이면 실행 명령을 생략하고 기존 컨테이너의 DB 비밀번호를 사용합니다.
+
+```powershell
+$env:CSRO_CHAT_DEMO_DB_PASSWORD = [guid]::NewGuid().ToString('N')
+$env:POSTGRES_PASSWORD = $env:CSRO_CHAT_DEMO_DB_PASSWORD
+docker run --rm --detach --name csro-local-chat-demo-db --tmpfs /var/lib/postgresql -p 127.0.0.1:25434:5432 -e POSTGRES_USER=yb_chat_demo -e POSTGRES_DB=yeohaengbom_chat_demo -e POSTGRES_PASSWORD postgres:18.7
+Remove-Item Env:POSTGRES_PASSWORD
+```
+
+기존 컨테이너를 재사용할 때는 `$env:CSRO_CHAT_DEMO_DB_PASSWORD = docker exec csro-local-chat-demo-db printenv POSTGRES_PASSWORD`로 현재 세션에 값을 불러올 수 있습니다.
+
+```powershell
+docker exec csro-local-chat-demo-db pg_isready -h 127.0.0.1 -U yb_chat_demo -d yeohaengbom_chat_demo
+Start-Process powershell.exe -WorkingDirectory $repo -ArgumentList '-NoExit', '-Command', '.\.venv\Scripts\python.exe -m uvicorn llm.alternative-search.app:app --host 127.0.0.1 --port 18025 --no-proxy-headers'
+Start-Process powershell.exe -WorkingDirectory $repo -ArgumentList '-NoExit', '-Command', '.\.venv\Scripts\python.exe -m uvicorn llm.postprocessing.api:app --host 127.0.0.1 --port 8003'
+```
+
+검색 서버는 [상태 확인](http://127.0.0.1:18025/health)에서 `{"status":"ok"}`를 반환합니다. 후처리 서버는 OpenAPI를 비활성화합니다. 시작 로그로 포트를 확인하거나 아래 요청으로 인증 경로를 확인할 수 있습니다. 이 요청의 기대 응답은 `401 UNAUTHENTICATED_SERVICE`입니다.
+
+```powershell
+curl.exe -i -X POST http://127.0.0.1:8003/internal/v1/case-postprocessing/drafts -H "Content-Type: application/json" -d "{}"
+```
+
+포트가 이미 사용 중이면 새 Agent를 빈 포트에서 실행하고, 검색은 프론트 빌드의 `NEXT_PUBLIC_AI_SEARCH_API_URL`, 후처리는 Spring을 시작할 때의 `POSTPROCESSING_AGENT_URL`을 변경합니다.
+
+### 3. Spring과 상담사 프론트 실행
+
+원래 PowerShell에서 `java -version`이 JDK 21을 가리키는지 확인한 뒤 실행합니다. DB가 연결을 수락하면 Spring이 Flyway 마이그레이션을 적용합니다.
+
+```powershell
+Start-Process powershell.exe -WorkingDirectory (Join-Path $repo 'backend') -ArgumentList '-NoExit', '-Command', '.\gradlew.bat bootRun --args=--spring.profiles.active=local-chat-demo'
+```
+
+Spring 시작 로그가 나온 뒤 `Invoke-RestMethod http://127.0.0.1:18082/hello`로 확인합니다. 신규 시연 DB에 사건이 없으면 [상담 사건 시드 절차](backend/docs/api/README.md#api-012-구현-메모)를 따라 샘플 사건을 준비합니다. 실제 검색에는 체크인 날짜가 지나지 않은 시연 사건을 사용합니다.
+
+```powershell
+Set-Location (Join-Path $repo 'frontend\travel_bom')
+$env:NEXT_PUBLIC_AI_SEARCH_API_URL = 'http://127.0.0.1:18025'
+pnpm.cmd install --frozen-lockfile
+pnpm.cmd build
+
+$env:PORT = '3100'
+$env:CSRO_DEMO_SPRING_PORT = '18082'
+$env:CSRO_LOCAL_DEMO = 'true'
+$env:CSRO_CHAT_DEMO_PROXY = 'true'
+$env:CSRO_AIRBNB_DEMO_PROXY = 'true'
+$env:CSRO_CLOSURE_DEMO_PROXY = 'true'
+$env:CSRO_ASSIST_DEMO_PROXY = 'true'
+$env:CSRO_CUSTOMER_DEMO_PROXY = 'false'
+$env:CSRO_DEMO_TOKEN = $env:CSRO_CHAT_DEMO_TOKEN
+node .\demo-server.mjs
+```
+
+[상담 사건 목록](http://127.0.0.1:3100/cases)을 엽니다. 조회가 401이면 프록시의 `CSRO_DEMO_TOKEN`과 실행 중인 Spring의 `CSRO_CHAT_DEMO_TOKEN`이 일치하는지 확인합니다. 같은 원래 세션에서 두 서버를 시작하면 토큰을 공유할 수 있습니다.
+
+Airbnb 시연 후보 3곳을 보낸 뒤 약 5초가 지나면 첫 후보 선택이 기록됩니다. 화면 표시에는 채팅 조회 주기만큼 더 걸릴 수 있습니다. **예약 진행**으로 시연 예약을 만들고, **후속 업무 → 초안 생성**에서 문서를 검토하고 DOCX를 내려받을 수 있습니다. 초안 본문의 메시지 근거는 큰따옴표로 인용합니다. 프록시의 CSRO_CLOSURE_DEMO_PROXY 설정은 업무 완료, 호텔 확인 결과 등록, 사건 종결 요청을 활성화합니다.
+
+종료할 때 서버 창에서 `Ctrl+C`를 누릅니다. 시연 DB 컨테이너는 메모리 볼륨을 사용하므로 `docker stop csro-local-chat-demo-db`를 실행하면 해당 시연 데이터가 사라집니다.
+
+- [대체 숙소 검색 상세](llm/alternative-search/README.md)
+- [후처리 CLI 및 내부 서버](llm/postprocessing/README.md)

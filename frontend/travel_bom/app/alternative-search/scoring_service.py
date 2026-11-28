@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from .airbnb_agent import AirbnbAlternativeSearchAgent
 from .location_agent import GoogleMapsLocationAgent
 from .policy import rank_candidates, resolve_search_policy
-from .schemas import AlternativeSearchResponse, HotelOrigin
+from .schemas import AlternativeSearchResponse, HotelOrigin, RankingCandidateInput
 from .summary_agent import apply_candidate_summaries, summarize_response
 
 
@@ -14,7 +14,7 @@ class AlternativeSearchService:
             location_agent: GoogleMapsLocationAgent | None = None,
             airbnb_agent: AirbnbAlternativeSearchAgent | None = None,
             min_desired_candidates: int = 3,
-            max_recommendations: int = 5,
+            max_recommendations: int = 3,
     ) -> None:
         # Configuration is checked only when search is requested, after its
         # booking period has been validated. Importing /health performs no I/O.
@@ -73,6 +73,10 @@ class AlternativeSearchService:
             candidates = list(by_id.values())
             raw_count += expanded_count
 
+        ranking_input = [
+            RankingCandidateInput.model_validate(candidate, from_attributes=True)
+            for candidate in candidates
+        ]
         apply_candidate_summaries(candidates, policy)
         recommendations, exceptions = rank_candidates(
             candidates,
@@ -89,6 +93,9 @@ class AlternativeSearchService:
             verified_candidate_count=len(candidates),
             top_recommendations=recommendations,
             exception_candidates=exceptions,
+            ranking_version="airbnb-candidate-ranking-v1",
+            analyzed_at=datetime.now(timezone.utc),
+            ranking_input=ranking_input,
         )
         response.summary = summarize_response(response)
         return response

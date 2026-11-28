@@ -33,7 +33,10 @@ esac
 db=(psql -X --no-password --set=ON_ERROR_STOP=1)
 [[ "$("${db[@]}" -Atc "select current_database() || ':' || current_user")" == "$PGDATABASE:$PGUSER" ]]
 if [[ "$test_class" == RiskAssessmentLiveTest || "$test_class" == RiskCaseDemoLiveTest ]]; then
-  "${db[@]}" -f backend/src/main/resources/db/migration/V1__initial_business_schema.sql
+  # Spring uses Flyway-disabled profiles in these live tests.
+  while IFS= read -r migration; do
+    "${db[@]}" -f "$migration"
+  done < <(printf "%s\n" backend/src/main/resources/db/migration/V[0-9]*__*.sql | LC_ALL=C sort -V)
   "${db[@]}" -f backend/src/main/resources/db/local/R__seed_yb001.sql
 fi
 
